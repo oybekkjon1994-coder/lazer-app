@@ -903,6 +903,78 @@ PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",note:"Tokchalar uzunl
     this.warn=nb?`Yoyilma: ${Lf.toFixed(2)} × ${W} mm. Bukish chiziqlari chap chetdan: ${lines.map(b=>b.toFixed(1)).join(", ")} mm.`:`Bukishsiz tasma: ${Lf.toFixed(2)} × ${W} mm.`;
     return E.poly(v)},
   label:p=>"Yoyilma "+String(p.fl).trim().replace(/\s+/g,"-")};
+/* bukiladigan detal: profil yoki quti, ichiga naqsh */
+const PAT_OPTS=()=>[["yoq","Naqshsiz"],["perf_doira","Teshiklar — doira"],["perf_kv","Teshiklar — kvadrat"],["perf_romb","Teshiklar — romb"]].concat(Object.entries(GIRIH).filter(([k])=>k.includes("_")).map(([k,g])=>["g:"+k,"Naqsh "+g.n]));
+function patternHoles(zones,o){let out="",n=0;if(!o.pat||o.pat==="yoq"||!zones.length)return {out,n};
+  const s=o.s,gap=o.w;if(!(s>0)||!(gap>0))throw"Naqsh o‘lchami va oraliq qalinligi 0 dan katta bo‘lsin.";
+  if(o.pat.startsWith("perf_")){const sh=o.pat.slice(5),st=s+gap,h=s/2;
+    for(const [x0,y0,x1,y1] of zones){const w=x1-x0,hh=y1-y0;if(w<s||hh<s)continue;const nx=Math.floor((w-s)/st)+1,ny=Math.floor((hh-s)/st)+1;if(nx*ny>8000)throw"Teshiklar juda ko‘p — o‘lchamini kattalashtiring.";
+      const cx0=x0+(w-(nx-1)*st)/2,cy0=y0+(hh-(ny-1)*st)/2;
+      for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const x=cx0+i*st,y=cy0+j*st;out+=sh==="doira"?E.circle(x,y,h):sh==="kv"?E.poly([[x-h,y-h],[x+h,y-h],[x+h,y+h],[x-h,y+h]]):E.poly([[x,y-h],[x+h,y],[x,y+h],[x-h,y]]);n++}}
+    return {out,n}}
+  const G=GIRIH[o.pat.slice(2)];if(!G)return {out,n};if(gap>=s)throw"Chiziq qalinligi naqsh o‘lchamidan kichik bo‘lsin.";
+  let X0=1e9,Y0=1e9,X1=-1e9,Y1=-1e9;for(const [a,b,c,d] of zones){X0=Math.min(X0,a);Y0=Math.min(Y0,b);X1=Math.max(X1,c);Y1=Math.max(Y1,d)}
+  const W=X1-X0,H=Y1-Y0;if(W*H/(s*s)>40000)throw"Naqsh juda mayda — o‘lchamini kattalashtiring.";
+  const sc=Math.min(8,3200/Math.max(W,H)),cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+  const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";
+  for(const [a,b,c,d] of zones)x.fillRect(1+(a-X0)*sc,1+(Y1-d)*sc,(c-a)*sc,(d-b)*sc);
+  x.strokeStyle="#fff";x.lineWidth=gap*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
+  for(const [a,b,c] of hankin(girihTiles(G.t,s,W,H),G.a)){x.moveTo(1+a[0]*sc,1+a[1]*sc);x.lineTo(1+b[0]*sc,1+b[1]*sc);x.lineTo(1+c[0]*sc,1+c[1]*sc)}x.stroke();
+  const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;
+  for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+    if(Math.abs(ar/2)/(sc*sc)<3)continue;out+=E.poly(L.map(([u,v])=>[X0+(u-.5)/sc,Y1-(v-.5)/sc]));n++}
+  return {out,n}}
+const isBox=p=>p.mode==="quti",isProf=p=>p.mode!=="quti",hasPat=p=>p.pt&&p.pt!=="yoq";
+PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",rerender:["mode","pt"],
+  note:"Avval bukish turini tanlang. Profil — bir yo‘nalishda bukiladi (ugolok, U, Z): tokchalarni tashqi o‘lcham bo‘yicha yozing. Quti/lotok — asos atrofida nechta tomoni bukilishini tanlang. Naqsh bukish chizig‘idan va chetdan bo‘sh joy qoldirib tushiriladi. K-faktor odatda 0.33–0.45.",
+  fields:[["mode","Bukish turi","profil","select",[["profil","Profil — bir yo‘nalishda (ugolok, U, Z)"],["quti","Quti / lotok — atrofi bukiladi"]]],
+    ["fl","Tokchalar uzunligi (mm)","50 100 50","text",null,isProf],["ang","Bukish burchaklari (°, bo‘sh = 90)","","text",null,isProf],["W","Detal eni (mm)",200,"num",null,isProf],
+    ["sides","Nechta tomoni bukiladi","4","select",[["1","1 tomon"],["2q","2 tomon — qarama-qarshi"],["2y","2 tomon — yonma-yon (burchak)"],["3","3 tomon"],["4","4 tomon — to‘liq quti"]],isBox],
+    ["A","Asos uzunligi (mm, tashqi)",400,"num",null,isBox],["B","Asos eni (mm, tashqi)",300,"num",null,isBox],["h","Devor balandligi (mm, tashqi)",50,"num",null,isBox],
+    ["t","List qalinligi (mm)",2],["r","Ichki radius (mm)",2],["K","K-faktor",0.4],
+    ["nt","Bukish belgilari","ha","select",[["ha","Ha — chetga kichik kesik"],["yoq","Yo‘q"]],isProf],
+    ["pt","Ichiga naqsh","yoq","select",PAT_OPTS()],
+    ["pf","Naqsh qaysi tokchada (raqami, bo‘sh = hammasi)","","text",null,p=>hasPat(p)&&isProf(p)],
+    ["pz","Naqsh joyi","asos","select",[["asos","Faqat asos (tagi)"],["devor","Faqat devorlar"],["hammasi","Asos va devorlar"]],p=>hasPat(p)&&isBox(p)],
+    ["ps","Naqsh / teshik o‘lchami (mm)",30,"num",null,hasPat],["pw","Chiziq / oraliq qalinligi (mm)",5,"num",null,hasPat],["pm","Bukish va chetdan bo‘sh joy (mm)",10,"num",null,hasPat]],
+  build(p){const {t,r}=p,K=parseFloat(String(p.K).replace(",","."));if(!(t>0)||r<0||!(K>=0&&K<=1))throw"Qalinlik, radius va K-faktor (0–1) ni tekshiring.";
+    const pm=Math.max(0,p.pm),zones=[];let out="",info="";
+    if(isBox(p)){const sd={"1":"b","2q":"bt","2y":"br","3":"btr","4":"btrl"}[p.sides]||"btrl",has=c=>sd.includes(c);
+      const {A,B,h}=p;if(!(A>0&&B>0&&h>0))throw"Asos o‘lchamlari va devor balandligini kiriting.";
+      const ss=r+t,ba=Math.PI/2*(r+K*t),fh=h-ss;if(fh<=0)throw"Devor juda past — radius va qalinlikka sig‘maydi.";
+      const Ab=A-ss*((has("l")?1:0)+(has("r")?1:0)),Bb=B-ss*((has("b")?1:0)+(has("t")?1:0)),e=ba+fh;if(Ab<=0||Bb<=0)throw"Asos juda kichik.";
+      const v=[];const P=(a,b)=>{const l=v[v.length-1];if(!l||Math.abs(l[0]-a)>1e-9||Math.abs(l[1]-b)>1e-9)v.push([a,b])};
+      if(has("b")){P(0,-e);P(Ab,-e);P(Ab,0)}else{P(0,0);P(Ab,0)}
+      if(has("r")){P(Ab+e,0);P(Ab+e,Bb);P(Ab,Bb)}else P(Ab,Bb);
+      if(has("t")){P(Ab,Bb+e);P(0,Bb+e);P(0,Bb)}else P(0,Bb);
+      if(has("l")){P(-e,Bb);P(-e,0);P(0,0)}
+      if(Math.abs(v[0][0]-v[v.length-1][0])<1e-9&&Math.abs(v[0][1]-v[v.length-1][1])<1e-9)v.pop();
+      const ox=has("l")?e:0,oy=has("b")?e:0,T=pts=>pts.map(([a,b])=>[a+ox,b+oy]);out=E.poly(T(v));
+      if(hasPat(p)){const z=[];if(p.pz!=="devor")z.push([pm,pm,Ab-pm,Bb-pm]);
+        if(p.pz!=="asos"){if(has("b"))z.push([pm,-e+pm,Ab-pm,-ba/2-ba/2-pm]);if(has("t"))z.push([pm,Bb+ba+pm,Ab-pm,Bb+e-pm]);
+          if(has("r"))z.push([Ab+ba+pm,pm,Ab+e-pm,Bb-pm]);if(has("l"))z.push([-e+pm,pm,-ba-pm,Bb-pm])}
+        for(const [a,b,c,d] of z)if(c-a>p.ps&&d-b>p.ps)zones.push([a+ox,b+oy,c+ox,d+oy])}
+      const Wt=Ab+(has("l")?e:0)+(has("r")?e:0),Ht=Bb+(has("b")?e:0)+(has("t")?e:0);
+      info=`Yoyilma: ${Wt.toFixed(1)} × ${Ht.toFixed(1)} mm. Asos (tekis qismi): ${Ab.toFixed(1)} × ${Bb.toFixed(1)} mm, devor tekis qismi ${fh.toFixed(1)} mm, bukish zonasi ${ba.toFixed(1)} mm. Bukish chiziqlari asos chetidan ${(ba/2).toFixed(1)} mm tashqarida.`}
+    else{const nl=v=>String(v||"").replace(/,/g,".").trim().split(/[\s;\/xX×*-]+/).filter(Boolean).map(Number);
+      const Ls=nl(p.fl);let As=nl(p.ang);const W=p.W;
+      if(!Ls.length||Ls.some(v=>!isFinite(v)||v<=0))throw"Tokchalar uzunligini bo‘sh joy bilan yozing, masalan: 50 100 50";
+      if(As.some(v=>!isFinite(v)))throw"Burchaklarni son bilan yozing, masalan: 90 90";
+      const nb=Ls.length-1;if(!As.length)As=Array(nb).fill(90);else if(As.length===1&&nb>1)As=Array(nb).fill(As[0]);
+      if(As.length!==nb)throw`${Ls.length} ta tokcha uchun ${nb} ta burchak kerak (yoki bittasini yozing — hammasiga qo‘llanadi).`;
+      if(!(W>0))throw"Detal enini kiriting.";if(As.some(a=>a<=0||a>=180))throw"Bukish burchagi 1° dan 179° gacha bo‘lsin.";
+      const ss=As.map(a=>(r+t)*Math.tan(a*Math.PI/360)),ba=As.map(a=>Math.PI*a/180*(r+K*t));
+      let x=0;const lines=[],flats=[];Ls.forEach((L,i)=>{const fl=L-(i>0?ss[i-1]:0)-(i<As.length?ss[i]:0);if(fl<=0)throw`${i+1}-tokcha juda qisqa — radius va qalinlikka sig‘maydi.`;flats.push([x,x+fl]);x+=fl;if(i<As.length){lines.push(x+ba[i]/2);x+=ba[i]}});
+      const Lf=x,nd=1.5,nw=1.5;let v=[[0,0]];
+      if(p.nt==="ha"){for(const b of lines)v.push([b-nw,0],[b,nd],[b+nw,0]);v.push([Lf,0],[Lf,W]);for(const b of [...lines].reverse())v.push([b+nw,W],[b,W-nd],[b-nw,W]);v.push([0,W])}
+      else v=[[0,0],[Lf,0],[Lf,W],[0,W]];
+      out=E.poly(v);
+      if(hasPat(p)){const sel=nl(p.pf).map(n=>Math.round(n));for(let i=0;i<flats.length;i++){if(sel.length&&!sel.includes(i+1))continue;const [a,b]=flats[i];if(b-a-2*pm>p.ps&&W-2*pm>p.ps)zones.push([a+pm,pm+(p.nt==="ha"?nd:0),b-pm,W-pm-(p.nt==="ha"?nd:0)])}}
+      info=nb?`Yoyilma: ${Lf.toFixed(2)} × ${W} mm. Bukish chiziqlari chap chetdan: ${lines.map(b=>b.toFixed(1)).join(", ")} mm.`:`Bukishsiz tasma: ${Lf.toFixed(2)} × ${W} mm.`}
+    if(hasPat(p)){if(!zones.length)info+=" Naqsh uchun joy yetmadi — bo‘sh joyni kamaytiring yoki detalni kattalashtiring.";
+      else{const r2=patternHoles(zones,{pat:p.pt,s:p.ps,w:p.pw});out+=r2.out;info+=` Naqsh: ${r2.n} ta teshik.`}}
+    this.warn=info;return out},
+  label:p=>isBox(p)?`Quti ${p.A}x${p.B}x${p.h}`:"Yoyilma "+String(p.fl).trim().replace(/\s+/g,"-")};
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
@@ -940,19 +1012,20 @@ const GROUPS={det:"Detallar",tpl:"Shablonlar",gen:"Matn va rasm"};
 $("parts").innerHTML=Object.entries(GROUPS).map(([gk,gn])=>`<span class="pgroup">${gn}</span>`+Object.entries(PARTS).filter(([,v])=>v.group===gk).map(([k,v])=>`<button data-part="${k}" aria-pressed="${k===part}">${v.name}</button>`).join("")).join("");
 renderParams=function(){
   const P=PARTS[part];
-  $("params").innerHTML=P.fields.map(([id,lab,,type="num",opts])=>{const fid=`g-${part}-${id}`,v=vals[part][id];
+  const FF=P.fields.filter(f=>!f[5]||f[5](vals[part]));
+  $("params").innerHTML=FF.map(([id,lab,,type="num",opts])=>{const fid=`g-${part}-${id}`,v=vals[part][id];
     if(type==="select")return `<div class="field"><label class="label" for="${fid}">${lab}</label><select id="${fid}">${opts.map(([o,t])=>`<option value="${o}"${o===v?" selected":""}>${t}</option>`).join("")}</select></div>`;
     if(type==="area")return `<div class="field wide"><label class="label" for="${fid}">${lab}</label><textarea id="${fid}" rows="3"></textarea></div>`;
     if(type==="text")return `<div class="field"><label class="label" for="${fid}">${lab}</label><input id="${fid}" type="text" inputmode="text" autocomplete="off" style="font-family:var(--mono)" value="${esc(v)}"></div>`;
     if(type==="file")return `<div class="field wide"><span class="label">${lab}</span><div class="drop"><div class="fname" id="${fid}-n">${lzImg?esc(lzImg.name):"Rasm tanlanmagan — namuna ko‘rsatilmoqda"}</div><label class="btn primary">Rasm tanlash<input id="${fid}" type="file" accept="image/*" hidden></label></div></div>`;
     return `<div class="field"><label class="label" for="${fid}">${lab}</label><input id="${fid}" type="number" step="any" inputmode="decimal" value="${v}"></div>`}).join("")+(P.note?`<p class="note wide">${P.note}</p>`:"");
-  P.fields.forEach(([id,,,type="num"])=>{const el=$(`g-${part}-${id}`);
+  FF.forEach(([id,,,type="num"])=>{const el=$(`g-${part}-${id}`);
     if(type==="area")el.value=vals[part][id];
     if(type==="file"){el.addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const url=URL.createObjectURL(f),im=new Image();
       im.onload=()=>{lzImg=imgToGrid(im,f.name.replace(/\.[^.]+$/,""));URL.revokeObjectURL(url);$(`g-${part}-${id}-n`).textContent=f.name;build()};
       im.onerror=()=>{$("gwarn").textContent="Rasmni ochib bo‘lmadi. JPG yoki PNG tanlang.";$("gwarn").hidden=false};im.src=url});return}
     let tm=null;el.addEventListener("input",e=>{vals[part][id]=type==="num"?(parseFloat(String(e.target.value).replace(",","."))||0):e.target.value;
-      try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};clearTimeout(tm);tm=setTimeout(build,part==="image"?250:60)})});
+      try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};clearTimeout(tm);if((P.rerender||[]).includes(id)){renderParams();return}tm=setTimeout(build,part==="image"?250:60)})});
   build()};
 const _build=build;build=function(){PARTS[part].warn="";_build();const ex=PARTS[part].warn;if(ex){const w=$("gwarn");w.textContent=(w.hidden?"":w.textContent+" ")+ex;w.hidden=false}};
 const _rpG=renderParams;renderParams=function(){_rpG();if(part==="girih")girihGallery();if(part==="text")fontGallery();if(part==="lib")libUI()};
