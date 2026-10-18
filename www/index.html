@@ -1548,7 +1548,7 @@ async function offerZip(base,files,toast){
 const safeName=s=>s.replace(/[Ø×,]/g,m=>({"Ø":"D","×":"x",",":""}[m])).replace(/\s+/g,"_").replace(/[^A-Za-z0-9_\-]/g,"");
 $("save").addEventListener("click",()=>{if(!gen)return;const base=safeName(genName)||"detal";offerZip(base,[[base+".dxf",genText]],$("gtoast"))});
 /* ---------- litsenziya: 3 kun sinov, keyin kalit bilan (faqat APK) ---------- */
-const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=3,LIC_BOT="lazer_uz77_bot";
+const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=0,LIC_BOT="lazer_uz77_bot";
 const LIC={ok:false,code:"",left:0,ready:false};
 const b32=u=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let bits=0,v=0,o="";for(const b of u){v=((v<<8)|b)&0xffff;bits+=8;while(bits>=5){o+=A[(v>>>(bits-5))&31];bits-=5}}return o};
 const b64u=s=>{s=String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
@@ -1558,7 +1558,7 @@ async function licCode(){let id="";try{const D=window.Capacitor.Plugins.Device;i
 async function licCheck(code,key){try{const k=await crypto.subtle.importKey("jwk",LIC_PUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
   return await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},k,b64u(key),new TextEncoder().encode("LZ1|"+code))}catch(_){return false}}
 function licBar(){let b=$("licBar");if(!b){b=document.createElement("button");b.id="licBar";b.type="button";b.className="licbar";document.body.prepend(b);b.addEventListener("click",()=>licOpen())}
-  b.hidden=LIC.ok;b.textContent=LIC.left>0?`Sinov: ${Math.ceil(LIC.left)} kun qoldi · fayl saqlash yopiq — Faollashtirish`:"Sinov muddati tugadi — Faollashtirish"}
+  b.hidden=LIC.ok;b.textContent=LIC.left>0?`Sinov: ${Math.ceil(LIC.left)} kun qoldi · fayl saqlash yopiq — Faollashtirish`:"Ilova faollashtirilmagan — Faollashtirish"}
 function licOpen(msg){let o=$("licOv");if(!o){o=document.createElement("div");o.id="licOv";o.className="mockov";
     o.innerHTML=`<div class="wrap"><div class="otop"><h2 class="mh">Ilovani faollashtirish</h2><button type="button" id="licX">Yopish ✕</button></div>
     <div class="card"><p class="note" id="licMsg"></p><span class="label">Telefoningiz kodi</span><div class="lic-code" id="licC"></div>
@@ -1573,7 +1573,7 @@ function licOpen(msg){let o=$("licOv");if(!o){o=document.createElement("div");o.
     $("licGo").addEventListener("click",async()=>{const k=$("licK").value.trim();if(!k){$("licT").textContent="Kalitni qo‘ying.";return}
       if(await licCheck(LIC.code,k)){try{localStorage.setItem("lzKey",k)}catch(_){};LIC.ok=true;licBar();$("licT").textContent="Ilova faollashtirildi. Rahmat!";setTimeout(()=>{o.hidden=true;document.body.style.overflow=""},1200)}
       else $("licT").textContent="Kalit noto‘g‘ri yoki boshqa telefon uchun berilgan. Botdagi kalitni to‘liq nusxalab qo‘ying."})}
-  $("licC").textContent=LIC.code||"…";$("licMsg").textContent=msg||(LIC.left>0?`Sinov muddati: ${Math.ceil(LIC.left)} kun qoldi. Sinov davrida hamma bo‘lim ishlaydi, faqat fayl saqlash va ulashish yopiq.`:"Sinov muddati tugadi. Ilovadan foydalanishni davom ettirish uchun faollashtiring.");
+  $("licC").textContent=LIC.code||"…";$("licMsg").textContent=msg||(LIC.left>0?`Sinov muddati: ${Math.ceil(LIC.left)} kun qoldi. Sinov davrida hamma bo‘lim ishlaydi, faqat fayl saqlash va ulashish yopiq.`:"Ilovadan foydalanish uchun uni faollashtiring: telefon kodini botga yuboring, to‘lovdan keyin kalit keladi.");
   $("licX").hidden=!(LIC.left>0||LIC.ok);o.hidden=false;document.body.style.overflow="hidden"}
 async function licInit(){if(!isNative()){LIC.ok=true;LIC.ready=true;return}
   LIC.code=await licCode();let key="";try{key=localStorage.getItem("lzKey")||""}catch(_){}
