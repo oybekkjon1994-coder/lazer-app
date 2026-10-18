@@ -25,8 +25,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 header h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,38px);letter-spacing:-.02em;margin:0;text-wrap:balance}
 header p{margin:4px 0 0;color:var(--muted)}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
-.tabs button{border:0;background:transparent;padding:9px 4px;font:600 14px var(--body);color:var(--muted);border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{border:0;background:transparent;padding:9px 2px;font:600 clamp(11px,3.2vw,14px) var(--body);min-width:0;overflow-wrap:anywhere;color:var(--muted);border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
 .tabs button small{font:500 11px var(--mono);opacity:.8}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
 .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
@@ -104,7 +104,7 @@ input,select{font:500 16px var(--mono);padding:10px 12px;border-radius:7px;borde
 <div class="wrap">
   <header>
     <h1>Lazer kesish ustaxonasi</h1>
-    <p>Narx hisoblash, detal chizish, list joylashtirish va buyurtmalar — bitta joyda.</p>
+    <p>Narx hisoblash, detal chizish, list joylashtirish, buyurtmalar va metall og‘irligi — bitta joyda.</p>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -112,6 +112,7 @@ input,select{font:500 16px var(--mono);padding:10px 12px;border-radius:7px;borde
     <button role="tab" id="tab-dxf" aria-selected="false">DXF yasash<small>2</small></button>
     <button role="tab" id="tab-nest" aria-selected="false">Nesting<small>3</small></button>
     <button role="tab" id="tab-buy" aria-selected="false">Buyurtma<small>4</small></button>
+    <button role="tab" id="tab-metal" aria-selected="false">Metall<small>5</small></button>
   </nav>
 
   <!-- ===== 1. NARX ===== -->
@@ -242,6 +243,36 @@ input,select{font:500 16px var(--mono);padding:10px 12px;border-radius:7px;borde
       </div>
     </section>
   </div>
+  <!-- ===== 5. METALL ===== -->
+  <div id="p-metal" class="grid" hidden>
+    <section class="card">
+      <div class="label">Metall turi</div>
+      <div class="parts" id="mshapes"></div>
+      <div class="field"><label class="label" for="mmat">Material</label><select id="mmat"></select></div>
+      <div class="params" id="mparams"></div>
+      <div class="params">
+        <div class="field"><label class="label" for="mqty">Soni (dona)</label><input id="mqty" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="mprice">1 kg narxi, so‘m</label><input id="mprice" type="number" min="0" step="100" inputmode="numeric" placeholder="masalan 11500"></div>
+      </div>
+      <div class="warn" id="mwarn" hidden></div>
+    </section>
+    <section class="card">
+      <div class="label">Natija</div>
+      <div class="stats">
+        <div class="stat"><span class="label" id="mUnitL">1 metr</span><b id="mUnit">—</b></div>
+        <div class="stat"><span class="label">1 dona</span><b id="mOne">—</b></div>
+        <div class="stat"><span class="label">Jami</span><b id="mTotal">—</b></div>
+      </div>
+      <div class="total">
+        <span class="label">Metall narxi</span>
+        <span class="sum" id="mSum">—</span>
+        <span class="calc" id="mCalc"></span>
+      </div>
+      <div class="actions"><button id="mCopy">Nusxalash</button><button id="mOrder" class="primary">Buyurtma qilish</button></div>
+      <div class="toast" id="mtoast" aria-live="polite"></div>
+      <p class="note">Og‘irlik nazariy: profil va burchak radiuslari hisobga olinmaydi, shuning uchun GOST jadvalidan 1–3% farq qilishi mumkin.</p>
+    </section>
+  </div>
   <div id="p-buy" class="wrap" style="max-width:none" hidden>
     <div class="kpis">
       <div class="kpi"><span class="label">Faol</span><b id="kActive">0</b></div>
@@ -294,7 +325,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");
 
 /* ---------- tabs ---------- */
-const TABS=["narx","dxf","nest","buy"];
+const TABS=["narx","dxf","nest","buy","metal"];
 function showTab(t){TABS.forEach(k=>{$("tab-"+k).setAttribute("aria-selected",k===t);$("p-"+k).hidden=k!==t});
   try{localStorage.setItem("lazerTab",t)}catch(_){}; if(t==="narx")draw($("cv"),current); if(t==="dxf")draw($("gcv"),gen); if(t==="nest")drawSheet();}
 TABS.forEach(k=>$("tab-"+k).addEventListener("click",()=>showTab(k)));
@@ -786,6 +817,109 @@ renderParams();
     [["flange",12],["plate",20],["gusset",30]].forEach(([k,q])=>addPart(wrapDXF(PARTS[k].build(def(k))),"Namuna: "+PARTS[k].label(def(k)),q))}
   renderParts();runNest()})();
 fillForm(null);initOrders();
+/* ---------- 5. metall ---------- */
+// Metall og'irligi hisoblagichi. Hamma o'lchamlar mm da, uzunlik L metrda.
+const MATERIALS = {
+  stal: { name: "Po‘lat (qora)", rho: 7.85 },
+  nerj: { name: "Nerjaveyka", rho: 7.93 },
+  alum: { name: "Alyuminiy", rho: 2.70 },
+  latun: { name: "Latun", rho: 8.50 },
+  mis: { name: "Mis", rho: 8.94 },
+};
+
+// area: ko'ndalang kesim yuzasi, mm²; list uchun alohida
+const SHAPES = {
+  list: {
+    name: "List", fields: [["a", "Eni, mm"], ["b", "Bo‘yi, mm"], ["t", "Qalinligi, mm"]], sheet: true,
+    check: p => p.a > 0 && p.b > 0 && p.t > 0 || "Eni, bo‘yi va qalinligi 0 dan katta bo‘lsin.",
+    label: p => `List ${p.a}×${p.b}×${p.t}`,
+  },
+  truba: {
+    name: "Truba (dumaloq)", fields: [["d", "Tashqi diametr, mm"], ["t", "Devor qalinligi, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.d > 0 && p.t > 0 && 2 * p.t <= p.d || "Devor qalinligi diametrning yarmidan oshmasin.",
+    area: p => Math.PI / 4 * (p.d ** 2 - (p.d - 2 * p.t) ** 2),
+    label: p => `Truba Ø${p.d}×${p.t}`,
+  },
+  profil: {
+    name: "Profil truba", fields: [["a", "Eni, mm"], ["b", "Bo‘yi, mm"], ["t", "Devor qalinligi, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.a > 0 && p.b > 0 && p.t > 0 && 2 * p.t <= Math.min(p.a, p.b) || "Devor qalinligi tomonlarning yarmidan oshmasin.",
+    area: p => p.a * p.b - (p.a - 2 * p.t) * (p.b - 2 * p.t),
+    label: p => `Profil ${p.a}×${p.b}×${p.t}`,
+  },
+  burchak: {
+    name: "Burchak (ugolok)", fields: [["a", "Tokcha A, mm"], ["b", "Tokcha B, mm"], ["t", "Qalinligi, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.a > 0 && p.b > 0 && p.t > 0 && p.t < Math.min(p.a, p.b) || "Qalinlik tokchadan kichik bo‘lsin.",
+    area: p => (p.a + p.b - p.t) * p.t,
+    label: p => `Burchak ${p.a}×${p.b}×${p.t}`,
+  },
+  polosa: {
+    name: "Polosa", fields: [["a", "Eni, mm"], ["t", "Qalinligi, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.a > 0 && p.t > 0 || "Eni va qalinligi 0 dan katta bo‘lsin.",
+    area: p => p.a * p.t,
+    label: p => `Polosa ${p.a}×${p.t}`,
+  },
+  doira: {
+    name: "Armatura / doira", fields: [["d", "Diametr, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.d > 0 || "Diametr 0 dan katta bo‘lsin.",
+    area: p => Math.PI / 4 * p.d ** 2,
+    label: p => `Doira Ø${p.d}`,
+  },
+  kvadrat: {
+    name: "Kvadrat", fields: [["a", "Tomoni, mm"], ["L", "Uzunligi, m"]],
+    check: p => p.a > 0 || "Tomoni 0 dan katta bo‘lsin.",
+    area: p => p.a ** 2,
+    label: p => `Kvadrat ${p.a}×${p.a}`,
+  },
+};
+
+// Natija: bitta dona kg, jami kg, va profil uchun 1 metr kg (list uchun 1 m² kg)
+function metalWeight(shapeKey, matKey, p, qty = 1) {
+  const s = SHAPES[shapeKey], m = MATERIALS[matKey];
+  if (!s || !m) throw new Error("Noto‘g‘ri tur yoki material.");
+  const ok = s.check(p);
+  if (ok !== true) throw new Error(ok);
+  let one, perUnit, unit;
+  if (s.sheet) {
+    one = p.a * p.b * p.t * m.rho / 1e6;
+    perUnit = p.t * m.rho; unit = "kg/m²";
+  } else {
+    if (!(p.L > 0)) throw new Error("Uzunlik 0 dan katta bo‘lsin.");
+    perUnit = s.area(p) * m.rho / 1000; unit = "kg/m";
+    one = perUnit * p.L;
+  }
+  return { one, total: one * qty, perUnit, unit, label: s.label(p) + (s.sheet ? "" : `, ${p.L} m`), material: m.name };
+}
+
+const MEX={list:{a:1250,b:2500,t:3},truba:{d:57,t:3,L:6},profil:{a:40,b:40,t:2,L:6},burchak:{a:50,b:50,t:5,L:6},polosa:{a:40,t:4,L:6},doira:{d:12,L:11.7},kvadrat:{a:10,L:6}};
+let mShape="list",mVals=JSON.parse(JSON.stringify(MEX)),mPrices={},mLast="";
+try{const s=JSON.parse(localStorage.getItem("lazerMetal")||"null");if(s){if(s.v)Object.keys(s.v).forEach(k=>{if(mVals[k])Object.assign(mVals[k],s.v[k])});if(s.p)mPrices=s.p;if(SHAPES[s.s])mShape=s.s}}catch(_){}
+const mSave=()=>{try{localStorage.setItem("lazerMetal",JSON.stringify({v:mVals,p:mPrices,s:mShape}))}catch(_){}};
+const kgf=v=>v>=100?fmt(v):v.toFixed(v>=10?1:2);
+$("mshapes").innerHTML=Object.entries(SHAPES).map(([k,s])=>`<button data-sh="${k}" aria-pressed="${k===mShape}">${s.name}</button>`).join("");
+$("mmat").innerHTML=Object.entries(MATERIALS).map(([k,m])=>`<option value="${k}">${m.name}</option>`).join("");
+function mRender(){
+  $("mparams").innerHTML=SHAPES[mShape].fields.map(([k,l])=>`<div class="field"><label class="label" for="m-${mShape}-${k}">${l}</label><input id="m-${mShape}-${k}" type="number" min="0" step="any" inputmode="decimal" value="${mVals[mShape][k]??""}"></div>`).join("");
+  SHAPES[mShape].fields.forEach(([k])=>$(`m-${mShape}-${k}`).addEventListener("input",e=>{mVals[mShape][k]=parseFloat(e.target.value)||0;mSave();mCalc()}));
+  $("mprice").value=mPrices[$("mmat").value]||"";mCalc();
+}
+function mCalc(){
+  const w=$("mwarn");w.hidden=true;const mat=$("mmat").value,qty=Math.max(1,parseInt($("mqty").value)||1),price=parseFloat($("mprice").value)||0;
+  try{const r=metalWeight(mShape,mat,mVals[mShape],qty);
+    $("mUnitL").textContent=r.unit==="kg/m"?"1 metr":"1 m²";$("mUnit").textContent=kgf(r.perUnit)+" kg";$("mOne").textContent=kgf(r.one)+" kg";$("mTotal").textContent=kgf(r.total)+" kg";
+    $("mSum").textContent=price?fmt(r.total*price)+" so‘m":"—";
+    $("mCalc").textContent=price?`${kgf(r.total)} kg × ${fmt(price)} so‘m`:"Narx uchun 1 kg narxini kiriting";
+    mLast={r,qty,price,mat};
+  }catch(e){w.textContent=e.message;w.hidden=false;["mUnit","mOne","mTotal"].forEach(i=>$(i).textContent="—");$("mSum").textContent="—";$("mCalc").textContent="";mLast=null}
+}
+document.querySelectorAll("#mshapes button").forEach(b=>b.addEventListener("click",()=>{mShape=b.dataset.sh;document.querySelectorAll("#mshapes button").forEach(x=>x.setAttribute("aria-pressed",x===b));mSave();mRender()}));
+$("mmat").addEventListener("input",()=>{$("mprice").value=mPrices[$("mmat").value]||"";mCalc()});
+$("mqty").addEventListener("input",mCalc);
+$("mprice").addEventListener("input",()=>{mPrices[$("mmat").value]=parseFloat($("mprice").value)||0;mSave();mCalc()});
+const mText=()=>{if(!mLast)return"";const {r,qty,price}=mLast;return `${r.label} · ${r.material}\n1 dona: ${kgf(r.one)} kg`+(qty>1?`\n${qty} dona: ${kgf(r.total)} kg`:"")+(price?`\n1 kg: ${fmt(price)} so‘m\nJami: ${fmt(r.total*price)} so‘m`:"")};
+$("mCopy").addEventListener("click",()=>{const t=mText();if(!t)return;navigator.clipboard.writeText(t).then(()=>$("mtoast").textContent="Nusxalandi — Telegramga joylashingiz mumkin.").catch(()=>$("mtoast").textContent=t)});
+$("mOrder").addEventListener("click",()=>{if(!mLast)return;const {r,qty,price}=mLast;startOrder({detal:`${r.label} (${r.material})`,soni:qty,metr:"",summa:price?Math.round(r.total*price):null,izoh:`Metall: ${kgf(r.total)} kg`})});
+mRender();
+
 let startTab="narx";try{const s=localStorage.getItem("lazerTab");if(TABS.includes(s))startTab=s}catch(_){}
 showTab(startTab);
 </script>
