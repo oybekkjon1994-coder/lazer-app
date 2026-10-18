@@ -63,3 +63,11 @@ jobs:
         with:
           name: lazer-egasi
           path: lazer.apk
+
+      - name: Yopiq qoralama (draft) — faqat egasi ko'radi
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lazer-egasi-${{ github.run_number }}
+          name: "EGASI — Lazer ${{ github.run_number }} (maxfiy)"
+          draft: true
+          files: lazer.apk

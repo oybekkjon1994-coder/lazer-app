@@ -67,3 +67,11 @@ jobs:
         with:
           name: gap-egasi
           path: gap/gap-daftari.apk
+
+      - name: Yopiq qoralama (draft) — faqat egasi ko'radi
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gap-egasi-${{ github.run_number }}
+          name: "EGASI — Gap daftari ${{ github.run_number }} (maxfiy)"
+          draft: true
+          files: gap/gap-daftari.apk
