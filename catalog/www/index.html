@@ -137,6 +137,7 @@ body.sel .card .ck{display:grid}
     <hr style="border:0;border-top:1px solid var(--line);width:100%">
     <p class="note" id="stHidN"></p>
     <button id="stUnhide">Yashirilgan namunalarni qaytarish</button>
+    <p class="note">Siluet rasmlar: game-icons.net (CC BY 3.0) — mualliflari Delapouite, Lorc, Caro Asercion, Skoll, Carl Olsen.</p>
     <label class="chk"><input type="checkbox" id="stNoBuilt"> Faqat o‘z ishlarimni ko‘rsatish (tayyor namunalarni yashirish)</label>
   </div>
 </div>
@@ -167,6 +168,7 @@ body.sel .card .ck{display:grid}
 </div>
 
 <script src="items.js"></script>
+<script src="inflate.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const CATS=[["mening","Mening ishlarim"],["darvoza","Darvoza va eshiklar"],["panjara","Panjara va to‘siqlar"],["dekor","Devor dekori"],["soat","Devor soatlari"],["kozgu","Ko‘zgu ramkalari"],["kamin","Kamin ekranlari"],["polka","Polka kronshteynlari"],["belgi","Uy raqami va yozuvlar"],["naqsh","Naqshli medalyonlar"]];
@@ -203,8 +205,9 @@ function updSel(){$("selN").textContent=sel.size+" ta tanlandi";$("selPdf").disa
 function setSel(on){selMode=on;document.body.classList.toggle("sel",on);$("selbar").hidden=!on;$("fab").hidden=on;if(!on)sel.clear();updSel();render()}
 $("btnSel").onclick=()=>setSel(!selMode);$("selX").onclick=()=>setSel(false);
 $("selAll").onclick=()=>{const V=visible();const all=V.every(x=>sel.has(x.id));V.forEach(x=>all?sel.delete(x.id):sel.add(x.id));updSel();render()};
-async function dxfOf(x){if(x.dxfBlob)return new Uint8Array(await x.dxfBlob.arrayBuffer());if(!x.dxf)return null;const r=await fetch(x.dxf);if(!r.ok)return null;const buf=new Uint8Array(await r.arrayBuffer());if(!(buf[0]===0x1f&&buf[1]===0x8b))return buf;
-  if(typeof DecompressionStream!=="function")throw new Error("Android System WebView ni yangilang");return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
+async function dxfOf(x){if(x.dxfBlob)return new Uint8Array(await x.dxfBlob.arrayBuffer());if(!x.dxf)return null;let r=null;try{r=await fetch(x.dxf)}catch(_){}if(!r||!r.ok){const alt=await new Promise(ok=>{const q=new XMLHttpRequest();q.open("GET",x.dxf);q.responseType="arraybuffer";q.onload=()=>ok(q.status===200||q.status===0&&q.response&&q.response.byteLength?q.response:null);q.onerror=()=>ok(null);q.send()});if(!alt)return null;r=new Response(alt)}const buf=new Uint8Array(await r.arrayBuffer());if(!(buf[0]===0x1f&&buf[1]===0x8b))return buf;
+  if(typeof DecompressionStream==="function"){try{return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}catch(_){}}
+  return window.gunzipJS(buf)}
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return d=>{let c=0xFFFFFFFF;for(let i=0;i<d.length;i++)c=t[(c^d[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}})();
 function zipStore(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;const u16=v=>[v&255,v>>8&255],u32=v=>[v&255,v>>8&255,v>>16&255,v>>>24&255];
   for(const [name,data] of files){const nb=enc.encode(name),crc=CRC(data),h=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0)]);
