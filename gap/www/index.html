@@ -86,7 +86,8 @@ const mAmt=(g,m)=>m&&+m.amount>0?+m.amount:+g.amount;
 const paidAmt=(g,i,m)=>{const p=paidSet(g,i)[m.id];return p?(+p.a>0?+p.a:mAmt(g,m)):0};
 const full=(g,i,m)=>paidAmt(g,i,m)>=mAmt(g,m)-1e-9;
 const owe=(g,i,m)=>Math.max(0,mAmt(g,m)-paidAmt(g,i,m));
-function hostOf(g,i){g.host=g.host||{};const h=g.host[i]||{};const r=recipient(g,i);return {who:h.who||r?.id,addr:h.addr||"",time:h.time||""}}
+function hostOf(g,i){g.host=g.host||{};const h=g.host[i]||{};const r=recipient(g,i);return {who:h.who||r?.id,addr:h.addr||"",time:h.time||"",lat:h.lat,lng:h.lng}}
+const mapUrl=h=>h.lat!=null?`https://maps.google.com/?q=${h.lat},${h.lng}`:h.addr?`https://yandex.uz/maps/?text=${encodeURIComponent(h.addr)}`:"";
 function expOf(g,i){g.exp=g.exp||{};return g.exp[i]||(g.exp[i]=[])}
 function expSplit(g,i){const E=expOf(g,i),tot=E.reduce((s,e)=>s+(+e.a||0),0),a=attSet(g,i),n=g.members.filter(m=>a[m.id]===1).length||g.members.length;return {tot,n,per:n?tot/n:0,byAtt:g.members.some(m=>a[m.id]===1)}}
 const sum=v=>fmt(v)+" so‘m";
@@ -102,7 +103,7 @@ function curRound(g){if(!N(g))return 0;const t=todayS();let i=0;const max=N(g)*(
 const PREMIUM=()=>LIC.ok;
 const FREE_GAPS=1,FREE_MEM=Infinity;
 /* ---------- matnlar ---------- */
-function placeText(g,i){const h=hostOf(g,i),w=g.members.find(m=>m.id===h.who);return (w?`🏠 Kimnikida: ${w.name}\n`:"")+(h.addr?`📍 ${h.addr}\n`:"")+(h.time?`🕖 Soat ${h.time}\n`:"")}
+function placeText(g,i){const h=hostOf(g,i),w=g.members.find(m=>m.id===h.who);return (w?`🏠 Kimnikida: ${w.name}\n`:"")+(h.addr?`📍 ${h.addr}\n`:"")+(h.time?`🕖 Soat ${h.time}\n`:"")+(h.lat!=null?`🗺 Lokatsiya: ${mapUrl(h)}\n`:"")}
 function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>full(g,i,m)),no=ps.filter(m=>!full(g,i,m));
   return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n${placeText(g,i)}💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}${(()=>{const x=noSet(g,i),c=no.filter(m=>x[m.id]).length;return c?`, ${c} tasi «bermadi» deb belgilangan`:""})()}): ${no.map(m=>m.name+(paidAmt(g,i,m)>0?` (qoldi ${money(g,owe(g,i,m))})`:+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
 function expText(g,i){const E=expOf(g,i),x=expSplit(g,i);return `🧾 ${g.name} — gap xarajati\n📅 ${nice(roundDate(g,i))}\n\n`+E.map(e=>`• ${e.t}: ${sum(e.a)}`).join("\n")+`\n\nJami: ${sum(x.tot)}\n👥 ${x.n} kishiga bo‘linadi${x.byAtt?" (kelganlar)":""}\n💵 Har kimga: ${sum(Math.ceil(x.per/1000)*1000)}`}
@@ -187,8 +188,15 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
 function placeCard(g,i){const C=$("plc"),h=hostOf(g,i);
   C.innerHTML=`<b>📍 Gap joyi va vaqti</b><label for="hw">Kimnikida (mezbon)</label><select id="hw">${g.members.map(m=>`<option value="${m.id}"${m.id===h.who?" selected":""}>${esc(m.name)}</option>`).join("")}</select>
    <label for="ha">Manzil</label><input id="ha" placeholder="masalan, Chilonzor 9-kvartal, 12-uy" value="${esc(h.addr)}"><label for="ht">Soati</label><input id="ht" type="time" value="${esc(h.time)}">
-   ${h.addr?`<div class="row" style="margin-top:10px"><a href="https://yandex.uz/maps/?text=${encodeURIComponent(h.addr)}" style="flex:1"><button style="width:100%">🗺 Xaritada ochish</button></a></div>`:""}`;
-  const upd=()=>{g.host=g.host||{};g.host[i]={who:$("hw").value,addr:$("ha").value.trim(),time:$("ht").value};save()};
+   <div class="row" style="margin-top:10px"><button id="hgeo">📍 Hozirgi joyimni olish</button>${mapUrl(h)?`<a href="${esc(mapUrl(h))}" style="flex:1"><button style="width:100%">🗺 Xaritada ochish</button></a>`:""}</div>
+   ${h.lat!=null?`<p class="note">✅ Lokatsiya saqlangan (${(+h.lat).toFixed(5)}, ${(+h.lng).toFixed(5)}) — eslatmada xarita havolasi bo‘lib boradi. <a href="#" id="hgx">Olib tashlash</a></p>`:`<p class="note">Mezbonning uyida turib «Hozirgi joyimni olish»ni bosing — aniq joy saqlanadi va guruhga xarita havolasi ketadi.</p>`}`;
+  const upd=(extra)=>{g.host=g.host||{};const o=g.host[i]||{};g.host[i]=Object.assign({lat:o.lat,lng:o.lng},{who:$("hw").value,addr:$("ha").value.trim(),time:$("ht").value},extra||{});save()};
+  $("hgeo").addEventListener("click",async()=>{const b=$("hgeo");b.disabled=true;b.textContent="⏳ Joylashuv aniqlanmoqda…";
+    try{let pos;const G=P().Geolocation;if(G&&isNative()){const pr=await G.checkPermissions().catch(()=>({location:"prompt"}));if(pr.location!=="granted"){const q=await G.requestPermissions();if(q.location!=="granted")throw new Error("ruxsat")}pos=await G.getCurrentPosition({enableHighAccuracy:true,timeout:20000})}
+      else pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:20000}));
+      upd({lat:+pos.coords.latitude.toFixed(6),lng:+pos.coords.longitude.toFixed(6)});toast("📍 Lokatsiya saqlandi");render()}
+    catch(e){b.disabled=false;b.textContent="📍 Hozirgi joyimni olish";toast(String(e&&e.message||e).includes("ruxsat")?"Joylashuvga ruxsat berilmadi — telefon sozlamalaridan ruxsat bering":"Joylashuvni aniqlab bo‘lmadi — GPS yoqilganini tekshiring")}});
+  if($("hgx"))$("hgx").addEventListener("click",e=>{e.preventDefault();upd({lat:null,lng:null});g.host[i].lat=undefined;g.host[i].lng=undefined;save();render()});
   ["hw","ht"].forEach(id=>$(id).addEventListener("change",()=>{upd();toast("Saqlandi")}));$("ha").addEventListener("change",()=>{upd();render()})}
 function expCard(g,i){const C=$("exc"),E=expOf(g,i),x=expSplit(g,i);
   C.innerHTML=`<b>🧾 Gap xarajati</b><p class="note">Osh, tort, ichimlik… — jami kelganlar soniga bo‘linadi (davomat belgilanmagan bo‘lsa — hamma a’zolarga).</p><div id="exl"></div>
