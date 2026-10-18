@@ -1988,6 +1988,73 @@ function initQur(){$("qtypes").addEventListener("click",e=>{const b=e.target.clo
   $("qShare").addEventListener("click",async()=>{const t=qText();try{if(typeof isNative==="function"&&isNative()){await window.Capacitor.Plugins.Share.share({title:"Smeta",text:t});return}if(navigator.share){await navigator.share({title:"Smeta",text:t});return}}catch(_){}
     navigator.clipboard.writeText(t).then(()=>$("qtoast").textContent="Smeta nusxalandi.").catch(()=>{})});
   qRender()}
+/* ---------- bukiladigan detal: 3D ko‘rinish ---------- */
+function bend3dGeom(p){const t=+p.t,r=+p.r,K=parseFloat(String(p.K).replace(",","."))||.4,F=[];
+  if(p.mode==="quti"){const sd={"1":"b","2q":"bt","2y":"br","3":"btr","4":"btrl"}[p.sides]||"btrl",has=c=>sd.includes(c);
+    const A=+p.A,B=+p.B,h=+p.h,ss=r+t,ba=Math.PI/2*(r+K*t),fh=h-ss,Ab=A-ss*((has("l")?1:0)+(has("r")?1:0)),Bb=B-ss*((has("b")?1:0)+(has("t")?1:0)),e=ba+fh,ox=has("l")?e:0,oy=has("b")?e:0;
+    F.push({f0:[ox,oy],fa:[1,0],la:Ab,Va:[1,0,0],fb:[0,1],lb:Bb,Vb:[0,1,0],P:[0,0,0]});
+    if(has("b"))F.push({f0:[ox,oy],fa:[1,0],la:Ab,Va:[1,0,0],fb:[0,-1],lb:e,Vb:[0,0,1],P:[0,0,0]});
+    if(has("t"))F.push({f0:[ox,oy+Bb],fa:[1,0],la:Ab,Va:[1,0,0],fb:[0,1],lb:e,Vb:[0,0,1],P:[0,Bb,0]});
+    if(has("r"))F.push({f0:[ox+Ab,oy],fa:[1,0],la:e,Va:[0,0,1],fb:[0,1],lb:Bb,Vb:[0,1,0],P:[Ab,0,0]});
+    if(has("l"))F.push({f0:[ox,oy],fa:[-1,0],la:e,Va:[0,0,1],fb:[0,1],lb:Bb,Vb:[0,1,0],P:[0,0,0]});
+    return {F,c:[Ab/2,Bb/2,e/2],R:Math.hypot(Ab,Bb,e)}}
+  const nl=v=>String(v||"").replace(/,/g,".").trim().split(/[\s;\/xX×*-]+/).filter(Boolean).map(Number);
+  const Ls=nl(p.fl);let As=nl(p.ang);const W=+p.W,nb=Ls.length-1;if(!As.length)As=Array(nb).fill(90);else if(As.length===1&&nb>1)As=Array(nb).fill(As[0]);
+  const ss=As.map(a=>(r+t)*Math.tan(a*Math.PI/360)),ba=As.map(a=>Math.PI*a/180*(r+K*t));let x=0;const lines=[];
+  Ls.forEach((L,i)=>{const fl=L-(i>0?ss[i-1]:0)-(i<As.length?ss[i]:0);x+=fl;if(i<As.length){lines.push(x+ba[i]/2);x+=ba[i]}});
+  const Lf=x;let py=0,pz=0,th=0,my=[0,0],mz=[0,0];
+  for(let i=0;i<Ls.length;i++){const a=i?lines[i-1]:0,b=i<nb?lines[i]:Lf,len=b-a,dy=Math.cos(th),dz=Math.sin(th);
+    F.push({f0:[a,0],fa:[1,0],la:len,Va:[0,dy,dz],fb:[0,1],lb:W,Vb:[1,0,0],P:[0,py,pz]});
+    py+=len*dy;pz+=len*dz;my=[Math.min(my[0],py),Math.max(my[1],py)];mz=[Math.min(mz[0],pz),Math.max(mz[1],pz)];if(i<nb)th+=As[i]*Math.PI/180}
+  return {F,c:[W/2,(my[0]+my[1])/2,(mz[0]+mz[1])/2],R:Math.hypot(W,my[1]-my[0],mz[1]-mz[0])}}
+const B3={yaw:-35,pitch:35,col:"steel",cv:null,tex:null};
+function bend3dTexture(){const loops=mockLoops(gen);let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const L of loops)for(const [a,b] of L){x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)}
+  const k=Math.min(4,1600/Math.max(x1-x0,y1-y0)),c=document.createElement("canvas");c.width=Math.ceil((x1-x0)*k)+4;c.height=Math.ceil((y1-y0)*k)+4;const x=c.getContext("2d"),Pt=new Path2D();
+  for(const L of loops){L.forEach(([a,b],i)=>{const X=(a-x0)*k+2,Y=(y1-b)*k+2;i?Pt.lineTo(X,Y):Pt.moveTo(X,Y)});Pt.closePath()}
+  const C={steel:["#c9ced3","#8e959b"],black:["#3a3d41","#1b1d20"],white:["#f3f3f1","#cfd0cc"],gold:["#e7c66a","#a8801f"],corten:["#b0643a","#6e3418"]}[B3.col]||["#c9ced3","#8e959b"];
+  const g=x.createLinearGradient(0,0,c.width,c.height);g.addColorStop(0,C[0]);g.addColorStop(1,C[1]);x.fillStyle=g;x.fill(Pt,"evenodd");
+  return {c,map:(a,b)=>[(a-x0)*k+2,(y1-b)*k+2]}}
+function bend3dDraw(){const cv=$("b3cv");if(!cv||!gen)return;let G;try{G=bend3dGeom(vals.bend)}catch(e){return}
+  if(!B3.tex)B3.tex=bend3dTexture();const T=B3.tex,W=cv.width,H=cv.height,x=cv.getContext("2d");
+  const bg=x.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#eef0f2");bg.addColorStop(1,"#cfd4d8");x.fillStyle=bg;x.fillRect(0,0,W,H);
+  const cy=Math.cos(B3.yaw*Math.PI/180),sy=Math.sin(B3.yaw*Math.PI/180),cp=Math.cos(B3.pitch*Math.PI/180),sp=Math.sin(B3.pitch*Math.PI/180),S=Math.min(W,H)*.78/G.R;
+  const rot=v=>{const X=v[0]*cy-v[1]*sy,Y=v[0]*sy+v[1]*cy,Z=v[2];return [X,Y*cp-Z*sp,Y*sp+Z*cp]};
+  const pr=p=>{const q=rot([p[0]-G.c[0],p[1]-G.c[1],p[2]-G.c[2]]);return [W/2+q[0]*S,H/2-q[2]*S,q[1]]};
+  const add=(a,b,s)=>[a[0]+b[0]*s,a[1]+b[1]*s,a[2]+b[2]*s],L=[.35,-.55,.76];
+  const faces=G.F.map(f=>{const p0=f.P,p1=add(p0,f.Va,f.la),p2=add(p0,f.Vb,f.lb),p3=add(p1,f.Vb,f.lb),s=[p0,p1,p3,p2].map(pr);
+    const n=[f.Va[1]*f.Vb[2]-f.Va[2]*f.Vb[1],f.Va[2]*f.Vb[0]-f.Va[0]*f.Vb[2],f.Va[0]*f.Vb[1]-f.Va[1]*f.Vb[0]],nr=rot(n),lit=.5+.5*Math.abs(nr[0]*L[0]+nr[1]*L[1]+nr[2]*L[2]);
+    return {f,s,d:(s[0][2]+s[1][2]+s[2][2]+s[3][2])/4,lit}}).sort((a,b)=>b.d-a.d);
+  // soya
+  x.save();x.fillStyle="rgba(0,0,0,.12)";x.filter="blur(14px)";x.beginPath();x.ellipse(W/2,H*.86,W*.32,H*.06,0,0,7);x.fill();x.restore();
+  for(const {f,s,lit} of faces){const m0=T.map(f.f0[0],f.f0[1]),m1=T.map(f.f0[0]+f.fa[0]*f.la,f.f0[1]+f.fa[1]*f.la),m2=T.map(f.f0[0]+f.fb[0]*f.lb,f.f0[1]+f.fb[1]*f.lb);
+    const d0=s[0],d1=s[1],d2=s[3],den=(m1[0]-m0[0])*(m2[1]-m0[1])-(m2[0]-m0[0])*(m1[1]-m0[1]);if(Math.abs(den)<1e-9)continue;
+    const a=((d1[0]-d0[0])*(m2[1]-m0[1])-(d2[0]-d0[0])*(m1[1]-m0[1]))/den,c=((d2[0]-d0[0])*(m1[0]-m0[0])-(d1[0]-d0[0])*(m2[0]-m0[0]))/den,
+      b=((d1[1]-d0[1])*(m2[1]-m0[1])-(d2[1]-d0[1])*(m1[1]-m0[1]))/den,dd=((d2[1]-d0[1])*(m1[0]-m0[0])-(d1[1]-d0[1])*(m2[0]-m0[0]))/den;
+    const poly=new Path2D();s.forEach((q,i)=>i?poly.lineTo(q[0],q[1]):poly.moveTo(q[0],q[1]));poly.closePath();
+    const lay=document.createElement("canvas");lay.width=W;lay.height=H;const y=lay.getContext("2d");y.save();y.clip(poly);y.setTransform(a,b,c,dd,d0[0]-a*m0[0]-c*m0[1],d0[1]-b*m0[0]-dd*m0[1]);y.drawImage(T.c,0,0);y.restore();
+    y.globalCompositeOperation="source-atop";y.fillStyle=`rgba(0,0,0,${(1-lit)*.75})`;y.fill(poly);y.globalCompositeOperation="source-over";
+    x.drawImage(lay,0,0);x.strokeStyle="rgba(0,0,0,.25)";x.lineWidth=1.2;x.stroke(poly)}
+  x.fillStyle="#555";x.font="600 22px system-ui,sans-serif";x.fillText(genName,20,34);x.font="500 18px system-ui,sans-serif";x.fillStyle="#777";x.fillText("Barmoq bilan aylantiring",20,H-18)}
+function bend3dOpen(){if(!gen){return}let o=$("b3ov");if(!o){o=document.createElement("div");o.id="b3ov";o.className="mockov";
+    o.innerHTML=`<div class="wrap"><div class="otop"><h2 class="mh">3D ko‘rinish</h2><button type="button" id="b3x">Yopish ✕</button></div>
+    <canvas id="b3cv" width="1000" height="800" style="width:100%;height:auto;aspect-ratio:auto;touch-action:none;border-radius:10px"></canvas>
+    <div class="card"><span class="label">Metall rangi</span><div class="chips" id="b3c">${[["steel","Po‘lat"],["black","Qora"],["white","Oq"],["gold","Oltin"],["corten","Zang"]].map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===B3.col}">${n}</button>`).join("")}</div>
+    <div class="actions"><button type="button" id="b3r">↺ Boshlang‘ich holat</button><button type="button" id="b3s" class="primary">Rasmni saqlash / yuborish</button></div><div class="toast" id="b3t" aria-live="polite"></div>
+    <p class="note">Radius va qalinlik soddalashtirilgan holda ko‘rsatiladi — bu mijozga umumiy ko‘rinishni tushuntirish uchun. O‘lchamlar va yoyilma hisobi o‘zgarmaydi.</p></div></div>`;
+    document.body.appendChild(o);$("b3x").onclick=()=>{o.hidden=true;document.body.style.overflow=""};
+    $("b3c").onclick=e=>{const b=e.target.closest("button[data-v]");if(!b)return;B3.col=b.dataset.v;B3.tex=null;$("b3c").querySelectorAll("button").forEach(q=>q.setAttribute("aria-pressed",q===b));bend3dDraw()};
+    $("b3r").onclick=()=>{B3.yaw=-35;B3.pitch=35;bend3dDraw()};
+    const cv=$("b3cv");let drag=null;cv.addEventListener("pointerdown",e=>{drag=[e.clientX,e.clientY,B3.yaw,B3.pitch];cv.setPointerCapture(e.pointerId)});
+    cv.addEventListener("pointermove",e=>{if(!drag)return;B3.yaw=drag[2]+(e.clientX-drag[0])*.5;B3.pitch=Math.max(-10,Math.min(89,drag[3]+(e.clientY-drag[1])*.4));bend3dDraw()});
+    cv.addEventListener("pointerup",()=>drag=null);cv.addEventListener("pointercancel",()=>drag=null);
+    $("b3s").onclick=()=>$("b3cv").toBlob(async blob=>{if(!blob)return;const nm=(String(genName||"detal").replace(/[^\w\-]+/g,"_").slice(0,40)||"detal")+"_3d.png",t=$("b3t");
+      if(typeof isNative==="function"&&isNative())return nativeShare(nm,blob,t);
+      const dl=await (window.claude?.use?.("downloads")??Promise.resolve(null)).catch(()=>null);if(!dl){t.textContent="Bu ko‘rinishda saqlab bo‘lmaydi.";return}
+      try{await dl.save({filename:nm,data:blob});t.textContent=nm+" saqlandi."}catch(e){t.textContent="Saqlab bo‘lmadi."}},"image/png")}
+  B3.tex=null;o.hidden=false;document.body.style.overflow="hidden";bend3dDraw()}
+const _rpB3=renderParams;renderParams=function(){_rpB3();if(part!=="bend")return;const host=$("params");if(!host)return;const d=document.createElement("div");d.className="field wide";
+  d.innerHTML=`<button type="button" id="b3open" class="primary" style="width:100%;min-height:48px">🧊 3D ko‘rinishda ko‘rish</button>`;host.insertBefore(d,host.firstChild);$("b3open").onclick=()=>{if(typeof fullBuild==="function")fullBuild(true);bend3dOpen()}};
+
 /* ---------- start ---------- */
 function sampleDXF(){let s=E.circle(0,0,100)+E.circle(0,0,40);for(let k=0;k<4;k++){const a=(k+.5)*Math.PI/2;s+=E.circle(70*Math.cos(a),70*Math.sin(a),9)}return wrapDXF(s)}
 renderTiers();$("thk").value="t2";$("nthk").value="t2";
