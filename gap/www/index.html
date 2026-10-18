@@ -93,7 +93,7 @@ function curRound(g){if(!N(g))return 0;const t=todayS();let i=0;const max=N(g)*(
   // birinchi to'liq yig'ilmagan yoki sanasi o'tmagan navbat
   while(i<max-1){const done=payers(g,i).every(m=>paidSet(g,i)[m.id]);if(roundDate(g,i)>=t||!done)break;i++}return i}
 const PREMIUM=()=>LIC.ok;
-const FREE_GAPS=1,FREE_MEM=12;
+const FREE_GAPS=1,FREE_MEM=Infinity;
 /* ---------- matnlar ---------- */
 function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>pay[m.id]),no=ps.filter(m=>!pay[m.id]);
   return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}): ${no.map(m=>m.name+(+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
@@ -200,7 +200,7 @@ function vLot(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
     g.order=out;g.pay={};save();$("lt").textContent="✅ Navbat tayyor";b.disabled=false;b.textContent="📤 Natijani hammaga yuborish";b.onclick=()=>shareText("🎲 Qur’a natijasi\n"+orderText(g));
     const c=document.createElement("button");c.className="big";c.style.marginTop="10px";c.textContent="Davom etish";c.onclick=()=>go({name:"gap",id:g.id,tab:"jad"});b.after(c)},{once:true})}
 function vSet(){app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>Sozlamalar</h2></div>
-  <div class="card"><b>${PREMIUM()?"⭐ Premium faol":"Bepul versiya"}</b><p class="note">${PREMIUM()?"Cheksiz gap va a’zolar.":`Bepul: ${FREE_GAPS} ta gap, ${FREE_MEM} kishigacha. Premium: cheksiz gap va a’zolar.`}</p>${PREMIUM()?"":`<button class="pri big" id="bPrem">⭐ Premium’ni faollashtirish</button>`}</div>
+  <div class="card"><b>${PREMIUM()?"⭐ Premium faol":"Bepul versiya"}</b><p class="note">${PREMIUM()?"Cheksiz gap va a’zolar.":`Bepul: ${FREE_GAPS} ta gap, a’zolar soni cheksiz. Premium: cheksiz gaplar.`}</p>${PREMIUM()?"":`<button class="pri big" id="bPrem">⭐ Premium’ni faollashtirish</button>`}</div>
   <div class="card"><b>Bosh sahifa foni</b><div class="prev" style="${D.bg?`background-image:url('${D.bg}')`:""}">${D.bg?"":"Fon yo‘q"}</div><div class="row" style="margin-top:8px"><button id="bBg">🖼 Rasm tanlash</button>${D.bg?`<button class="warn" id="bBgX">Olib tashlash</button>`:""}</div></div>
   <div class="card"><b>Eslatmalar</b><p class="note">Gapdan bir kun oldin soat 19:00 da va gap kuni 09:00 da telefoningiz eslatadi.</p><button class="big" id="bNot">🔔 Eslatmaga ruxsat berish</button></div>
   <p class="note" id="ver" style="text-align:center">Versiya: —</p>
