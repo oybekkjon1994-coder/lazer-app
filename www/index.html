@@ -631,6 +631,72 @@ Object.assign(PARTS,{
       return out},
     label:p=>"Rasm "+(lzImg?lzImg.name:"namuna")}
 });
+Object.assign(PARTS,{
+  rail:{group:"tpl",name:"Panjara (vertikal)",fields:[["W","Eni (mm)",1000],["H","Bo‘yi (mm)",600],["m","Rama eni (mm)",40],["n","Tirqishlar soni",12],["sw","Tirqish eni (mm)",50],["R","Tirqish burchagi radiusi",0]],
+    build(p){const {W,H,m,n,sw,R}=p;
+      if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+      if(m<=0||2*m>=Math.min(W,H)-10)throw"Rama eni juda katta.";
+      if(n<1||n>300||n%1)throw"Tirqishlar soni 1–300 butun son bo‘lsin.";
+      const bar=n>1?(W-2*m-n*sw)/(n-1):0;
+      if(sw<=0||(n>1&&bar<3)||(n===1&&sw>W-2*m))throw"Tirqishlar sig‘mayapti — sonini yoki enini kamaytiring (oralarida kamida 3 mm qolsin).";
+      if(R<0||2*R>sw)throw"Radius tirqish enining yarmidan oshmasin.";
+      const x0=n>1?m:(W-sw)/2,h=H-2*m;let out=roundRect(W,H,0);
+      for(let i=0;i<n;i++){const x=x0+i*(sw+bar);out+=R>0?E.poly([[x+R,m],[x+sw-R,m,Q],[x+sw,m+R],[x+sw,m+h-R,Q],[x+sw-R,m+h],[x+R,m+h,Q],[x,m+h-R],[x,m+R,Q]]):E.poly([[x,m],[x+sw,m],[x+sw,m+h],[x,m+h]])}
+      return out},
+    label:p=>`Panjara ${p.W}×${p.H}`},
+  hex:{group:"tpl",name:"Asalari uyasi panel",fields:[["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["m","Chetdan bo‘sh (mm)",25],["f","Olti burchak eni (mm)",40],["t","Ko‘prik qalinligi (mm)",6],["mh","Mahkamlash teshigi Ø (0=yo‘q)",8]],
+    build(p){const {W,H,m,f,t,mh}=p;
+      if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+      if(f<=0||t<2)throw"Olti burchak eni 0 dan, ko‘prik 2 mm dan katta bo‘lsin.";
+      const R=f/Math.sqrt(3),dx=f+t,dy=dx*Math.sqrt(3)/2,cells=[];
+      for(let j=0;;j++){const y=m+R+j*dy;if(y+R>H-m+1e-6)break;
+        for(let i=0;;i++){const x=m+f/2+i*dx+(j%2?dx/2:0);if(x+f/2>W-m+1e-6)break;cells.push([x,y])}}
+      if(!cells.length)throw"Olti burchak panelga sig‘mayapti.";
+      if(cells.length>4000)throw`Teshiklar juda ko‘p (${cells.length}). O‘lchamni kattalashtiring.`;
+      const mxs=Math.max(...cells.map(c=>c[0])),mys=Math.max(...cells.map(c=>c[1])),sx=(W-(mxs+f/2)-(m))/2,sy=(H-(mys+R)-m)/2;
+      let out=roundRect(W,H,0);
+      for(const [cx,cy] of cells){const v=[];for(let k=0;k<6;k++){const a=Math.PI/6+k*Math.PI/3;v.push([cx+sx+R*Math.cos(a),cy+sy+R*Math.sin(a)])}out+=E.poly(v)}
+      if(mh>0){if(mh>=m)throw"Mahkamlash teshigi chetdagi bo‘sh joyga sig‘maydi.";[[m/2,m/2],[W-m/2,m/2],[W-m/2,H-m/2],[m/2,H-m/2]].forEach(([x,y])=>out+=E.circle(x,y,mh/2))}
+      return out},
+    label:p=>`Asalari panel ${p.W}×${p.H}`},
+  lbr:{group:"tpl",name:"L-kronshteyn",fields:[["A","Gorizontal oyoq (mm)",200],["B","Vertikal oyoq (mm)",150],["w","Oyoq eni (mm)",40],["n","Har oyoqda teshik",2],["d","Teshik Ø",10],["c","Burchakda teshik Ø (0=yo‘q)",0]],
+    build(p){const {A,B,w,n,d,c}=p;
+      if(A<=0||B<=0||w<=0)throw"O‘lchamlar 0 dan katta bo‘lsin.";
+      if(w>=Math.min(A,B))throw"Oyoq eni oyoq uzunligidan kichik bo‘lsin.";
+      if(n<0||n>20||n%1)throw"Teshiklar soni 0–20 butun son bo‘lsin.";
+      let out=E.poly([[0,0],[A,0],[A,w],[w,w],[w,B],[0,B]]);
+      if(n>0){if(d<=0||d>=w-4)throw"Teshik oyoq eniga sig‘maydi.";
+        if((A-w)/n<=d+3||(B-w)/n<=d+3)throw"Teshiklar bir-biriga juda yaqin — sonini kamaytiring.";
+        for(let i=0;i<n;i++){out+=E.circle(w+(A-w)*(i+.5)/n,w/2,d/2);out+=E.circle(w/2,w+(B-w)*(i+.5)/n,d/2)}}
+      if(c>0){if(c>=w-4)throw"Burchakdagi teshik sig‘maydi.";out+=E.circle(w/2,w/2,c/2)}
+      return out},
+    label:p=>`L-kronshteyn ${p.A}×${p.B}`},
+  vent:{group:"tpl",name:"Ventilyatsiya panel",fields:[["W","Eni (mm)",400],["H","Bo‘yi (mm)",300],["cols","Ustunlar",3],["rows","Qatorlar",8],["sl","Paz uzunligi (mm)",80],["sw","Paz eni (mm)",8],["g","Pazlar orasi (mm)",15],["mh","Mahkamlash teshigi Ø (0=yo‘q)",6]],
+    build(p){const {W,H,cols,rows,sl,sw,g,mh}=p;
+      if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+      if(cols<1||rows<1||cols%1||rows%1)throw"Ustun va qatorlar butun son bo‘lsin.";
+      if(sw<=0||sl<sw||g<3)throw"Paz uzunligi enidan kichik bo‘lmasin, oralig‘i kamida 3 mm.";
+      const bw=cols*sl+(cols-1)*g,bh=rows*sw+(rows-1)*g;
+      if(bw>W-20||bh>H-20)throw"Pazlar bloki panelga sig‘mayapti (chetdan kamida 10 mm qolsin).";
+      const x0=(W-bw)/2,y0=(H-bh)/2;let out=roundRect(W,H,0);
+      for(let i=0;i<cols;i++)for(let j=0;j<rows;j++)out+=obround(x0+i*(sl+g)+sl/2,y0+j*(sw+g)+sw/2,sl,sw);
+      if(mh>0){const e=Math.min(x0,y0)/2;if(mh/2>=e-1)throw"Mahkamlash teshigiga joy yetmayapti.";[[e,e],[W-e,e],[W-e,H-e],[e,H-e]].forEach(([x,y])=>out+=E.circle(x,y,mh/2))}
+      return out},
+    label:p=>`Ventilyatsiya ${p.W}×${p.H}`},
+  dots:{group:"tpl",name:"Doira naqsh (shaxmat)",fields:[["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["m","Chetdan bo‘sh (mm)",30],["d1","Katta doira Ø",40],["d2","Kichik doira Ø (0=yo‘q)",15],["st","Qadam (mm)",55],["mh","Mahkamlash teshigi Ø (0=yo‘q)",8]],
+    build(p){const {W,H,m,d1,d2,st,mh}=p;
+      if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+      if(d1<=0||st<=d1+3)throw"Qadam katta doiradan kamida 3 mm katta bo‘lsin.";
+      if(d2>0&&(d1+d2)/2>=st*Math.SQRT1_2-3)throw"Kichik doira kattalariga tegib qolyapti — kichraytiring yoki qadamni oshiring.";
+      const nx=Math.floor((W-2*m-d1)/st)+1,ny=Math.floor((H-2*m-d1)/st)+1;
+      if(nx<1||ny<1)throw"Doira panelga sig‘mayapti.";
+      if(nx*ny*2>6000)throw"Doiralar juda ko‘p. Qadamni kattalashtiring.";
+      const x0=(W-(nx-1)*st)/2,y0=(H-(ny-1)*st)/2;let out=roundRect(W,H,0);
+      for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){out+=E.circle(x0+i*st,y0+j*st,d1/2);if(d2>0&&i<nx-1&&j<ny-1)out+=E.circle(x0+(i+.5)*st,y0+(j+.5)*st,d2/2)}
+      if(mh>0){if(mh>=m)throw"Mahkamlash teshigi chetdagi bo‘sh joyga sig‘maydi.";[[m/2,m/2],[W-m/2,m/2],[W-m/2,H-m/2],[m/2,H-m/2]].forEach(([x,y])=>out+=E.circle(x,y,mh/2))}
+      return out},
+    label:p=>`Doira naqsh ${p.W}×${p.H}`}
+});
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
