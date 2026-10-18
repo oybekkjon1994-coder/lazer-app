@@ -34,14 +34,25 @@ jobs:
       - name: Ikonka va splash
         run: npx @capacitor/assets generate --android --iconBackgroundColor '#0e1214' --splashBackgroundColor '#0e1214' || echo "Ikonka yaratilmadi"
 
+      - name: Versiya raqami
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+
       - name: APK yig'ish
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: APK nomini o'zgartirish
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk lazer.apk
+      - name: Doimiy kalit bilan imzolash
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out lazer.apk aligned.apk
+          $BT/apksigner verify --print-certs lazer.apk
 
       - uses: actions/upload-artifact@v4
         with:
