@@ -25,8 +25,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 header h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,38px);letter-spacing:-.02em;margin:0;text-wrap:balance}
 header p{margin:4px 0 0;color:var(--muted)}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
-.tabs button{border:0;background:transparent;padding:9px 2px;font:600 clamp(11px,3.2vw,14px) var(--body);min-width:0;overflow-wrap:anywhere;color:var(--muted);border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{border:0;background:transparent;padding:9px 2px;font:600 clamp(10px,2.55vw,14px) var(--body);min-width:0;overflow-wrap:normal;letter-spacing:-.01em;color:var(--muted);border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
 .tabs button small{font:500 11px var(--mono);opacity:.8}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
 .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
@@ -113,6 +113,11 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 .mockov{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(16px + env(safe-area-inset-top,0px)) 40px}
 .mockov .wrap{gap:14px}.mockov .mh{font-family:var(--display);font-size:22px;margin:0}
 #mockCv{width:100%;height:auto;aspect-ratio:auto;border-radius:8px;background:var(--panel)}
+.licbar{position:sticky;top:0;z-index:40;display:block;width:100%;border:0;border-radius:0;padding:calc(8px + env(safe-area-inset-top,0px)) 16px 8px;background:#f0683a;color:#fff;font:600 13px var(--body);text-align:center}
+.lic-code{font:700 30px var(--mono);letter-spacing:.08em;padding:10px 0;user-select:all}
+.lic-steps{padding-left:20px;line-height:1.6}
+.qtab{overflow-x:auto}.qtab table{width:100%;border-collapse:collapse;font-size:14px}.qtab th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:4px 6px;font-weight:600}
+.qtab td{padding:7px 6px;border-top:1px solid var(--line);vertical-align:middle}.qtab td.num{white-space:nowrap;font-family:var(--mono);font-size:13px}.qtab input{width:76px;padding:6px 6px;font-size:13px}.qtab td:last-child{font-size:12px}.qtab td,.qtab th{padding-left:4px;padding-right:4px}
 .soon{display:flex;flex-direction:column;gap:8px;max-width:60ch}
 .soon h2{font-family:var(--display);font-weight:700;font-size:22px;margin:0}
 </style>
@@ -120,7 +125,7 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 <div class="wrap">
   <header>
     <h1>Lazer kesish ustaxonasi</h1>
-    <p>Narx hisoblash, detal chizish, list joylashtirish, buyurtmalar va metall og‘irligi — bitta joyda.</p>
+    <p>Narx hisoblash, detal chizish, list joylashtirish, buyurtmalar, metall va qurilish hisobi — bitta joyda.</p>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -129,6 +134,7 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
     <button role="tab" id="tab-nest" aria-selected="false">Nesting<small>3</small></button>
     <button role="tab" id="tab-buy" aria-selected="false">Buyurtma<small>4</small></button>
     <button role="tab" id="tab-metal" aria-selected="false">Metall<small>5</small></button>
+    <button role="tab" id="tab-qur" aria-selected="false">Qurilish<small>6</small></button>
   </nav>
 
   <!-- ===== 1. NARX ===== -->
@@ -287,6 +293,23 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
       <p class="note">Og‘irlik nazariy: profil va burchak radiuslari hisobga olinmaydi, shuning uchun GOST jadvalidan 1–3% farq qilishi mumkin.</p>
     </section>
   </div>
+  <!-- ===== 6. QURILISH ===== -->
+  <div id="p-qur" class="grid" hidden>
+    <section class="card">
+      <div class="label">Nimani hisoblaymiz</div>
+      <div class="parts" id="qtypes"></div>
+      <div class="params" id="qparams"></div>
+      <div class="warn" id="qwarn" hidden></div>
+    </section>
+    <section class="card">
+      <div class="label">Kerakli materiallar</div>
+      <div class="qtab"><table><thead><tr><th>Material</th><th>Miqdori</th><th>Narxi</th><th>Summa</th></tr></thead><tbody id="qrows"></tbody></table></div>
+      <div class="total"><span class="label">Jami narx</span><span class="sum" id="qSum">—</span><span class="calc" id="qInfo"></span></div>
+      <div class="actions"><button type="button" id="qCopy">Smetani nusxalash</button><button type="button" id="qShare" class="primary">Mijozga yuborish</button></div>
+      <div class="toast" id="qtoast" aria-live="polite"></div>
+      <p class="note">Narxlarni bir marta yozsangiz, eslab qoladi. Hisob odatiy sarf me’yorlari bo‘yicha taxminiy — haqiqiy sarf 5–10% farq qilishi mumkin.</p>
+    </section>
+  </div>
   <div id="p-buy" class="wrap" style="max-width:none" hidden>
     <div class="kpis">
       <div class="kpi"><span class="label">Faol</span><b id="kActive">0</b></div>
@@ -359,7 +382,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");
 
 /* ---------- tabs ---------- */
-const TABS=["narx","dxf","nest","buy","metal"];
+const TABS=["narx","dxf","nest","buy","metal","qur"];
 function showTab(t){TABS.forEach(k=>{$("tab-"+k).setAttribute("aria-selected",k===t);$("p-"+k).hidden=k!==t});
   try{localStorage.setItem("lazerTab",t)}catch(_){}; if(t==="narx")draw($("cv"),current); if(t==="dxf")draw($("gcv"),gen); if(t==="nest")drawSheet();}
 TABS.forEach(k=>$("tab-"+k).addEventListener("click",()=>showTab(k)));
@@ -1363,6 +1386,91 @@ function silGallery(){if(!sThumbs){sThumbs={};const css=getComputedStyle(documen
 ["clock","lamp","mirror","kashpo","shelf","decor","ochoq","kamin","photo"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)["clock","lamp","mirror","kashpo","shelf","decor","ochoq","kamin","photo"].forEach(k=>{if(s[k])Object.assign(vals[k],s[k])})}catch(_){}
 
+/* ---------- darvoza rasmidan: mijoz rasmi + o‘lchamlari → o‘lchamli ko‘rinish va DXF ---------- */
+const GPH={img:null,name:"",pts:[],rect:null,key:""};
+PARTS.gate={group:"tpl",name:"Darvoza rasmidan (o‘lchamga moslash)",rerender:["nl"],
+  note:"Mijoz yuborgan darvoza rasmini tanlang va suratda darvozaning 4 burchagini bosing. Mijozning o‘lchamlarini yozing — rasm aynan shu o‘lchamga to‘g‘rilanadi, o‘lchamlar chizig‘i bilan ko‘rsatiladi va kesish uchun DXF chiqadi. Naqsh to‘q (metall) bo‘lib, orasi och bo‘lsa yaxshi chiqadi; chiqmasa «Chegara»ni surib ko‘ring.",
+  fields:[["W","Darvoza eni (mm)",3000],["H","Darvoza bo‘yi (mm)",2000],["nl","Tavaqalar soni","2","select",[["1","1 ta"],["2","2 ta"],["3","3 ta (kalitka bilan)"]]],
+    ["kw","Kalitka eni (mm)",900,"num",null,p=>p.nl==="3"],["gap","Tavaqalar orasidagi tirqish (mm)",10,"num",null,p=>p.nl!=="1"],["m","Rama eni (mm)",40],
+    ["thr","Chegara (0–255)",120],["inv","Metall rangi rasmda","toq","select",[["toq","To‘q — metall qora, orasi och"],["och","Och — metall oq, orasi to‘q"]]],
+    ["sm","Silliqlash (0–3)",1],["min","Mayda dog‘larni o‘chirish (mm²)",150]],
+  build(p){const {W,H,m}=p;if(!(W>200&&H>200))throw"Darvoza eni va bo‘yini kiriting.";if(m<10)throw"Rama eni kamida 10 mm bo‘lsin.";
+    const leaves=gateLeaves(p);if(leaves.some(([a,b])=>b-a<2*m+50))throw"Tavaqa juda tor — eni yoki kalitka enini tekshiring.";
+    let out="";for(const [a,b] of leaves)out+=E.poly([[a,0],[b,0],[b,H],[a,H]]);
+    const R=gateRect();if(!R){this.warn=GPH.img?"Suratda darvozaning 4 burchagini bosing.":"Darvoza rasmini tanlang — hozircha faqat tavaqalar konturi.";return out}
+    const k=R.w/W,bin=new Uint8Array(R.w*R.h),thr=p.thr,inv=p.inv==="och";
+    for(let y=0;y<R.h;y++)for(let x=0;x<R.w;x++){const mmx=x/k,mmy=H-y/k,lf=leaves.find(([a,b])=>mmx>=a&&mmx<b);let v=0;
+      if(lf){const inFrame=mmx<lf[0]+m||mmx>=lf[1]-m||mmy<m||mmy>H-m;v=inFrame?0:((R.g[y*R.w+x]<thr)!==inv?0:1)}bin[y*R.w+x]=v}
+    const seen=new Uint8Array(R.w*R.h),q=new Int32Array(R.w*R.h);let qh=0,qt=0;
+    for(let y=0;y<R.h;y++)for(let x=0;x<R.w;x++){const i=y*R.w+x;if(bin[i]===0&&(x<=1||y<=1||x>=R.w-2||y>=R.h-2||(()=>{const mmx=x/k,lf=leaves.find(([a,b])=>mmx>=a&&mmx<b);return lf&&(mmx<lf[0]+m/2||mmx>=lf[1]-m/2)})())&&!seen[i]){seen[i]=1;q[qt++]=i}}
+    while(qh<qt){const i=q[qh++],x=i%R.w,y=(i/R.w)|0;for(const j of [x>0?i-1:-1,x<R.w-1?i+1:-1,y>0?i-R.w:-1,y<R.h-1?i+R.w:-1])if(j>=0&&!seen[j]&&bin[j]===0){seen[j]=1;q[qt++]=j}}
+    let isl=0;for(let i=0;i<bin.length;i++)if(bin[i]===0&&!seen[i]){bin[i]=1;isl++}
+    let n=0,drop=0;const minA=Math.max(0,p.min);
+    for(const L of traceBin(bin,R.w,R.h,Math.max(0,Math.min(3,Math.round(p.sm))))){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+      if(Math.abs(ar/2)/(k*k)<minA){drop++;continue}out+=E.poly(L.map(([x,y])=>[x/k,H-y/k]));n++}
+    this.warn=`${n} ta kesiladigan teshik.`+(isl/(k*k)>200?` Ramaga ulanmagan (osilib qolgan) metall bo‘laklar olib tashlandi — kerak bo‘lsa ularni ko‘prik bilan ulang.`:"")+(drop?` ${drop} ta mayda dog‘ olib tashlandi.`:"")+(n>3000?" Juda ko‘p — «Chegara» yoki «Mayda dog‘lar»ni oshiring.":"");return out},
+  label:p=>`Darvoza ${p.W}×${p.H}`};
+function gateLeaves(p){const {W}=p,g=p.nl==="1"?0:Math.max(0,p.gap);if(p.nl==="1")return [[0,W]];
+  if(p.nl==="2"){const w=(W-g)/2;return [[0,w],[w+g,W]]}const kw=Math.min(p.kw,W/2),w=(W-kw-2*g)/2;return [[0,w],[w+g,2*w+g],[2*w+2*g,W]]}
+function gateQuad(){const P=GPH.pts;if(P.length<4)return null;const s=P.slice(0,4).sort((u,v)=>u[1]-v[1]),tp=s.slice(0,2).sort((u,v)=>u[0]-v[0]),bt=s.slice(2).sort((u,v)=>u[0]-v[0]);return [tp[0],tp[1],bt[1],bt[0]]}
+function gateRect(){const q=gateQuad(),p=vals.gate;if(!q||!GPH.img)return null;const key=JSON.stringify([q,p.W,p.H,GPH.name]);if(GPH.key===key&&GPH.rect)return GPH.rect;
+  const img=GPH.img,s=Math.min(1,2000/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+  const x=c.getContext("2d");x.drawImage(img,0,0,c.width,c.height);const src=x.getImageData(0,0,c.width,c.height).data;c.width=c.height=0;
+  const k=Math.min(1400/p.W,1400/p.H),w=Math.max(2,Math.round(p.W*k)),h=Math.max(2,Math.round(p.H*k)),Hm=homog(q.map(([a,b])=>[a*s,b*s])),g=new Uint8Array(w*h),rgb=new Uint8ClampedArray(w*h*4),sw=Math.round(img.naturalWidth*s),sh=Math.round(img.naturalHeight*s);
+  for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const [u,v]=Hm((xx+.5)/w,(yy+.5)/h),X=Math.min(sw-1,Math.max(0,u|0)),Y=Math.min(sh-1,Math.max(0,v|0)),i=(Y*sw+X)*4,o=yy*w+xx;
+    g[o]=(src[i]*299+src[i+1]*587+src[i+2]*114)/1000;rgb.set([src[i],src[i+1],src[i+2],255],o*4)}
+  GPH.rect={w,h,g,rgb};GPH.key=key;return GPH.rect}
+function gateSheet(mode){const p=vals.gate,{W,H}=p,leaves=gateLeaves(p),R=gateRect(),S=1500/Math.max(W,H*1.2),pw=W*S,ph=H*S,mx=150,mt=170,mb=230,cap=110,cv=document.createElement("canvas");
+  cv.width=Math.round(pw+2*mx);cv.height=Math.round(ph+mt+mb+cap);const x=cv.getContext("2d");x.fillStyle="#f4f3ef";x.fillRect(0,0,cv.width,cv.height);
+  const X=v=>mx+v*S,Y=v=>mt+(H-v)*S;
+  if(mode==="rasm"&&R){const c=document.createElement("canvas");c.width=R.w;c.height=R.h;c.getContext("2d").putImageData(new ImageData(R.rgb,R.w,R.h),0,0);x.drawImage(c,X(0),Y(H),pw,ph)}
+  else if(gen){const P=new Path2D();for(const L of mockLoops(gen)){L.forEach(([a,b],i)=>i?P.lineTo(X(a),Y(b)):P.moveTo(X(a),Y(b)));P.closePath()}
+    x.save();x.shadowColor="rgba(0,0,0,.35)";x.shadowBlur=14;x.shadowOffsetX=6;x.shadowOffsetY=8;x.fillStyle=finishFill(x,mockSt.fin,mockSt.col,X(0),Y(H),pw,ph);x.fill(P,"evenodd");x.restore()}
+  x.strokeStyle="#c2410c";x.fillStyle="#c2410c";x.lineWidth=2.5;x.font="700 40px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";
+  const arr=(x1,y1,x2,y2)=>{const a=Math.atan2(y2-y1,x2-x1),L=18;x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();for(const [px,py,aa] of [[x1,y1,a],[x2,y2,a+Math.PI]]){x.beginPath();x.moveTo(px,py);x.lineTo(px+L*Math.cos(aa+.35),py+L*Math.sin(aa+.35));x.lineTo(px+L*Math.cos(aa-.35),py+L*Math.sin(aa-.35));x.closePath();x.fill()}};
+  const lab=(t,cx,cy,rot)=>{x.save();x.translate(cx,cy);if(rot)x.rotate(-Math.PI/2);const w=x.measureText(t).width+24;x.fillStyle="#f4f3ef";x.fillRect(-w/2,-26,w,52);x.fillStyle="#c2410c";x.fillText(t,0,0);x.restore()};
+  const ext=(x1,y1,x2,y2)=>{x.save();x.lineWidth=1.5;x.setLineDash([6,6]);x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();x.restore()};
+  const ty=mt-80;ext(X(0),Y(H)-10,X(0),ty-20);ext(X(W),Y(H)-10,X(W),ty-20);arr(X(0),ty,X(W),ty);lab(`${Math.round(W)} mm`,(X(0)+X(W))/2,ty);
+  const lx=mx-80;ext(X(0)-10,Y(H),lx-20,Y(H));ext(X(0)-10,Y(0),lx-20,Y(0));arr(lx,Y(0),lx,Y(H));lab(`${Math.round(H)} mm`,lx,(Y(0)+Y(H))/2,true);
+  if(leaves.length>1){const by=Y(0)+80;x.font="700 34px system-ui,sans-serif";for(const [a,b] of leaves){ext(X(a),Y(0)+10,X(a),by+20);ext(X(b),Y(0)+10,X(b),by+20);arr(X(a),by,X(b),by);lab(`${(b-a).toFixed(0)}`,(X(a)+X(b))/2,by)}
+    if(p.gap>0){x.font="500 28px system-ui,sans-serif";x.fillStyle="#555";x.fillText(`tirqish ${p.gap} mm`,cv.width/2,by+70)}}
+  x.textAlign="left";x.fillStyle="rgba(15,17,19,.92)";x.fillRect(0,cv.height-cap,cv.width,cap);x.fillStyle="#fff";x.font="700 40px system-ui,sans-serif";x.fillText(`Darvoza ${W} × ${H} mm`+(leaves.length>1?` · ${leaves.length} tavaqa`:""),40,cv.height-cap/2-16);
+  x.font="500 28px system-ui,sans-serif";x.fillStyle="#d9dde0";x.fillText(mode==="rasm"?"Mijoz rasmi o‘lchamga moslangan":"Kesiladigan ko‘rinish (DXF)",40,cv.height-cap/2+26);
+  const br=[mockSt.brand,mockSt.phone].filter(Boolean).join("  ·  ");if(br){x.textAlign="right";x.font="700 34px system-ui,sans-serif";x.fillStyle="#f0683a";x.fillText(br,cv.width-40,cv.height-cap/2);x.textAlign="left"}
+  return cv}
+let gView="metall";
+function drawGate(){const cv=$("gtCv");if(!cv)return;const x=cv.getContext("2d"),img=GPH.img;
+  if(!img){cv.width=800;cv.height=260;x.fillStyle="#888";x.font="500 26px system-ui,sans-serif";x.textAlign="center";x.fillText("Darvoza rasmini tanlang",400,130);x.textAlign="left"}
+  else{const s=Math.min(1,1000/Math.max(img.naturalWidth,img.naturalHeight));cv.width=Math.round(img.naturalWidth*s);cv.height=Math.round(img.naturalHeight*s);x.drawImage(img,0,0,cv.width,cv.height);
+    const q=gateQuad();x.lineWidth=3;x.strokeStyle="#f0683a";if(q){x.beginPath();q.forEach(([a,b],i)=>i?x.lineTo(a*s,b*s):x.moveTo(a*s,b*s));x.closePath();x.stroke()}
+    const rr=Math.max(9,cv.width/80);GPH.pts.forEach(([a,b],i)=>{x.beginPath();x.arc(a*s,b*s,rr,0,7);x.fillStyle="#f0683a";x.fill();x.fillStyle="#fff";x.font=`700 ${rr*1.2}px system-ui,sans-serif`;x.textAlign="center";x.textBaseline="middle";x.fillText(i+1,a*s,b*s)});x.textAlign="left";x.textBaseline="alphabetic"}
+  const need=Math.max(0,4-GPH.pts.length);$("gtHint").textContent=!img?"":need?`Darvozaning burchaklarini bosing — yana ${need} ta (tartibi muhim emas).`:"Tayyor. Nuqtalarni surib to‘g‘rilash mumkin.";
+  const out=$("gtOut");if(out){const sh=gateSheet(gView);out.width=sh.width;out.height=sh.height;out.getContext("2d").drawImage(sh,0,0)}}
+function gateUI(){const host=$("params");if(!host)return;const d=document.createElement("div");d.className="field wide";
+  d.innerHTML=`<span class="label">Mijoz yuborgan darvoza rasmi</span><div class="drop"><div class="fname" id="gtN"></div><label class="btn primary">Rasm tanlash<input id="gtF" type="file" accept="image/*" hidden></label></div>
+    <canvas id="gtCv" width="800" height="260" style="width:100%;height:auto;touch-action:none;border-radius:8px;background:var(--panel);margin-top:8px" aria-label="Rasm — darvoza burchaklarini bosing"></canvas>
+    <div class="actions"><button type="button" id="gtUndo">Oxirgi nuqtani o‘chirish</button><button type="button" id="gtClr">Tozalash</button></div><p class="note" id="gtHint"></p>
+    <span class="label" style="margin-top:10px">O‘lchamli ko‘rinish (mijozga)</span><div class="chips" id="gtView"><button type="button" data-v="metall">Kesiladigan (metall)</button><button type="button" data-v="rasm">Mijoz rasmi o‘lchamda</button></div>
+    <canvas id="gtOut" style="width:100%;height:auto;border-radius:8px;margin-top:8px" aria-label="O‘lchamli ko‘rinish"></canvas>
+    <div class="actions"><button type="button" id="gtSave" class="primary">Rasmni saqlash / yuborish</button></div><div class="toast" id="gtT" aria-live="polite"></div>`;
+  const anchor=host.querySelector("p.note");host.insertBefore(d,anchor||null);$("gtN").textContent=GPH.img?GPH.name:"Rasm tanlanmagan";
+  const vb=()=>$("gtView").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===gView));vb();
+  $("gtView").addEventListener("click",e=>{const b=e.target.closest("button[data-v]");if(!b)return;gView=b.dataset.v;vb();drawGate()});
+  $("gtF").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{GPH.img=im;GPH.name=f.name;GPH.pts=[];GPH.rect=null;GPH.key="";$("gtN").textContent=f.name;build()};im.onerror=()=>{$("gtHint").textContent="Rasmni ochib bo‘lmadi."};im.src=u});
+  const cv=$("gtCv");let drag=-1;const pos=e=>{const r=cv.getBoundingClientRect(),s=GPH.img.naturalWidth/r.width;return [(e.clientX-r.left)*s,(e.clientY-r.top)*s,s]};
+  cv.addEventListener("pointerdown",e=>{if(!GPH.img)return;const [a,b,s]=pos(e);let bi=-1,bd=26*s;GPH.pts.forEach(([u,v],i)=>{const dd=Math.hypot(u-a,v-b);if(dd<bd){bd=dd;bi=i}});
+    if(bi<0){if(GPH.pts.length>=4)return;GPH.pts.push([a,b]);bi=GPH.pts.length-1;drawGate()}drag=bi;cv.setPointerCapture(e.pointerId);e.preventDefault()});
+  cv.addEventListener("pointermove",e=>{if(drag<0)return;const [a,b]=pos(e);GPH.pts[drag]=[a,b];drawGate()});
+  const up=()=>{if(drag<0)return;drag=-1;qBuild()};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  $("gtUndo").addEventListener("click",()=>{GPH.pts.pop();qBuild()});$("gtClr").addEventListener("click",()=>{GPH.pts=[];qBuild()});
+  $("gtSave").addEventListener("click",()=>{gateSheet(gView).toBlob(async blob=>{if(!blob)return;const nm=`darvoza_${vals.gate.W}x${vals.gate.H}.png`,t=$("gtT");
+    if(typeof isNative==="function"&&isNative())return nativeShare(nm,blob,t);
+    const dl=await (window.claude?.use?.("downloads")??Promise.resolve(null)).catch(()=>null);if(!dl){t.textContent="Bu ko‘rinishda saqlab bo‘lmaydi — rasmni bosib turib saqlang.";return}
+    try{await dl.save({filename:nm,data:blob});t.textContent=nm+" saqlandi."}catch(e){t.textContent=e&&e.code==="declined"?"Saqlash bekor qilindi.":"Saqlab bo‘lmadi."}},"image/png")});
+  drawGate()}
+if(!vals.gate){vals.gate={};PARTS.gate.fields.forEach(([id,,v])=>vals.gate[id]=v)}
+try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s&&s.gate)Object.assign(vals.gate,s.gate)}catch(_){}
+
 /* tugmalar va maydonlar */
 const GROUPS={det:"Detallar",tpl:"Shablonlar",gen:"Matn va rasm"};
 $("parts").innerHTML=Object.entries(GROUPS).map(([gk,gn])=>`<span class="pgroup">${gn}</span>`+Object.entries(PARTS).filter(([,v])=>v.group===gk).map(([k,v])=>`<button data-part="${k}" aria-pressed="${k===part}">${v.name}</button>`).join("")).join("");
@@ -1439,6 +1547,42 @@ async function offerZip(base,files,toast){
 }
 const safeName=s=>s.replace(/[Ø×,]/g,m=>({"Ø":"D","×":"x",",":""}[m])).replace(/\s+/g,"_").replace(/[^A-Za-z0-9_\-]/g,"");
 $("save").addEventListener("click",()=>{if(!gen)return;const base=safeName(genName)||"detal";offerZip(base,[[base+".dxf",genText]],$("gtoast"))});
+/* ---------- litsenziya: 3 kun sinov, keyin kalit bilan (faqat APK) ---------- */
+const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=3,LIC_BOT="__BOT__";
+const LIC={ok:false,code:"",left:0,ready:false};
+const b32=u=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let bits=0,v=0,o="";for(const b of u){v=((v<<8)|b)&0xffff;bits+=8;while(bits>=5){o+=A[(v>>>(bits-5))&31];bits-=5}}return o};
+const b64u=s=>{s=String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
+async function licCode(){let id="";try{const D=window.Capacitor.Plugins.Device;if(D)id=(await D.getId()).identifier||""}catch(_){}
+  if(!id){try{id=localStorage.getItem("lzDev")||""}catch(_){}if(!id){id=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join("");try{localStorage.setItem("lzDev",id)}catch(_){}}}
+  const h=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode("lazer:"+id))),c=b32(h).slice(0,10);return c.slice(0,5)+"-"+c.slice(5)}
+async function licCheck(code,key){try{const k=await crypto.subtle.importKey("jwk",LIC_PUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
+  return await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},k,b64u(key),new TextEncoder().encode("LZ1|"+code))}catch(_){return false}}
+function licBar(){let b=$("licBar");if(!b){b=document.createElement("button");b.id="licBar";b.type="button";b.className="licbar";document.body.prepend(b);b.addEventListener("click",()=>licOpen())}
+  b.hidden=LIC.ok;b.textContent=LIC.left>0?`Sinov: ${Math.ceil(LIC.left)} kun qoldi · fayl saqlash yopiq — Faollashtirish`:"Sinov muddati tugadi — Faollashtirish"}
+function licOpen(msg){let o=$("licOv");if(!o){o=document.createElement("div");o.id="licOv";o.className="mockov";
+    o.innerHTML=`<div class="wrap"><div class="otop"><h2 class="mh">Ilovani faollashtirish</h2><button type="button" id="licX">Yopish ✕</button></div>
+    <div class="card"><p class="note" id="licMsg"></p><span class="label">Telefoningiz kodi</span><div class="lic-code" id="licC"></div>
+    <div class="actions"><button type="button" id="licCopy">Kodni nusxalash</button><button type="button" id="licSend" class="primary">Botga o‘tish</button></div>
+    <ol class="note lic-steps"><li>Kodni sotuv botiga yuboring: <b>@${LIC_BOT}</b></li><li>To‘lov qiling va chek rasmini botga yuboring.</li><li>Bot yuborgan kalitni pastga qo‘ying.</li></ol>
+    <label class="label" for="licK">Faollashtirish kaliti</label><textarea id="licK" rows="3" autocomplete="off" spellcheck="false" style="font-family:var(--mono);width:100%"></textarea>
+    <div class="actions"><button type="button" id="licGo" class="primary">Faollashtirish</button></div><div class="toast" id="licT" aria-live="polite"></div></div></div>`;
+    document.body.appendChild(o);
+    $("licX").addEventListener("click",()=>{if(LIC.left>0||LIC.ok){o.hidden=true;document.body.style.overflow=""}});
+    $("licCopy").addEventListener("click",()=>{navigator.clipboard.writeText(LIC.code).then(()=>$("licT").textContent="Kod nusxalandi.").catch(()=>$("licT").textContent="Kodni qo‘lda yozib oling.")});
+    $("licSend").addEventListener("click",()=>{location.href="https://t.me/"+LIC_BOT+"?start=k_"+LIC.code.replace("-","")});
+    $("licGo").addEventListener("click",async()=>{const k=$("licK").value.trim();if(!k){$("licT").textContent="Kalitni qo‘ying.";return}
+      if(await licCheck(LIC.code,k)){try{localStorage.setItem("lzKey",k)}catch(_){};LIC.ok=true;licBar();$("licT").textContent="Ilova faollashtirildi. Rahmat!";setTimeout(()=>{o.hidden=true;document.body.style.overflow=""},1200)}
+      else $("licT").textContent="Kalit noto‘g‘ri yoki boshqa telefon uchun berilgan. Botdagi kalitni to‘liq nusxalab qo‘ying."})}
+  $("licC").textContent=LIC.code||"…";$("licMsg").textContent=msg||(LIC.left>0?`Sinov muddati: ${Math.ceil(LIC.left)} kun qoldi. Sinov davrida hamma bo‘lim ishlaydi, faqat fayl saqlash va ulashish yopiq.`:"Sinov muddati tugadi. Ilovadan foydalanishni davom ettirish uchun faollashtiring.");
+  $("licX").hidden=!(LIC.left>0||LIC.ok);o.hidden=false;document.body.style.overflow="hidden"}
+async function licInit(){if(!isNative()){LIC.ok=true;LIC.ready=true;return}
+  LIC.code=await licCode();let key="";try{key=localStorage.getItem("lzKey")||""}catch(_){}
+  if(key&&await licCheck(LIC.code,key)){LIC.ok=true;LIC.ready=true;return}
+  let t0=0;try{t0=+localStorage.getItem("lzT")||0;if(!t0||t0>Date.now()+864e5){t0=Date.now();localStorage.setItem("lzT",String(t0))}}catch(_){t0=Date.now()}
+  LIC.left=LIC_DAYS-(Date.now()-t0)/864e5;LIC.ready=true;licBar();if(LIC.left<=0)licOpen()}
+const _nsL=nativeShare;nativeShare=async function(name,data,toast){if(!LIC.ok){if(toast)toast.textContent="Sinov davrida fayl saqlash yopiq — ilovani faollashtiring.";licOpen("Fayl saqlash va ulashish faollashtirilgan ilovada ishlaydi.");return}return _nsL(name,data,toast)};
+licInit();
+
 
 /* ---------- 3. nesting ---------- */
 const shoelace=pts=>{let a=0;for(let i=0,n=pts.length;i<n;i++){const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%n];a+=x1*y2-x2*y1}return Math.abs(a)/2};
@@ -1763,6 +1907,87 @@ const _rm4=renderMock;renderMock=function(){if(mockSt.bg!=="photo"||!mockPhoto||
   const br=[mockSt.brand,mockSt.phone].filter(Boolean).join("  ·  ");if(br){x.textAlign="right";x.font="700 34px system-ui,sans-serif";x.fillStyle="#f0683a";x.fillText(br,W-40,Hp+cap/2);x.textAlign="left"}};
 const _rp4=renderParams;renderParams=function(){_rp4();const P=PARTS[part];if(P.gal)patGallery(P.gal);if(part==="decor")silGallery();if(part==="photo")photoUI()};
 const _b4=build;build=function(){_b4();if(part==="photo")drawPhoto()};
+HEAVY.add("gate");
+const _rpG5=renderParams;renderParams=function(){_rpG5();if(part==="gate")gateUI()};
+const _bG5=build;build=function(){_bG5();if(part==="gate")drawGate()};
+/* ---------- 6. qurilish kalkulyatori ---------- */
+// Me'yorlar taxminiy (SNiP/odatiy sarf). Sement — 50 kg qop, zichligi 1300 kg/m³ (sochma).
+const Q_MIX=(V,r)=>({cem:V*1.3/(1+r)*1300,sand:V*1.3*r/(1+r)});
+const Q_BET={M150:230,M200:280,M250:330,M300:380};
+const QT={
+  gisht:{name:"G‘isht devor",fields:[["L","Devorlar uzunligi (jami), m",20],["H","Balandligi, m",3],["th","Devor qalinligi","250","sel",[["120","Yarim g‘isht — 12 sm"],["250","Bir g‘isht — 25 sm"],["380","Bir yarim g‘isht — 38 sm"],["510","Ikki g‘isht — 51 sm"]]],
+      ["bt","G‘isht o‘lchami","g","sel",[["g","Oddiy 250×120×65"],["g15","Qalin 250×120×88"]]],["op","Eshik va derazalar yuzasi, m²",6],["j","Chok qalinligi, mm",10],["mix","Qorishma (sement : qum)","4","sel",[["3","1 : 3"],["4","1 : 4"],["5","1 : 5"]]],["rz","Zaxira, %",5]],
+    calc(p){const A=p.L*p.H-p.op;if(!(A>0))throw"Devor yuzasi 0 dan katta bo‘lsin.";const V=A*p.th/1000,[l,w,h]=p.bt==="g15"?[250,120,88]:[250,120,65],j=Math.max(0,p.j);
+      const per=1/((l+j)*(w+j)*(h+j)*1e-9),n=Math.ceil(V*per*(1+p.rz/100)),mort=Math.max(0,V-V*per*l*w*h*1e-9),m=Q_MIX(mort,+p.mix);
+      return {rows:[["gisht","G‘isht",n,"dona"],["cem","Sement (50 kg qop)",Math.ceil(m.cem/50),"qop"],["sand","Qum",m.sand,"m³"]],info:`Devor yuzasi ${A.toFixed(1)} m², hajmi ${V.toFixed(2)} m³. 1 m³ ga ${Math.round(per)} ta g‘isht. Qorishma ${mort.toFixed(2)} m³.`}}},
+  blok:{name:"Blok / gazoblok",fields:[["L","Devorlar uzunligi (jami), m",20],["H","Balandligi, m",3],["op","Eshik va derazalar yuzasi, m²",6],["bl","Blok uzunligi, mm",600],["bh","Blok balandligi, mm",200],["bw","Blok qalinligi (devor qalinligi), mm",300],
+      ["jt","Terish","yelim","sel",[["yelim","Yelim bilan (gazoblok)"],["qor","Qorishma bilan (shlakoblok)"]]],["rz","Zaxira, %",5]],
+    calc(p){const A=p.L*p.H-p.op;if(!(A>0))throw"Devor yuzasi 0 dan katta bo‘lsin.";if(!(p.bl>0&&p.bh>0&&p.bw>0))throw"Blok o‘lchamlarini kiriting.";const V=A*p.bw/1000,y=p.jt==="yelim",j=y?3:10;
+      const n=Math.ceil(A/((p.bl+j)*(p.bh+j)*1e-6)*(1+p.rz/100)),rows=[["blok","Blok",n,"dona"]];
+      if(y)rows.push(["kley","Blok yelimi (25 kg qop)",Math.ceil(V*25/25),"qop"]);else{const mort=V*.2,m=Q_MIX(mort,4);rows.push(["cem","Sement (50 kg qop)",Math.ceil(m.cem/50),"qop"],["sand","Qum",m.sand,"m³"])}
+      return {rows,info:`Devor yuzasi ${A.toFixed(1)} m², hajmi ${V.toFixed(2)} m³ (${(V*1).toFixed(2)} m³ blok).`}}},
+  beton:{name:"Beton (poydevor, plita)",fields:[["sh","Nima quyiladi","plita","sel",[["plita","Plita / pol"],["lenta","Lenta poydevor"],["ustun","Ustunlar"]]],
+      ["a","Uzunligi, m",10,"num",p=>p.sh==="plita"],["b","Eni, m",8,"num",p=>p.sh==="plita"],["t","Qalinligi, sm",15,"num",p=>p.sh==="plita"],
+      ["P","Poydevor uzunligi (perimetr), m",40,"num",p=>p.sh==="lenta"],["w","Poydevor eni, sm",40,"num",p=>p.sh==="lenta"],["h","Poydevor balandligi, sm",80,"num",p=>p.sh==="lenta"],
+      ["n","Ustunlar soni",8,"num",p=>p.sh==="ustun"],["ua","Ustun kesimi, sm (masalan 30)",30,"num",p=>p.sh==="ustun"],["uh","Ustun balandligi, m",3,"num",p=>p.sh==="ustun"],
+      ["mk","Beton markasi","M200","sel",[["M150","M150 — pol, tayyorlov"],["M200","M200 — poydevor, yo‘lak"],["M250","M250 — plita, ustun"],["M300","M300 — mustahkam"]]],["rz","Zaxira, %",5]],
+    calc(p){const V0=p.sh==="plita"?p.a*p.b*p.t/100:p.sh==="lenta"?p.P*p.w/100*p.h/100:p.n*(p.ua/100)**2*p.uh;if(!(V0>0))throw"O‘lchamlarni kiriting.";const V=V0*(1+p.rz/100),c=Q_BET[p.mk]||280;
+      return {rows:[["beton","Tayyor beton (zavoddan olinsa)",V,"m³"],["cem","yoki o‘zi qorilsa — Sement (50 kg qop)",Math.ceil(V*c/50),"qop"],["sand","Qum",V*.5,"m³"],["shag","Shag‘al (sheben)",V*.8,"m³"],["suv","Suv",V*185,"litr"]],
+        info:`Beton hajmi ${V0.toFixed(2)} m³ (+${p.rz}% zaxira). ${p.mk}: 1 m³ ga taxminan ${c} kg sement (M400).`}}},
+  arm:{name:"Armatura",fields:[["sh","Qayerga","tor","sel",[["tor","Plita to‘ri"],["lenta","Lenta poydevor"]]],
+      ["a","Plita uzunligi, m",10,"num",p=>p.sh==="tor"],["b","Plita eni, m",8,"num",p=>p.sh==="tor"],["st","Katak qadami, mm",200,"num",p=>p.sh==="tor"],["ly","Qatlamlar soni","2","sel",[["1","1 qatlam"],["2","2 qatlam"]],p=>p.sh==="tor"],
+      ["P","Poydevor uzunligi (perimetr), m",40,"num",p=>p.sh==="lenta"],["nb","Kesimdagi sterjenlar soni","4","sel",[["4","4 ta"],["6","6 ta"],["8","8 ta"]],p=>p.sh==="lenta"],["w","Poydevor eni, sm",40,"num",p=>p.sh==="lenta"],["h","Poydevor balandligi, sm",80,"num",p=>p.sh==="lenta"],["xs","Xomut qadami, mm",400,"num",p=>p.sh==="lenta"],
+      ["d","Armatura Ø, mm","12","sel",[["8","Ø8"],["10","Ø10"],["12","Ø12"],["14","Ø14"],["16","Ø16"]]],["ov","Ustma-ust ulash, %",10]],
+    calc(p){const d=+p.d,kg=L=>L*d*d*.00617,rows=[];let L=0,info="";
+      if(p.sh==="tor"){if(!(p.a>0&&p.b>0&&p.st>0))throw"O‘lchamlarni kiriting.";const nx=Math.floor(p.b*1000/p.st)+1,ny=Math.floor(p.a*1000/p.st)+1,ly=+p.ly;L=(nx*p.a+ny*p.b)*ly*(1+p.ov/100);
+        const cr=nx*ny*ly;rows.push(["arm",`Armatura Ø${d}`,kg(L),"kg"],["armd",`yoki 11.7 m lik sterjen`,Math.ceil(L/11.7),"dona"],["sim","Bog‘lash simi",cr*.3*.0089,"kg"]);info=`Jami uzunlik ${L.toFixed(0)} m, kesishmalar ${cr} ta. 1 m Ø${d} = ${(d*d*.00617).toFixed(3)} kg.`}
+      else{if(!(p.P>0&&p.w>0&&p.h>0))throw"O‘lchamlarni kiriting.";L=p.P*(+p.nb)*(1+p.ov/100);const nx=Math.ceil(p.P*1000/p.xs)+1,lx=2*((p.w-10)+(p.h-10))/100+.2,Lx=nx*lx;
+        rows.push(["arm",`Armatura Ø${d} (bo‘ylama)`,kg(L),"kg"],["armd",`yoki 11.7 m lik sterjen`,Math.ceil(L/11.7),"dona"],["xom","Xomut Ø6",Lx*.222,"kg"],["sim","Bog‘lash simi",nx*(+p.nb)*.3*.0089,"kg"]);info=`Bo‘ylama ${L.toFixed(0)} m, ${nx} ta xomut (har biri ${lx.toFixed(2)} m).`}
+      return {rows,info}}},
+  suvoq:{name:"Suvoq (shtukaturka)",fields:[["A","Devor yuzasi, m²",100],["t","Qalinligi, mm",20],["tp","Turi","sem","sel",[["sem","Sement-qum (1:4)"],["gips","Gipsli tayyor aralashma"]]]],
+    calc(p){if(!(p.A>0&&p.t>0))throw"Yuza va qalinlikni kiriting.";if(p.tp==="gips"){const kg=p.A*p.t*.9;return {rows:[["gips","Gipsli suvoq (30 kg qop)",Math.ceil(kg/30),"qop"]],info:`Sarf: 1 m² ga 1 sm qalinlikda ~9 kg. Jami ${kg.toFixed(0)} kg.`}}
+      const V=p.A*p.t/1000*1.1,m=Q_MIX(V,4);return {rows:[["cem","Sement (50 kg qop)",Math.ceil(m.cem/50),"qop"],["sand","Qum",m.sand,"m³"]],info:`Qorishma ${V.toFixed(2)} m³ (+10% yo‘qotish).`}}},
+  plitka:{name:"Plitka / kafel",fields:[["A","Yuzasi, m²",20],["pa","Plitka eni, sm",30],["pb","Plitka bo‘yi, sm",60],["rz","Zaxira (kesish), %",10]],
+    calc(p){if(!(p.A>0&&p.pa>0&&p.pb>0))throw"Yuza va plitka o‘lchamini kiriting.";const one=p.pa*p.pb/1e4,n=Math.ceil(p.A/one*(1+p.rz/100));
+      return {rows:[["plitka","Plitka",n,"dona"],["plm2","yoki",n*one,"m²"],["kley","Plitka yelimi (25 kg qop)",Math.ceil(p.A*5/25),"qop"],["zat","Zatirka (choc to‘ldiruvchi)",p.A*.5,"kg"]],info:`1 dona = ${one.toFixed(3)} m². Yelim sarfi ~5 kg/m².`}}},
+  tom:{name:"Tom (profnastil)",fields:[["sk","Skatlar soni","2","sel",[["1","1 skat (bir tomonlama)"],["2","2 skat"]]],["sl","Skat uzunligi (karnizdan tepaga), m",4.5],["rl","Tom uzunligi (karniz bo‘yi), m",12],
+      ["pw","List ishchi eni","1100","sel",[["1150","C8 — 1150 mm"],["1100","C20 / MP20 — 1100 mm"],["1000","C21 / NS35 — 1000 mm"],["1050","Metallocherepitsa — 1050 mm"]]],["nh","Karnizdan chiqishi, sm",10]],
+    calc(p){if(!(p.sl>0&&p.rl>0))throw"Tom o‘lchamlarini kiriting.";const sk=+p.sk,ll=p.sl+p.nh/100,per=Math.ceil(p.rl*1000/(+p.pw)),n=per*sk,A=n*ll*(+p.pw+50)/1000,rows=[["prof",`Profnastil list ${ll.toFixed(2)} m`,n,"dona"],["profm2","yoki",A,"m²"],["samorez","Tom samorezi",Math.ceil(n*ll*(+p.pw)/1000*8),"dona"]];
+      if(sk===2)rows.push(["konyok","Konyok planka (2 m)",Math.ceil(p.rl/1.9),"dona"]);rows.push(["karniz","Karniz planka (2 m)",Math.ceil(p.rl*sk/1.9),"dona"]);
+      return {rows,info:`Har bir skatga ${per} ta list, list uzunligi ${ll.toFixed(2)} m. Samorez ~8 ta/m².`}}},
+  boyoq:{name:"Bo‘yoq",fields:[["A","Bo‘yaladigan yuza, m²",50],["ly","Qatlamlar soni",2],["sf","Sarfi, g/m² (bankada yozilgan)",120],["bk","Banka hajmi, kg",3]],
+    calc(p){if(!(p.A>0&&p.ly>0&&p.sf>0))throw"Yuza, qatlam va sarfni kiriting.";const kg=p.A*p.ly*p.sf/1000;return {rows:[["boyoq","Bo‘yoq",kg,"kg"],["banka",`yoki ${p.bk} kg lik banka`,Math.ceil(kg/Math.max(.1,p.bk)),"dona"]],info:"Metall uchun gruntovka ham 1 qatlam hisobga oling."}}}
+};
+let qType="gisht";const qVals={},qPrice=(()=>{try{return JSON.parse(localStorage.getItem("lazerQPrice")||"{}")}catch(_){return {}}})();
+Object.entries(QT).forEach(([k,t])=>{qVals[k]={};t.fields.forEach(f=>qVals[k][f[0]]=f[2])});
+try{const s=JSON.parse(localStorage.getItem("lazerQ")||"null");if(s){Object.keys(s.v||{}).forEach(k=>{if(qVals[k])Object.assign(qVals[k],s.v[k])});if(QT[s.t])qType=s.t}}catch(_){}
+const qSave=()=>{try{localStorage.setItem("lazerQ",JSON.stringify({t:qType,v:qVals}));localStorage.setItem("lazerQPrice",JSON.stringify(qPrice))}catch(_){}};
+const qFmt=(v,u)=>u==="dona"||u==="qop"||u==="litr"?Math.ceil(v).toLocaleString("ru-RU"):(v<10?v.toFixed(2):v.toFixed(1)).replace(".",",");
+let qLast=null;
+function qRender(){$("qtypes").innerHTML=Object.entries(QT).map(([k,t])=>`<button type="button" data-q="${k}" aria-pressed="${k===qType}">${t.name}</button>`).join("");
+  const T=QT[qType],v=qVals[qType];$("qparams").innerHTML=T.fields.filter(f=>{const s=f[3]==="sel"?f[5]:f[4];return typeof s!=="function"||s(v)}).map(([id,lab,def,type,opt])=>{const fid="q-"+qType+"-"+id;
+    if(type==="sel")return `<div class="field"><label class="label" for="${fid}">${lab}</label><select id="${fid}">${opt.map(([o,t])=>`<option value="${o}"${String(v[id])===o?" selected":""}>${t}</option>`).join("")}</select></div>`;
+    return `<div class="field"><label class="label" for="${fid}">${lab}</label><input id="${fid}" type="number" step="any" inputmode="decimal" value="${v[id]}"></div>`}).join("");
+  T.fields.forEach(([id,,,type,opt])=>{const el=$("q-"+qType+"-"+id);if(!el)return;el.addEventListener(type==="sel"?"change":"input",e=>{v[id]=type==="sel"?e.target.value:(parseFloat(String(e.target.value).replace(",","."))||0);qSave();if(type==="sel")qRender();else qCalc()})});
+  qCalc()}
+function qCalc(){const T=QT[qType],p=qVals[qType],w=$("qwarn");w.hidden=true;let r;
+  try{r=T.calc(p)}catch(e){w.textContent=typeof e==="string"?e:e.message;w.hidden=false;$("qrows").innerHTML="";$("qSum").textContent="—";$("qInfo").textContent="";qLast=null;return}
+  qLast={name:T.name,...r};let tot=0;
+  $("qrows").innerHTML=r.rows.map(([k,n,q,u],i)=>{const pr=qPrice[k]||"",s=pr?q*(u==="dona"||u==="qop"?Math.ceil(q):1)/(u==="dona"||u==="qop"?q:1)*pr:0;return `<tr><td>${esc(n)}</td><td class="num"><b>${qFmt(q,u)}</b> ${u}</td><td><input type="number" min="0" step="any" inputmode="numeric" data-k="${k}" value="${pr}" placeholder="narx / ${u}" aria-label="${esc(n)} narxi"></td><td class="num" id="qs${i}">${s?Math.round(s).toLocaleString("ru-RU"):"—"}</td></tr>`}).join("");
+  const sums=()=>{tot=0;r.rows.forEach(([k,,q,u],i)=>{const pr=+qPrice[k]||0,qq=(u==="dona"||u==="qop")?Math.ceil(q):q,s=qq*pr;if(/^yoki/.test(r.rows[i][1]))return;tot+=s;$("qs"+i).textContent=s?Math.round(s).toLocaleString("ru-RU"):"—"});
+    r.rows.forEach(([k,n,q,u],i)=>{if(/^yoki/.test(n)){const pr=+qPrice[k]||0;$("qs"+i).textContent=pr?Math.round(((u==="dona"||u==="qop")?Math.ceil(q):q)*pr).toLocaleString("ru-RU"):"—"}});
+    $("qSum").textContent=tot?Math.round(tot).toLocaleString("ru-RU")+" so‘m":"—"};
+  $("qrows").querySelectorAll("input[data-k]").forEach(el=>el.addEventListener("input",e=>{const k=e.target.dataset.k,val=parseFloat(e.target.value);if(val>0)qPrice[k]=val;else delete qPrice[k];qSave();sums()}));
+  sums();$("qInfo").textContent=r.info||""}
+function qText(){if(!qLast)return "";const p=qVals[qType],T=QT[qType];let tot=0;
+  const lines=[`${qLast.name} — smeta`,...T.fields.filter(f=>{const s=f[3]==="sel"?f[5]:f[4];return typeof s!=="function"||s(p)}).map(([id,lab,,type,opt])=>`${lab}: ${type==="sel"?((opt.find(o=>o[0]===String(p[id]))||[,p[id]])[1]):p[id]}`),"",
+    ...qLast.rows.map(([k,n,q,u])=>{const pr=+qPrice[k]||0,qq=(u==="dona"||u==="qop")?Math.ceil(q):q,s=qq*pr;if(!/^yoki/.test(n))tot+=s;return `• ${n}: ${qFmt(q,u)} ${u}`+(pr?` × ${pr.toLocaleString("ru-RU")} = ${Math.round(s).toLocaleString("ru-RU")} so‘m`:"")})];
+  if(tot)lines.push("",`Jami: ${Math.round(tot).toLocaleString("ru-RU")} so‘m`);lines.push("","Hisob taxminiy — 5–10% farq qilishi mumkin.");return lines.join("\n")}
+function initQur(){$("qtypes").addEventListener("click",e=>{const b=e.target.closest("button[data-q]");if(!b)return;qType=b.dataset.q;qSave();qRender()});
+  $("qCopy").addEventListener("click",()=>{const t=qText();navigator.clipboard.writeText(t).then(()=>$("qtoast").textContent="Smeta nusxalandi — Telegramga qo‘yib yuboring.").catch(()=>$("qtoast").textContent="Nusxalab bo‘lmadi.")});
+  $("qShare").addEventListener("click",async()=>{const t=qText();try{if(typeof isNative==="function"&&isNative()){await window.Capacitor.Plugins.Share.share({title:"Smeta",text:t});return}if(navigator.share){await navigator.share({title:"Smeta",text:t});return}}catch(_){}
+    navigator.clipboard.writeText(t).then(()=>$("qtoast").textContent="Smeta nusxalandi.").catch(()=>{})});
+  qRender()}
 /* ---------- start ---------- */
 function sampleDXF(){let s=E.circle(0,0,100)+E.circle(0,0,40);for(let k=0;k<4;k++){const a=(k+.5)*Math.PI/2;s+=E.circle(70*Math.cos(a),70*Math.sin(a),9)}return wrapDXF(s)}
 renderTiers();$("thk").value="t2";$("nthk").value="t2";
@@ -1773,7 +1998,7 @@ renderParams();
   else{const def=k=>Object.fromEntries(PARTS[k].fields.map(f=>[f[0],f[2]]));
     [["flange",12],["plate",20],["gusset",30]].forEach(([k,q])=>addPart(wrapDXF(PARTS[k].build(def(k))),"Namuna: "+PARTS[k].label(def(k)),q))}
   renderParts();runNest()})();
-fillForm(null);initOrders();initMock();
+fillForm(null);initOrders();initMock();initQur();
 /* ---------- 5. metall ---------- */
 // Metall og'irligi hisoblagichi. Hamma o'lchamlar mm da, uzunlik L metrda.
 const MATERIALS = {
