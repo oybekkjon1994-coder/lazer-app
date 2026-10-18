@@ -30,6 +30,8 @@ input,select{width:100%;font:17px system-ui,sans-serif;padding:12px;border-radiu
 .mem .nm{flex:1;min-width:0}.mem .nm b{display:block;font-size:17px}.mem .nm span{color:var(--muted);font-size:14px}
 .pay{min-width:118px;flex:0 0 auto}.pay.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .ic{flex:0 0 auto;min-width:48px;padding:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:6px}.seg button{border:0;min-height:42px;background:transparent;color:var(--muted)}.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 4px #0002}
+.att{min-width:64px;flex:0 0 auto;padding:10px 8px}.att.yes{background:var(--ok);border-color:var(--ok);color:#fff}.att.no{background:var(--bad);border-color:var(--bad);color:#fff}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:12px}
 .tabs button{border:0;min-height:44px;padding:8px 2px;font-size:14px;background:transparent;color:var(--muted)}.tabs button[aria-pressed="true"]{background:var(--acc);color:#fff}
 .rnd{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.rnd:first-child{border-top:0}
@@ -84,6 +86,9 @@ const mAmt=(g,m)=>m&&+m.amount>0?+m.amount:+g.amount;
 const paidAmt=(g,i,m)=>{const p=paidSet(g,i)[m.id];return p?(+p.a>0?+p.a:mAmt(g,m)):0};
 const expect=(g,i)=>payers(g,i).reduce((s,m)=>s+mAmt(g,m),0);
 const got=(g,i)=>payers(g,i).reduce((s,m)=>s+paidAmt(g,i,m),0);
+function attSet(g,i){g.att=g.att||{};return g.att[i]||(g.att[i]={})}
+function attText(g,i){const a=attSet(g,i),y=g.members.filter(m=>a[m.id]===1),n=g.members.filter(m=>a[m.id]===0),u=g.members.filter(m=>a[m.id]===undefined);
+  return `🙋 ${g.name} — davomat\n📅 ${nice(roundDate(g,i))}\n\n✅ Keldi (${y.length}): ${y.map(m=>m.name).join(", ")||"—"}\n🚫 Kelmadi (${n.length}): ${n.map(m=>m.name).join(", ")||"—"}`+(u.length?`\n❔ Belgilanmagan: ${u.map(m=>m.name).join(", ")}`:"")}
 function curRound(g){if(!N(g))return 0;const t=todayS();let i=0;const max=N(g)*(g.cycles||1);
   // birinchi to'liq yig'ilmagan yoki sanasi o'tmagan navbat
   while(i<max-1){const done=payers(g,i).every(m=>paidSet(g,i)[m.id]);if(roundDate(g,i)>=t||!done)break;i++}return i}
@@ -128,15 +133,20 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
     B.innerHTML=`<div class="card"><div class="row" style="flex-wrap:nowrap"><button class="ic" id="pv">‹</button><div style="text-align:center;flex:3"><span class="pill">${i%N(g)+1}-navbat${(g.cycles||1)>1?` · ${Math.floor(i/N(g))+1}-aylanma`:""}</span><div class="meta" style="margin-top:6px">📅 ${nice(roundDate(g,i))}</div></div><button class="ic" id="nx">›</button></div>
       <div style="text-align:center;margin-top:8px"><div class="meta">Pulni oladi</div><div class="who">🎁 ${esc(r?.name||"—")}</div><div class="sum">Yig‘ildi: <b>${money(g,got(g,i))}</b> / ${money(g,expect(g,i))}</div></div>
       <div class="bar"><i style="width:${expect(g,i)?got(g,i)/expect(g,i)*100:0}%"></i></div></div>
-      <div class="card" id="pl"></div>
-      <button class="pri big" id="bRem">📣 Eslatma yuborish (Telegram)</button>
-      <p class="note">«To‘ladi» tugmasini bosing — sana yoziladi. Qayta bossangiz bekor qilinadi. Qarzdorga SMS yoki qo‘ng‘iroq tugmasi yonida.</p>`;
-    const L=$("pl");ps.forEach(m=>{const p=pay[m.id],d=document.createElement("div");d.className="mem";
+      <div class="card"><div class="seg"><button data-m="pay" aria-pressed="${view.mode!=="att"}">💰 To‘lov</button><button data-m="att" aria-pressed="${view.mode==="att"}">🙋 Davomat</button></div><div id="pl"></div></div>
+      <button class="pri big" id="bRem">${view.mode==="att"?"📣 Davomatni yuborish (Telegram)":"📣 Eslatma yuborish (Telegram)"}</button>
+      <p class="note">${view.mode==="att"?"Gap kuni kim keldi — «Keldi», kelmagan bo‘lsa — «Kelmadi». Qayta bossangiz belgi olib tashlanadi.":"«To‘ladi» tugmasini bosing — sana yoziladi. Qayta bossangiz bekor qilinadi. Qarzdorga SMS yoki qo‘ng‘iroq tugmasi yonida."}</p>`;
+    app.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{view.mode=b.dataset.m;render()}));
+    const L=$("pl");if(view.mode==="att"){const a=attSet(g,i);g.members.forEach(m=>{const v=a[m.id],d=document.createElement("div");d.className="mem";
+        d.innerHTML=`<div class="nm"><b>${esc(m.name)}${r&&m.id===r.id?" 🎁":""}</b><span>${v===1?"✅ keldi":v===0?"🚫 kelmadi":"❔ belgilanmagan"}</span></div><button class="att ${v===1?"yes":""}">Keldi</button><button class="att ${v===0?"no":""}">Kelmadi</button>`;
+        const [by,bn]=d.querySelectorAll(".att");by.addEventListener("click",()=>{if(a[m.id]===1)delete a[m.id];else a[m.id]=1;save();render()});bn.addEventListener("click",()=>{if(a[m.id]===0)delete a[m.id];else a[m.id]=0;save();render()});L.appendChild(d)});
+      const y=g.members.filter(m=>a[m.id]===1).length,n=g.members.filter(m=>a[m.id]===0).length,sm=document.createElement("p");sm.className="sum";sm.style.marginTop="8px";sm.innerHTML=`Keldi: <b>${y}</b> · Kelmadi: <b>${n}</b> · Jami: ${g.members.length}`;L.appendChild(sm)}
+    else ps.forEach(m=>{const p=pay[m.id],d=document.createElement("div");d.className="mem";
       d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${money(g,mAmt(g,m))} · ${p?"✅ "+nice(p.d):"⏳ to‘lamagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,mAmt(g,m))} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic" aria-label="SMS">✉️</button></a><a href="${telLink(m.phone)}"><button class="ic" aria-label="Qo‘ng‘iroq">📞</button></a>`:""}<button class="pay ${p?"on":""}">${p?"To‘ladi ✓":"To‘ladi"}</button>`;
       d.querySelector(".pay").addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else pay[m.id]={d:todayS(),a:mAmt(g,m)};save();render()});L.appendChild(d)});
-    if(!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
+    if(view.mode!=="att"&&!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
     $("pv").addEventListener("click",()=>{view.round=i-1;render()});$("nx").addEventListener("click",()=>{view.round=i+1;render()});
-    $("bRem").addEventListener("click",()=>shareText(remindText(g,i)));
+    $("bRem").addEventListener("click",()=>shareText(view.mode==="att"?attText(g,i):remindText(g,i)));
     if(i===max-1&&ps.every(m=>pay[m.id])){const c=document.createElement("div");c.className="card";c.innerHTML=`<b>🎉 Aylanma tugadi!</b><p class="note">Hamma o‘z navbatini oldi. Shu a’zolar bilan yangi aylanma boshlaysizmi?</p><button class="pri big" id="bCyc">Yangi aylanma boshlash</button>`;B.appendChild(c);
       $("bCyc").addEventListener("click",()=>{g.cycles=(g.cycles||1)+1;save();view.round=max;render()})}}
   if(tab==="jad"){const cur=curRound(g),c0=Math.floor(cur/N(g))*N(g);
@@ -149,6 +159,7 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
   if(tab==="mem")memTab(g,B);
   if(tab==="his"){const max=N(g)*(g.cycles||1);let tot=0,debt=[];for(let i=0;i<=Math.min(curRound(g),max-1);i++){const ps=payers(g,i),pay=paidSet(g,i);tot+=got(g,i);if(roundDate(g,i)<=todayS())ps.filter(m=>!pay[m.id]).forEach(m=>debt.push([m,i]))}
     B.innerHTML=`<div class="card"><div class="sum">Jami yig‘ilgan: <b>${money(g,tot)}</b></div><div class="sum">Bir navbatdagi pul: <b>${money(g,expect(g,0))}</b></div></div>
+      ${(()=>{const A=g.att||{},ks=Object.keys(A).filter(k=>Object.keys(A[k]).length);if(!ks.length)return "";return `<div class="card"><b>🙋 Davomat (${ks.length} ta gap belgilangan)</b>`+g.members.map(m=>{let y=0,n=0;ks.forEach(k=>{if(A[k][m.id]===1)y++;else if(A[k][m.id]===0)n++});return `<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>keldi ${y} · kelmadi ${n}</span></div>${n?`<span class="pill bad">${n} marta</span>`:`<span class="pill ok">👍</span>`}</div>`}).join("")+`</div>`})()}
       <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${money(g,mAmt(g,m))}</span></div>`).join(""):`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
       <div class="card"><b>Sozlamalar</b><div class="row" style="margin-top:10px"><button id="bEd">✏️ Tahrirlash</button><button class="warn" id="bDel">🗑 O‘chirish</button></div></div>`;
     $("bEd").addEventListener("click",()=>go({name:"edit",id:g.id}));
