@@ -55,6 +55,7 @@ input,select{width:100%;font:17px system-ui,sans-serif;padding:12px;border-radiu
 const $=id=>document.getElementById(id),app=$("app");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=n=>Math.round(+n||0).toLocaleString("ru-RU").replace(/,/g," ");
+const money=(g,v)=>g&&g.cur==="usd"?"$"+(+v||0).toLocaleString("ru-RU",{maximumFractionDigits:2}).replace(/\s/g," "):fmt(v)+" so‘m";
 const isNative=()=>!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const P=()=>window.Capacitor?.Plugins||{};
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
@@ -81,8 +82,8 @@ const PREMIUM=()=>LIC.ok;
 const FREE_GAPS=1,FREE_MEM=12;
 /* ---------- matnlar ---------- */
 function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>pay[m.id]),no=ps.filter(m=>!pay[m.id]);
-  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${fmt(g.amount)} so‘m\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}): ${no.map(m=>m.name).join(", ")||"—"}\n\nJami: ${fmt(ok.length*g.amount)} / ${fmt(ps.length*g.amount)} so‘m`}
-function orderText(g){return `📋 ${g.name} — navbat\n💰 ${fmt(g.amount)} so‘m, ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}\n\n`+g.order.map((id,i)=>`${i+1}. ${nice(roundDate(g,i))} — ${g.members.find(m=>m.id===id)?.name||"?"}`).join("\n")}
+  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}): ${no.map(m=>m.name).join(", ")||"—"}\n\nJami: ${money(g,ok.length*g.amount)} / ${money(g,ps.length*g.amount)}`}
+function orderText(g){return `📋 ${g.name} — navbat\n💰 ${money(g,g.amount)}, ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}\n\n`+g.order.map((id,i)=>`${i+1}. ${nice(roundDate(g,i))} — ${g.members.find(m=>m.id===id)?.name||"?"}`).join("\n")}
 async function shareText(t){try{if(isNative()&&P().Share){await P().Share.share({text:t});return}if(navigator.share){await navigator.share({text:t});return}}catch(_){return}
   try{await navigator.clipboard.writeText(t);toast("Matn nusxalandi — Telegramga qo‘ying")}catch(_){toast("Ulashib bo‘lmadi")}}
 const telLink=p=>"tel:"+String(p||"").replace(/[^\d+]/g,"");
@@ -98,7 +99,7 @@ function vHome(){
   <button class="pri big fab" id="bNew">+ Yangi gap ochish</button>`;
   const L=$("list");if(!D.gaps.length)L.innerHTML=`<div class="empty"><div class="ico">🤝</div><p><b>Hali gap yo‘q</b><br>«Yangi gap ochish» tugmasini bosing: a’zolarni yozasiz, qancha pul qo‘shilishini va navbatni belgilaysiz.</p></div>`;
   D.gaps.forEach(g=>{const i=curRound(g),r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>pay[m.id]).length,b=document.createElement("button");b.className="gap";
-    b.innerHTML=`<b>${esc(g.name)}</b><span class="meta">${N(g)} kishi · ${fmt(g.amount)} so‘m · ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}</span>
+    b.innerHTML=`<b>${esc(g.name)}</b><span class="meta">${N(g)} kishi · ${money(g,g.amount)} · ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}</span>
       <div style="margin-top:8px">📅 <b style="display:inline;font-size:17px">${nice(roundDate(g,i))}</b> — navbat: <b style="display:inline;font-size:17px">${esc(r?.name||"—")}</b></div>
       <div class="bar"><i style="width:${ps.length?k/ps.length*100:0}%"></i></div><span class="meta">${k} / ${ps.length} kishi to‘ladi</span>`;
     b.addEventListener("click",()=>go({name:"gap",id:g.id,tab:"now"}));L.appendChild(b)});
@@ -112,13 +113,13 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
   if(!N(g)){B.innerHTML=`<div class="card empty">A’zolar yo‘q. «A’zolar» bo‘limida qo‘shing.</div>`;if(tab==="mem")memTab(g,B);return}
   if(tab==="now"){let i=view.round??curRound(g);const max=N(g)*(g.cycles||1);i=Math.max(0,Math.min(max-1,i));const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>pay[m.id]).length;
     B.innerHTML=`<div class="card"><div class="row" style="flex-wrap:nowrap"><button class="ic" id="pv">‹</button><div style="text-align:center;flex:3"><span class="pill">${i%N(g)+1}-navbat${(g.cycles||1)>1?` · ${Math.floor(i/N(g))+1}-aylanma`:""}</span><div class="meta" style="margin-top:6px">📅 ${nice(roundDate(g,i))}</div></div><button class="ic" id="nx">›</button></div>
-      <div style="text-align:center;margin-top:8px"><div class="meta">Pulni oladi</div><div class="who">🎁 ${esc(r?.name||"—")}</div><div class="sum">Yig‘ildi: <b>${fmt(k*g.amount)}</b> / ${fmt(ps.length*g.amount)} so‘m</div></div>
+      <div style="text-align:center;margin-top:8px"><div class="meta">Pulni oladi</div><div class="who">🎁 ${esc(r?.name||"—")}</div><div class="sum">Yig‘ildi: <b>${money(g,k*g.amount)}</b> / ${money(g,ps.length*g.amount)}</div></div>
       <div class="bar"><i style="width:${ps.length?k/ps.length*100:0}%"></i></div></div>
       <div class="card" id="pl"></div>
       <button class="pri big" id="bRem">📣 Eslatma yuborish (Telegram)</button>
       <p class="note">«To‘ladi» tugmasini bosing — sana yoziladi. Qayta bossangiz bekor qilinadi. Qarzdorga SMS yoki qo‘ng‘iroq tugmasi yonida.</p>`;
     const L=$("pl");ps.forEach(m=>{const p=pay[m.id],d=document.createElement("div");d.className="mem";
-      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${p?"✅ "+nice(p.d):"⏳ to‘lamagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${fmt(g.amount)} so‘m to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic" aria-label="SMS">✉️</button></a><a href="${telLink(m.phone)}"><button class="ic" aria-label="Qo‘ng‘iroq">📞</button></a>`:""}<button class="pay ${p?"on":""}">${p?"To‘ladi ✓":"To‘ladi"}</button>`;
+      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${p?"✅ "+nice(p.d):"⏳ to‘lamagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,g.amount)} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic" aria-label="SMS">✉️</button></a><a href="${telLink(m.phone)}"><button class="ic" aria-label="Qo‘ng‘iroq">📞</button></a>`:""}<button class="pay ${p?"on":""}">${p?"To‘ladi ✓":"To‘ladi"}</button>`;
       d.querySelector(".pay").addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else pay[m.id]={d:todayS()};save();render()});L.appendChild(d)});
     if(!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
     $("pv").addEventListener("click",()=>{view.round=i-1;render()});$("nx").addEventListener("click",()=>{view.round=i+1;render()});
@@ -134,8 +135,8 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
     $("bShO").addEventListener("click",()=>shareText(orderText(g)))}
   if(tab==="mem")memTab(g,B);
   if(tab==="his"){const max=N(g)*(g.cycles||1);let tot=0,debt=[];for(let i=0;i<=Math.min(curRound(g),max-1);i++){const ps=payers(g,i),pay=paidSet(g,i);tot+=ps.filter(m=>pay[m.id]).length*g.amount;if(roundDate(g,i)<=todayS())ps.filter(m=>!pay[m.id]).forEach(m=>debt.push([m,i]))}
-    B.innerHTML=`<div class="card"><div class="sum">Jami yig‘ilgan: <b>${fmt(tot)} so‘m</b></div><div class="sum">Bir navbatdagi pul: <b>${fmt(g.amount*payers(g,0).length)} so‘m</b></div></div>
-      <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${fmt(g.amount)}</span></div>`).join(""):`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
+    B.innerHTML=`<div class="card"><div class="sum">Jami yig‘ilgan: <b>${money(g,tot)}</b></div><div class="sum">Bir navbatdagi pul: <b>${money(g,g.amount*payers(g,0).length)}</b></div></div>
+      <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${money(g,g.amount)}</span></div>`).join(""):`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
       <div class="card"><b>Sozlamalar</b><div class="row" style="margin-top:10px"><button id="bEd">✏️ Tahrirlash</button><button class="warn" id="bDel">🗑 O‘chirish</button></div></div>`;
     $("bEd").addEventListener("click",()=>go({name:"edit",id:g.id}));
     $("bDel").addEventListener("click",()=>{if(confirm(`«${g.name}» gapi butunlay o‘chiriladi. Ishonchingiz komilmi?`)){D.gaps=D.gaps.filter(x=>x!==g);save();go({name:"home"})}})}}
@@ -146,10 +147,10 @@ function memTab(g,B){B.innerHTML=`<div class="card" id="ml"></div><div class="ca
     bd.addEventListener("click",()=>{if(!confirm(`${m.name} gapdan chiqariladimi?`))return;g.members=g.members.filter(x=>x!==m);g.order=g.order.filter(id=>id!==m.id);save();render()});L.appendChild(d)});
   $("madd").addEventListener("click",()=>{const n=$("mn").value.trim();if(!n){toast("Ismini yozing");return}if(!PREMIUM()&&g.members.length>=FREE_MEM){licOpen(`Bepul versiyada bitta gapda ${FREE_MEM} kishigacha. Ko‘proq a’zo uchun Premium’ni faollashtiring.`);return}
     const m={id:uid(),name:n,phone:$("mp").value.trim()};g.members.push(m);g.order.push(m.id);save();render();setTimeout(()=>$("mn")?.focus(),50)})}
-function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{name:"",amount:500000,period:"oy",start:todayS(),members:[],order:[],pay:{},cycles:1,selfPay:false};
+function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{name:"",amount:500000,cur:"uzs",period:"oy",start:todayS(),members:[],order:[],pay:{},cycles:1,selfPay:false};
   app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>${g0?"Gapni tahrirlash":"Yangi gap"}</h2></div>
    <div class="card"><label for="gn">Gap nomi</label><input id="gn" placeholder="masalan, Qizlar gapi, Ishxona kassasi" value="${esc(g.name)}">
-   <label for="ga">Har kim qo‘shadigan pul, so‘m</label><input id="ga" type="number" inputmode="numeric" value="${g.amount}">
+   <label for="ga">Har kim qo‘shadigan pul</label><div class="row" style="flex-wrap:nowrap"><input id="ga" type="number" inputmode="decimal" step="any" value="${g.amount}" style="flex:2"><select id="gc" style="flex:1"><option value="uzs"${g.cur!=="usd"?" selected":""}>so‘m</option><option value="usd"${g.cur==="usd"?" selected":""}>dollar ($)</option></select></div>
    <label for="gp">Qanchada bir marta</label><select id="gp">${PERIODS.map(([k,t])=>`<option value="${k}"${k===g.period?" selected":""}>${t}</option>`).join("")}</select>
    <label for="gs">Birinchi gap sanasi</label><input id="gs" type="date" value="${g.start}">
    <label for="gf">Navbati kelgan odam ham pul qo‘shadimi?</label><select id="gf"><option value="0"${!g.selfPay?" selected":""}>Yo‘q — o‘zi to‘lamaydi</option><option value="1"${g.selfPay?" selected":""}>Ha — u ham qo‘shadi</option></select></div>
@@ -157,7 +158,7 @@ function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{nam
    <button class="pri big" id="gsave">${g0?"Saqlash":"Gapni ochish"}</button>`;
   $("bk").addEventListener("click",()=>go(g0?{name:"gap",id:g0.id,tab:"his"}:{name:"home"}));
   $("gsave").addEventListener("click",()=>{const name=$("gn").value.trim(),amount=parseFloat($("ga").value)||0;if(!name){toast("Gap nomini yozing");return}if(!(amount>0)){toast("Pul miqdorini yozing");return}if(!$("gs").value){toast("Sanani tanlang");return}
-    Object.assign(g,{name,amount,period:$("gp").value,start:$("gs").value,selfPay:$("gf").value==="1"});
+    Object.assign(g,{name,amount,cur:$("gc").value,period:$("gp").value,start:$("gs").value,selfPay:$("gf").value==="1"});
     if(!g0){const lines=$("gm").value.split(/\n/).map(s=>s.trim()).filter(Boolean);if(!PREMIUM()&&lines.length>FREE_MEM){licOpen(`Bepul versiyada ${FREE_MEM} kishigacha. Ko‘proq a’zo uchun Premium’ni faollashtiring.`);return}
       g.id=uid();g.members=lines.map(l=>{const [n,...p]=l.split(",");return {id:uid(),name:n.trim(),phone:p.join(",").trim()}});g.order=g.members.map(m=>m.id);D.gaps.push(g);save();
       if(g.members.length>1&&confirm("Navbatni qur’a bilan aniqlaymizmi?\n«Bekor qilish» bossangiz, yozilgan tartibda qoladi."))go({name:"lot",id:g.id});else go({name:"gap",id:g.id,tab:"jad"})}
@@ -187,7 +188,7 @@ async function scheduleAll(){const L=P().LocalNotifications;if(!L||!isNative())r
   const list=[];let id=1;const now=Date.now();
   for(const g of D.gaps){if(!N(g))continue;const i=curRound(g);for(const k of [i,i+1]){if(k>=N(g)*(g.cycles||1))break;const r=recipient(g,k),d=pd(roundDate(g,k));
       const a=new Date(d);a.setDate(a.getDate()-1);a.setHours(19,0,0,0);const b=new Date(d);b.setHours(9,0,0,0);
-      if(a>now)list.push({id:id++,title:`Ertaga: ${g.name}`,body:`Navbat — ${r?.name}. ${fmt(g.amount)} so‘m. Eslatma yuborishni unutmang.`,schedule:{at:a}});
+      if(a>now)list.push({id:id++,title:`Ertaga: ${g.name}`,body:`Navbat — ${r?.name}. ${money(g,g.amount)}. Eslatma yuborishni unutmang.`,schedule:{at:a}});
       if(b>now)list.push({id:id++,title:`Bugun: ${g.name}`,body:`Navbat — ${r?.name}. Kim to‘lamaganini tekshiring.`,schedule:{at:b}})}}
   if(list.length)await L.schedule({notifications:list})}catch(_){}}
 /* ---------- Premium (faollashtirish) ---------- */
