@@ -1,0 +1,6 @@
+{
+  "appId": "uz.lazer.ustaxona",
+  "appName": "Lazer",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
