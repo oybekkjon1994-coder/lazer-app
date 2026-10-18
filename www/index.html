@@ -697,6 +697,52 @@ Object.assign(PARTS,{
       return out},
     label:p=>`Doira naqsh ${p.W}×${p.H}`}
 });
+/* ---------- islomiy naqshlar (girih, Hankin usuli) ---------- */
+const GIRIH={k8:{t:"488",a:67.5},xot:{t:"488",a:45},k12:{t:"31212",a:72},k126:{t:"4612",a:70},k6:{t:"666",a:60},k4:{t:"4444",a:67.5}};
+function regPoly(cx,cy,n,s,a0){const R=s/(2*Math.sin(Math.PI/n)),v=[];for(let k=0;k<n;k++){const a=(a0*Math.PI/180)+2*Math.PI*k/n;v.push([cx+R*Math.cos(a),cy+R*Math.sin(a)])}return v}
+function girihTiles(kind,s,W,H){const T=[],cx=W/2,cy=H/2,ext=Math.max(W,H)/2+6*s;
+  const lat=(d,f)=>{const h=d*Math.sqrt(3)/2,nj=Math.ceil(ext/h)+1,ni=Math.ceil(ext/d)+1;for(let j=-nj;j<=nj;j++)for(let i=-ni;i<=ni;i++){f(cx+i*d+(Math.abs(j)%2)*d/2,cy+j*h,d,h)}};
+  const near=(x,y)=>Math.abs(x-cx)<ext&&Math.abs(y-cy)<ext;
+  if(kind==="4444"){const n=Math.ceil(ext/s)+1;for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++)T.push(regPoly(cx+i*s,cy+j*s,4,s,45))}
+  else if(kind==="488"){const r=s*(Math.SQRT2+1)/2,P=2*r,n=Math.ceil(ext/P)+1;for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){T.push(regPoly(cx+i*P,cy+j*P,8,s,22.5));T.push(regPoly(cx+(i+.5)*P,cy+(j+.5)*P,4,s,0))}}
+  else if(kind==="666"){lat(s*Math.sqrt(3),(x,y)=>near(x,y)&&T.push(regPoly(x,y,6,s,30)))}
+  else if(kind==="31212"){const r=s*(2+Math.sqrt(3))/2;lat(2*r,(x,y,d)=>{if(!near(x,y))return;T.push(regPoly(x,y,12,s,15));T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,3,s,30));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,3,s,90))})}
+  else if(kind==="4612"){const r=s*(2+Math.sqrt(3))/2;lat(2*r+s,(x,y,d,h)=>{if(!near(x,y))return;T.push(regPoly(x,y,12,s,15));
+    [[d/2,0,45],[d/4,h/2,105],[-d/4,h/2,165]].forEach(([dx,dy,a])=>T.push(regPoly(x+dx,y+dy,4,s,a)));
+    T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,6,s,0));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,6,s,0))})}
+  return T}
+function hankin(T,deg,dl=0){const th=deg*Math.PI/180,c=Math.cos(th),sn=Math.sin(th),V=[];
+  for(const v of T){const n=v.length,R=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1])*4,mid=k=>{const a=v[k%n],b=v[(k+1)%n];return [(a[0]+b[0])/2,(a[1]+b[1])/2]};
+    for(let k=0;k<n;k++){const vk=v[k];let m1=mid(k+n-1),m2=mid(k);
+      let d1=[vk[0]-m1[0],vk[1]-m1[1]],d2=[vk[0]-m2[0],vk[1]-m2[1]];const l1=Math.hypot(...d1),l2=Math.hypot(...d2);d1=[d1[0]/l1,d1[1]/l1];d2=[d2[0]/l2,d2[1]/l2];
+      if(dl>0){if(dl>=Math.min(l1,l2)*.9)continue;m1=[m1[0]+d1[0]*dl,m1[1]+d1[1]*dl];m2=[m2[0]+d2[0]*dl,m2[1]+d2[1]*dl]}
+      const r1=[d1[0]*c-d1[1]*sn,d1[0]*sn+d1[1]*c],r2=[d2[0]*c+d2[1]*sn,-d2[0]*sn+d2[1]*c];
+      const den=r1[0]*r2[1]-r1[1]*r2[0];if(Math.abs(den)<1e-9)continue;
+      const dx=m2[0]-m1[0],dy=m2[1]-m1[1],t=(dx*r2[1]-dy*r2[0])/den,u=(dx*r1[1]-dy*r1[0])/den;
+      if(t<=0||u<=0||t>R||u>R)continue;
+      V.push([m1,[m1[0]+t*r1[0],m1[1]+t*r1[1]],m2])}}
+  return V}
+PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Naqsh chiziqlari (metall) qoladi, oradagi shakllar kesiladi. Burchakni o‘zgartirib, yulduz shaklini moslang. Katta panelda hisoblash bir necha soniya olishi mumkin.",
+  fields:[["pat","Naqsh turi","k126","select",[["k126","12–6 aralash rozetka"],["k12","12 qirrali rozetka"],["xot","Xotam (8 yulduz va xoch)"],["k8","8 qirrali yulduz"],["k6","6 qirrali yulduz"],["k4","Kvadrat yulduz"]]],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["s","Naqsh o‘lchami (mm)",40],["t","Chiziq qalinligi (mm)",4],["a","Yulduz burchagi (0=avto)",0],["m","Rama eni (mm)",10],["min","Mayda bo‘laklarni o‘chirish (mm²)",3]],
+  build(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH.k126,ang=p.a>0?p.a:G.a;
+    if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+    if(s<5)throw"Naqsh o‘lchami kamida 5 mm bo‘lsin.";
+    if(t<1||t>=s)throw"Chiziq qalinligi 1 mm dan katta va naqsh o‘lchamidan kichik bo‘lsin.";
+    if(m<t/2||2*m>=Math.min(W,H)-s)throw"Rama eni chiziq qalinligining yarmidan kam bo‘lmasin va panelga sig‘sin.";
+    if(ang<5||ang>89)throw"Burchak 5–89° oralig‘ida bo‘lsin.";
+    if(W*H/(s*s)>40000)throw"Naqsh juda mayda — o‘lchamini kattalashtiring.";
+    const V=hankin(girihTiles(G.t,s,W,H),ang);
+    const sc=Math.min(8,3200/Math.max(W,H)),cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+    const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";x.fillRect(1+m*sc,1+m*sc,(W-2*m)*sc,(H-2*m)*sc);
+    x.strokeStyle="#fff";x.lineWidth=t*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
+    for(const [a,b,c] of V){x.moveTo(1+a[0]*sc,1+a[1]*sc);x.lineTo(1+b[0]*sc,1+b[1]*sc);x.lineTo(1+c[0]*sc,1+c[1]*sc)}x.stroke();
+    const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;
+    const loops=traceBin(bin,cw,ch,0);let out=roundRect(W,H,0),n=0;const minA=Math.max(0,p.min);
+    for(const L of loops){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+      if(Math.abs(ar/2)/(sc*sc)<minA)continue;out+=E.poly(L.map(([u,v])=>[(u-.5)/sc,H-(v-.5)/sc]));n++}
+    if(!n)throw"Naqsh chiqmadi — chiziq qalinligini kamaytiring yoki o‘lchamni oshiring.";
+    return out},
+  label:p=>`Naqsh ${p.W}×${p.H}`};
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
@@ -709,7 +755,8 @@ function imgToGrid(src,name){const MAX=500,s=Math.min(1,MAX/Math.max(src.width,s
 function lzSampleImg(){if(lzSample)return lzSample;const c=document.createElement("canvas");c.width=c.height=300;const x=c.getContext("2d");
   x.fillStyle="#fff";x.fillRect(0,0,300,300);x.fillStyle="#000";x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?62:140;x.lineTo(150+r*Math.cos(a),155+r*Math.sin(a))}x.closePath();x.fill();
   x.fillStyle="#fff";x.beginPath();x.arc(150,155,34,0,7);x.fill();return lzSample=imgToGrid(c,"namuna")}
-function traceImage(im,thr,inv,sm){const {w,h,g}=im,B=(x,y)=>x<0||y<0||x>=w||y>=h?0:((g[y*w+x]<thr)!==inv?1:0);
+function traceImage(im,thr,inv,sm){const {w,h,g}=im,bin=new Uint8Array(w*h);for(let i=0;i<w*h;i++)bin[i]=(g[i]<thr)!==inv?1:0;return traceBin(bin,w,h,sm)}
+function traceBin(bin,w,h,sm){const B=(x,y)=>x<0||y<0||x>=w||y>=h?0:bin[y*w+x];
   const segs=[],adj=new Map(),K=(a,b)=>a*100003+b;
   const add=(p,q)=>{const i=segs.length;segs.push([p,q]);for(const e of[p,q]){const k=K(e[0],e[1]);(adj.get(k)||adj.set(k,[]).get(k)).push(i)}};
   for(let y=-1;y<h;y++)for(let x=-1;x<w;x++){const tl=B(x,y),tr=B(x+1,y),br=B(x+1,y+1),bl=B(x,y+1),c=tl*8+tr*4+br*2+bl;if(c===0||c===15)continue;
