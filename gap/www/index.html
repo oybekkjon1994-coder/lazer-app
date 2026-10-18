@@ -31,7 +31,7 @@ input,select{width:100%;font:17px system-ui,sans-serif;padding:12px;border-radiu
 .pay{min-width:118px;flex:0 0 auto}.pay.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .ic{flex:0 0 auto;min-width:48px;padding:10px}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:6px}.seg button{border:0;min-height:42px;background:transparent;color:var(--muted)}.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 4px #0002}
-.att{min-width:64px;flex:0 0 auto;padding:10px 8px}.att.yes{background:var(--ok);border-color:var(--ok);color:#fff}.att.no{background:var(--bad);border-color:var(--bad);color:#fff}
+.ic.sm{min-width:42px;padding:8px}.att{min-width:64px;flex:0 0 auto;padding:10px 8px}.att.yes{background:var(--ok);border-color:var(--ok);color:#fff}.att.no{background:var(--bad);border-color:var(--bad);color:#fff}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:12px}
 .tabs button{border:0;min-height:44px;padding:8px 2px;font-size:14px;background:transparent;color:var(--muted)}.tabs button[aria-pressed="true"]{background:var(--acc);color:#fff}
 .rnd{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.rnd:first-child{border-top:0}
@@ -86,6 +86,7 @@ const mAmt=(g,m)=>m&&+m.amount>0?+m.amount:+g.amount;
 const paidAmt=(g,i,m)=>{const p=paidSet(g,i)[m.id];return p?(+p.a>0?+p.a:mAmt(g,m)):0};
 const expect=(g,i)=>payers(g,i).reduce((s,m)=>s+mAmt(g,m),0);
 const got=(g,i)=>payers(g,i).reduce((s,m)=>s+paidAmt(g,i,m),0);
+function noSet(g,i){g.nopay=g.nopay||{};return g.nopay[i]||(g.nopay[i]={})}
 function attSet(g,i){g.att=g.att||{};return g.att[i]||(g.att[i]={})}
 function attText(g,i){const a=attSet(g,i),y=g.members.filter(m=>a[m.id]===1),n=g.members.filter(m=>a[m.id]===0),u=g.members.filter(m=>a[m.id]===undefined);
   return `🙋 ${g.name} — davomat\n📅 ${nice(roundDate(g,i))}\n\n✅ Keldi (${y.length}): ${y.map(m=>m.name).join(", ")||"—"}\n🚫 Kelmadi (${n.length}): ${n.map(m=>m.name).join(", ")||"—"}`+(u.length?`\n❔ Belgilanmagan: ${u.map(m=>m.name).join(", ")}`:"")}
@@ -96,7 +97,7 @@ const PREMIUM=()=>LIC.ok;
 const FREE_GAPS=1,FREE_MEM=Infinity;
 /* ---------- matnlar ---------- */
 function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>pay[m.id]),no=ps.filter(m=>!pay[m.id]);
-  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}): ${no.map(m=>m.name+(+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
+  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}${(()=>{const x=noSet(g,i),c=no.filter(m=>x[m.id]).length;return c?`, ${c} tasi «bermadi» deb belgilangan`:""})()}): ${no.map(m=>m.name+(+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
 function orderText(g){return `📋 ${g.name} — navbat\n💰 ${money(g,g.amount)}, ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}\n\n`+g.order.map((id,i)=>`${i+1}. ${nice(roundDate(g,i))} — ${g.members.find(m=>m.id===id)?.name||"?"}`).join("\n")}
 async function shareText(t){try{if(isNative()&&P().Share){await P().Share.share({text:t});return}if(navigator.share){await navigator.share({text:t});return}}catch(_){return}
   try{await navigator.clipboard.writeText(t);toast("Matn nusxalandi — Telegramga qo‘ying")}catch(_){toast("Ulashib bo‘lmadi")}}
@@ -135,15 +136,17 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
       <div class="bar"><i style="width:${expect(g,i)?got(g,i)/expect(g,i)*100:0}%"></i></div></div>
       <div class="card"><div class="seg"><button data-m="pay" aria-pressed="${view.mode!=="att"}">💰 To‘lov</button><button data-m="att" aria-pressed="${view.mode==="att"}">🙋 Davomat</button></div><div id="pl"></div></div>
       <button class="pri big" id="bRem">${view.mode==="att"?"📣 Davomatni yuborish (Telegram)":"📣 Eslatma yuborish (Telegram)"}</button>
-      <p class="note">${view.mode==="att"?"Gap kuni kim keldi — «Keldi», kelmagan bo‘lsa — «Kelmadi». Qayta bossangiz belgi olib tashlanadi.":"«To‘ladi» tugmasini bosing — sana yoziladi. Qayta bossangiz bekor qilinadi. Qarzdorga SMS yoki qo‘ng‘iroq tugmasi yonida."}</p>`;
+      <p class="note">${view.mode==="att"?"Gap kuni kim keldi — «Keldi», kelmagan bo‘lsa — «Kelmadi». Qayta bossangiz belgi olib tashlanadi.":"Pul bergan bo‘lsa — «Berdi» (sana yoziladi), bermagan bo‘lsa — «Bermadi». Qayta bossangiz belgi olib tashlanadi. Bermaganlarga ✉️ bilan SMS eslatma yuborasiz."}</p>`;
     app.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{view.mode=b.dataset.m;render()}));
     const L=$("pl");if(view.mode==="att"){const a=attSet(g,i);g.members.forEach(m=>{const v=a[m.id],d=document.createElement("div");d.className="mem";
         d.innerHTML=`<div class="nm"><b>${esc(m.name)}${r&&m.id===r.id?" 🎁":""}</b><span>${v===1?"✅ keldi":v===0?"🚫 kelmadi":"❔ belgilanmagan"}</span></div><button class="att ${v===1?"yes":""}">Keldi</button><button class="att ${v===0?"no":""}">Kelmadi</button>`;
         const [by,bn]=d.querySelectorAll(".att");by.addEventListener("click",()=>{if(a[m.id]===1)delete a[m.id];else a[m.id]=1;save();render()});bn.addEventListener("click",()=>{if(a[m.id]===0)delete a[m.id];else a[m.id]=0;save();render()});L.appendChild(d)});
       const y=g.members.filter(m=>a[m.id]===1).length,n=g.members.filter(m=>a[m.id]===0).length,sm=document.createElement("p");sm.className="sum";sm.style.marginTop="8px";sm.innerHTML=`Keldi: <b>${y}</b> · Kelmadi: <b>${n}</b> · Jami: ${g.members.length}`;L.appendChild(sm)}
-    else ps.forEach(m=>{const p=pay[m.id],d=document.createElement("div");d.className="mem";
-      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${money(g,mAmt(g,m))} · ${p?"✅ "+nice(p.d):"⏳ to‘lamagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,mAmt(g,m))} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic" aria-label="SMS">✉️</button></a><a href="${telLink(m.phone)}"><button class="ic" aria-label="Qo‘ng‘iroq">📞</button></a>`:""}<button class="pay ${p?"on":""}">${p?"To‘ladi ✓":"To‘ladi"}</button>`;
-      d.querySelector(".pay").addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else pay[m.id]={d:todayS(),a:mAmt(g,m)};save();render()});L.appendChild(d)});
+    else{const no=noSet(g,i);ps.forEach(m=>{const p=pay[m.id],x=!p&&no[m.id],d=document.createElement("div");d.className="mem";
+      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${money(g,mAmt(g,m))} · ${p?"✅ berdi "+nice(p.d):x?"🚫 bermadi":"⏳ belgilanmagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,mAmt(g,m))} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic sm" aria-label="SMS">✉️</button></a>`:""}<button class="att ${p?"yes":""}">Berdi</button><button class="att ${x?"no":""}">Bermadi</button>`;
+      const [by,bn]=d.querySelectorAll(".att");
+      by.addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else{pay[m.id]={d:todayS(),a:mAmt(g,m)};delete no[m.id]}save();render()});
+      bn.addEventListener("click",()=>{if(no[m.id])delete no[m.id];else{no[m.id]=1;delete pay[m.id]}save();render()});L.appendChild(d)});}
     if(view.mode!=="att"&&!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
     $("pv").addEventListener("click",()=>{view.round=i-1;render()});$("nx").addEventListener("click",()=>{view.round=i+1;render()});
     $("bRem").addEventListener("click",()=>shareText(view.mode==="att"?attText(g,i):remindText(g,i)));
