@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Post yordamchi</title>
+<style>
+:root{--bg:#f6f3f0;--card:#fff;--ink:#22191f;--muted:#76696f;--line:#e7dfdb;--acc:#d94a6a;--acc2:#f29a3a;--soft:#fbe9ee;--ok:#1f8a5a}
+@media (prefers-color-scheme:dark){:root{--bg:#161214;--card:#211a1e;--ink:#f1e9ec;--muted:#a8999f;--line:#352a30;--acc:#ff6f8e;--acc2:#ffb15e;--soft:#3a2229;--ok:#4cc98a}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:27px;margin:4px 0 2px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 12px}
+button{font:600 16px system-ui,sans-serif;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 14px;cursor:pointer;min-height:48px}
+button.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));border:0;color:#fff}
+button.big{width:100%;font-size:18px;min-height:56px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+label{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+input,select,textarea{width:100%;font:16px system-ui,sans-serif;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{line-height:1.45;resize:vertical}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:12px;position:sticky;top:0;z-index:5}
+.tabs button{border:0;min-height:44px;font-size:15px;background:transparent;color:var(--muted)}.tabs button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chips button{min-height:42px;padding:8px 12px;font-size:15px}.chips button[aria-pressed="true"]{background:var(--soft);border-color:var(--acc);color:var(--acc)}
+.topics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.topics button{text-align:left;font-size:15px;padding:10px 12px}.topics button[aria-pressed="true"]{background:var(--soft);border-color:var(--acc);color:var(--acc)}
+.hdr{display:flex;align-items:center;gap:12px}.logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:26px}
+.item{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}.item:first-child{border-top:0}
+.item .t{flex:1;min-width:0}.item .t b{display:block}.item .t span{color:var(--muted);font-size:14px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ic{flex:0 0 auto;min-width:46px;padding:8px}
+.note{color:var(--muted);font-size:14px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:700;background:var(--soft);color:var(--acc)}
+.pill.ok{background:#1f8a5a22;color:var(--ok)}
+.prompt{background:var(--bg);border-radius:12px;padding:12px;font-size:14px;margin:8px 0;font-family:ui-monospace,monospace;white-space:pre-wrap}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center;z-index:50}.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="logo">📣</div><div><h1>Post yordamchi</h1></div></div>
+<p class="sub">Instagram uchun tayyor matnlar, promptlar va kontent rejasi.</p>
+<div class="tabs"><button data-t="yoz" aria-pressed="true">✍️ Yozish</button><button data-t="reja" aria-pressed="false">📅 Reja</button><button data-t="prof" aria-pressed="false">👤 Profil</button></div>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script src="data.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),app=$("app");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const isNative=()=>!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const P=()=>window.Capacitor?.Plugins||{};
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
+let S={prof:{nom:"",tel:"",manzil:"",tg:"",ig:""},plan:[],fav:[],last:{topic:"lazer",fmt:"post",lang:"uz",mahsulot:"",narx:""}};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem("postData")||"{}"))}catch(_){}
+const save=()=>{try{localStorage.setItem("postData",JSON.stringify(S))}catch(_){}};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const FMT=[["post","📷 Post"],["reels","🎬 Reels"],["story","⭕ Story"]],LANG=[["uz","O‘zbekcha"],["ru","Русский"],["uzru","Ikkalasi"]];
+function fill(t){const p=S.prof,l=S.last;return t.replace(/\{nom\}/g,p.nom||"ustaxonamiz").replace(/\{tel\}/g,p.tel||"").replace(/\{manzil\}/g,p.manzil||"").replace(/\{tg\}/g,p.tg||"@telegram").replace(/\{ig\}/g,p.ig||"").replace(/\{narx\}/g,l.narx||"30%").replace(/\{mahsulot\}/g,l.mahsulot||"buyurtma")}
+function contacts(lang){const p=S.prof,L=[];if(p.nom)L.push("🏭 "+p.nom);if(p.manzil)L.push("📍 "+p.manzil);if(p.tel)L.push("📞 "+p.tel);if(p.tg)L.push("✈️ Telegram: "+p.tg);return L.join("\n")}
+function compose(lang){const T=TOPICS[S.last.topic],one=lg=>{const d=T[lg];return [pick(d.hook),pick(d.body),pick(d.cta)].map(fill).join("\n\n")};
+  const parts=lang==="uzru"?[one("uz"),"— — —",one("ru")]:[one(lang)];const c=contacts(lang);return parts.join("\n\n")+(c?"\n\n"+c:"")+"\n\n"+T.tags}
+let tab="yoz",cur="";
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{tab=b.dataset.t;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()}));
+function render(){({yoz:vYoz,reja:vReja,prof:vProf}[tab])();window.scrollTo(0,0)}
+function vYoz(){const l=S.last,T=TOPICS[l.topic];if(!cur)cur=compose(l.lang);
+  app.innerHTML=`${!S.prof.nom&&!S.prof.tel?`<div class="card"><b>👋 Avval profilni to‘ldiring</b><p class="note">Ustaxona nomi, telefon va Telegram matnlarga avtomatik qo‘shiladi.</p><button id="goP">👤 Profilni to‘ldirish</button></div>`:""}
+   <div class="card"><b>Mavzu</b><div class="topics" id="tp" style="margin-top:10px">${Object.entries(TOPICS).map(([k,t])=>`<button data-k="${k}" aria-pressed="${k===l.topic}">${t.ico} ${t.name}</button>`).join("")}</div>
+   <label>Turi</label><div class="chips" id="fm">${FMT.map(([k,t])=>`<button data-k="${k}" aria-pressed="${k===l.fmt}">${t}</button>`).join("")}</div>
+   <label>Til</label><div class="chips" id="lg">${LANG.map(([k,t])=>`<button data-k="${k}" aria-pressed="${k===l.lang}">${t}</button>`).join("")}</div>
+   <div class="row"><div><label for="mh">Mahsulot (ixtiyoriy)</label><input id="mh" placeholder="masalan, darvoza" value="${esc(l.mahsulot)}"></div>${l.topic==="aksiya"?`<div><label for="nx">Chegirma</label><input id="nx" placeholder="masalan, 20%" value="${esc(l.narx)}"></div>`:""}</div></div>
+   ${l.fmt==="story"?`<div class="card"><b>⭕ Story uchun g‘oyalar</b>${T.story.map(x=>`<div class="item"><div class="t"><span style="-webkit-line-clamp:unset">${esc(fill(x))}</span></div><button class="ic" data-c="${esc(fill(x))}">📋</button></div>`).join("")}<p class="note">Story’da matn qisqa bo‘lsin. So‘rovnoma, savol yoki taymer stikeri qo‘shsangiz, odamlar ko‘proq javob beradi.</p></div>`:""}
+   ${l.fmt==="reels"?`<div class="card"><b>🎬 Video ssenariysi</b>${T.reels.map(x=>`<div class="prompt">${esc(x)}</div>`).join("")}<p class="note">Reels 7–15 soniya bo‘lsa yaxshi ko‘riladi. Birinchi 2 soniyada eng qiziq kadrni ko‘rsating.</p></div>`:""}
+   <div class="card"><div class="row" style="align-items:center"><b style="flex:3">${l.fmt==="story"?"Story ostidagi matn":"Post matni"}</b><button class="ic" id="rnd" title="Boshqa variant">🔄</button></div>
+   <textarea id="txt" rows="12" style="margin-top:8px">${esc(cur)}</textarea>
+   <div class="row" style="margin-top:10px"><button id="cp">📋 Nusxalash</button><button id="fv">⭐ Saqlash</button><button id="pl">📅 Rejaga</button></div>
+   <button class="pri big" id="sh" style="margin-top:10px">📲 Instagram’ga joylash</button>
+   <p class="note">Rasm yoki videoni tanlaysiz — matn nusxalanadi va ulashish oynasi ochiladi. U yerda <b>Instagram</b> → Lenta, Reels yoki Stories’ni tanlab, izoh joyiga matnni qo‘yasiz.</p></div>
+   <div class="card"><b>🤖 AI video uchun promptlar</b><p class="note">Veo, Kling, Runway kabi dasturlarga qo‘yasiz (inglizcha yaxshiroq ishlaydi).</p>${T.ai.map(x=>`<div class="prompt">${esc(x)}</div><button data-c="${esc(x)}" style="width:100%">📋 Promptni nusxalash</button>`).join("")}</div>`;
+  if($("goP"))$("goP").onclick=()=>document.querySelector('.tabs button[data-t="prof"]').click();
+  const pickTo=(id,key,re)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b)return;l[key]=b.dataset.k;save();if(re)cur="";render()});
+  pickTo("tp","topic",1);pickTo("fm","fmt",0);pickTo("lg","lang",1);
+  $("mh").addEventListener("change",e=>{l.mahsulot=e.target.value.trim();save();cur="";render()});if($("nx"))$("nx").addEventListener("change",e=>{l.narx=e.target.value.trim();save();cur="";render()});
+  $("txt").addEventListener("input",e=>cur=e.target.value);
+  $("rnd").onclick=()=>{cur=compose(l.lang);render()};
+  $("cp").onclick=()=>copy($("txt").value);
+  $("fv").onclick=()=>{S.fav.unshift({id:Date.now(),topic:l.topic,text:$("txt").value});S.fav=S.fav.slice(0,50);save();toast("⭐ Saqlandi — «Reja» bo‘limida")};
+  $("pl").onclick=()=>addPlan($("txt").value);
+  $("sh").onclick=()=>postToInsta($("txt").value);
+  app.querySelectorAll("button[data-c]").forEach(b=>b.onclick=()=>copy(b.dataset.c))}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast("📋 Nusxalandi")}catch(_){toast("Nusxalab bo‘lmadi")}}
+async function pickMediaFile(){const FP=P().FilePicker;if(FP&&isNative()){const r=await FP.pickMedia({limit:1});const f=r.files&&r.files[0];if(!f)return null;let u=f.path||"";if(u&&!/^(file|content):/.test(u))u="file://"+u;return {uri:u,name:f.name}}
+  return await new Promise(res=>{const i=document.createElement("input");i.type="file";i.accept="image/*,video/*";i.onchange=()=>res(i.files[0]?{file:i.files[0],name:i.files[0].name}:null);i.click()})}
+async function postToInsta(text){try{await navigator.clipboard.writeText(text)}catch(_){}
+  let m;try{m=await pickMediaFile()}catch(e){toast("Fayl tanlanmadi");return}if(!m){toast("Rasm yoki video tanlanmadi");return}
+  toast("Matn nusxalandi — Instagram’da izoh joyiga «Qo‘yish»");
+  try{if(m.uri){await P().Share.share({title:"Instagram",text,files:[m.uri],dialogTitle:"Instagram’ni tanlang"});return}
+    if(navigator.canShare&&navigator.canShare({files:[m.file]})){await navigator.share({files:[m.file],text});return}toast("Bu qurilmada ulashish ishlamaydi — matn nusxalandi")}catch(_){}}
+function addPlan(text,date){const d=prompt("Qaysi kuni joylaysiz? (YYYY-OO-KK)",date||today());if(!d)return;const t=prompt("Soat nechada eslatay? (masalan 19:00)","19:00")||"19:00";
+  S.plan.push({id:Date.now(),date:d,time:t,topic:S.last.topic,fmt:S.last.fmt,text,done:false});S.plan.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));save();schedule();toast("📅 Rejaga qo‘shildi")}
+function vReja(){const up=S.plan.filter(p=>!p.done),dn=S.plan.filter(p=>p.done);
+  const row=p=>`<div class="item"><div class="t"><b>${TOPICS[p.topic]?.ico||""} ${esc(p.date)} · ${esc(p.time)} <span class="pill">${(FMT.find(f=>f[0]===p.fmt)||[,""])[1]}</span></b><span>${esc(p.text)}</span></div><button class="ic" data-s="${p.id}" title="Joylash">📲</button><button class="ic" data-d="${p.id}" title="Bajarildi">${p.done?"↩️":"✅"}</button><button class="ic" data-x="${p.id}" title="O‘chirish">✕</button></div>`;
+  app.innerHTML=`<div class="card"><b>📅 Kontent rejasi</b><p class="note">Belgilangan vaqtda telefon eslatadi. Haftasiga 3–4 ta post va har kuni 1–2 ta story qo‘yish tavsiya qilinadi.</p>${up.length?up.map(row).join(""):`<p class="note">Reja bo‘sh. «Yozish» bo‘limida matn tayyorlab, «📅 Rejaga» ni bosing.</p>`}
+   <button class="big" id="wk" style="margin-top:10px">🗓 1 haftalik reja tuzib berish</button></div>
+   ${dn.length?`<div class="card"><b>✅ Joylanganlar</b>${dn.slice(-10).reverse().map(row).join("")}</div>`:""}
+   <div class="card"><b>⭐ Saqlangan matnlar</b>${S.fav.length?S.fav.map(f=>`<div class="item"><div class="t"><b>${TOPICS[f.topic]?.ico||""} ${esc(TOPICS[f.topic]?.name||"")}</b><span>${esc(f.text)}</span></div><button class="ic" data-fc="${f.id}">📋</button><button class="ic" data-fs="${f.id}">📲</button><button class="ic" data-fx="${f.id}">✕</button></div>`).join(""):`<p class="note">Hali saqlangan matn yo‘q.</p>`}</div>
+   <div class="card"><b>🔔 Eslatmalar</b><p class="note">Telefon reja vaqtida eslatishi uchun bir marta ruxsat bering.</p><button id="nt" style="width:100%">🔔 Eslatmaga ruxsat berish</button></div>`;
+  const F=id=>S.plan.find(p=>p.id===+id);
+  app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>postToInsta(F(b.dataset.s).text));
+  app.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{const p=F(b.dataset.d);p.done=!p.done;save();schedule();render()});
+  app.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{if(!confirm("O‘chirilsinmi?"))return;S.plan=S.plan.filter(p=>p.id!==+b.dataset.x);save();schedule();render()});
+  const FF=id=>S.fav.find(f=>f.id===+id);
+  app.querySelectorAll("[data-fc]").forEach(b=>b.onclick=()=>copy(FF(b.dataset.fc).text));app.querySelectorAll("[data-fs]").forEach(b=>b.onclick=()=>postToInsta(FF(b.dataset.fs).text));
+  app.querySelectorAll("[data-fx]").forEach(b=>b.onclick=()=>{S.fav=S.fav.filter(f=>f.id!==+b.dataset.fx);save();render()});
+  $("wk").onclick=()=>{const plan=[["lazer","post"],["jarayon","reels"],["darvoza","post"],["naqsh","reels"],["dekor","post"],["tayyor","story"],["aksiya","post"]],d0=new Date();const keep=S.last.topic;
+    plan.forEach(([tp,fm],k)=>{const d=new Date(d0);d.setDate(d.getDate()+k+1);S.last.topic=tp;S.plan.push({id:Date.now()+k,date:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),time:"19:00",topic:tp,fmt:fm,text:compose(S.last.lang),done:false})});
+    S.last.topic=keep;S.plan.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));save();schedule();toast("🗓 7 kunlik reja tayyor");render()};
+  $("nt").onclick=async()=>{const L=P().LocalNotifications;if(!L){toast("Bu yerda eslatma ishlamaydi");return}try{const r=await L.requestPermissions();if(r.display==="granted"){await schedule();toast("🔔 Eslatmalar yoqildi")}else toast("Ruxsat berilmadi")}catch(_){toast("Eslatmani yoqib bo‘lmadi")}}}
+async function schedule(){const L=P().LocalNotifications;if(!L||!isNative())return;try{const pend=await L.getPending();if(pend.notifications.length)await L.cancel({notifications:pend.notifications.map(n=>({id:n.id}))});
+  const now=Date.now(),list=[];S.plan.filter(p=>!p.done).forEach((p,k)=>{const [y,m,d]=p.date.split("-").map(Number),[h,mi]=(p.time||"19:00").split(":").map(Number),at=new Date(y,m-1,d,h||19,mi||0);
+    if(at>now&&list.length<60)list.push({id:k+1,title:"📣 Instagram’ga joylash vaqti",body:`${TOPICS[p.topic]?.name||""} — ${(FMT.find(f=>f[0]===p.fmt)||[,""])[1]}`,schedule:{at}})});
+  if(list.length)await L.schedule({notifications:list})}catch(_){}}
+function vProf(){const p=S.prof;
+  app.innerHTML=`<div class="card"><b>👤 Ustaxona ma’lumotlari</b><p class="note">Bular har bir matnning oxiriga avtomatik qo‘shiladi.</p>
+   <label for="pn">Ustaxona nomi</label><input id="pn" value="${esc(p.nom)}" placeholder="masalan, Lazer Metal">
+   <label for="pt">Telefon</label><input id="pt" type="tel" value="${esc(p.tel)}" placeholder="+998 90 123 45 67">
+   <label for="pm">Manzil yoki shahar</label><input id="pm" value="${esc(p.manzil)}" placeholder="masalan, Toshkent, Chilonzor">
+   <label for="pg">Telegram (bot yoki kanal)</label><input id="pg" value="${esc(p.tg)}" placeholder="@lazer_uz77_bot">
+   <label for="pi">Instagram sahifangiz</label><input id="pi" value="${esc(p.ig)}" placeholder="@sizning_sahifa">
+   <button class="pri big" id="ps" style="margin-top:14px">Saqlash</button></div>
+   <div class="card"><b>💡 Instagram maslahatlari</b><p class="note">• Har kuni bir xil vaqtda joylang, kechqurun 19:00–22:00 eng faol vaqt.<br>• Reels’ning birinchi 2 soniyasi eng muhim — eng chiroyli kadrni boshida ko‘rsating.<br>• Izohga savol yozing — odamlar javob bersa, post ko‘proq tarqaladi.<br>• Mijoz yuborgan haqiqiy rasm va fikrlarni (ruxsati bilan) ulashing.<br>• Profil bio’siga Telegram havolasini qo‘ying.</p></div>`;
+  $("ps").onclick=()=>{Object.assign(S.prof,{nom:$("pn").value.trim(),tel:$("pt").value.trim(),manzil:$("pm").value.trim(),tg:$("pg").value.trim(),ig:$("pi").value.trim()});save();cur="";toast("✅ Saqlandi")}}
+render();schedule();
+</script>
+</body>
+</html>

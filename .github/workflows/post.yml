@@ -1,0 +1,71 @@
+name: Post yordamchi APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['post/**', '.github/workflows/post.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: post
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Kutubxonalarni o'rnatish
+        run: npm install --no-audit --no-fund
+
+      - name: Android loyihasini yaratish
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Ikonka va splash
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#e26455' --splashBackgroundColor '#e26455' || echo "Ikonka yaratilmadi"
+
+      - name: Versiya raqami
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Gap daftari APK
+        working-directory: post/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Doimiy kalit bilan imzolash
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks ../signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out post-yordamchi.apk aligned.apk
+          $BT/apksigner verify --print-certs post-yordamchi.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: post-apk
+          path: post/post-yordamchi.apk
+
+      - name: Releases sahifasiga joylash
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: post-1.0.${{ github.run_number }}
+          name: Post yordamchi ${{ github.run_number }}
+          files: post/post-yordamchi.apk

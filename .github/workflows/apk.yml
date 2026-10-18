@@ -3,7 +3,7 @@ name: APK yig'ish
 on:
   push:
     branches: [main]
-    paths-ignore: ['gap/**', '.github/workflows/gap.yml']
+    paths-ignore: ['gap/**', 'post/**', '.github/workflows/gap.yml', '.github/workflows/post.yml']
   workflow_dispatch:
 
 permissions:
