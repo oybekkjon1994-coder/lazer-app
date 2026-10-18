@@ -2055,6 +2055,95 @@ function bend3dOpen(){if(!gen){return}let o=$("b3ov");if(!o){o=document.createEl
 const _rpB3=renderParams;renderParams=function(){_rpB3();if(part!=="bend")return;const host=$("params");if(!host)return;const d=document.createElement("div");d.className="field wide";
   d.innerHTML=`<button type="button" id="b3open" class="primary" style="width:100%;min-height:48px">🧊 3D ko‘rinishda ko‘rish</button>`;host.insertBefore(d,host.firstChild);$("b3open").onclick=()=>{if(typeof fullBuild==="function")fullBuild(true);bend3dOpen()}};
 
+/* ---------- matn / raqam: shakl ichida ---------- */
+(()=>{const P=PARTS.text,orig=P.build;
+const arcPts=(cx,cy,r,a0,a1,n)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+const qPts=(a,c,b,n)=>Array.from({length:n+1},(_,i)=>{const t=i/n,u=1-t;return [u*u*a[0]+2*u*t*c[0]+t*t*b[0],u*u*a[1]+2*u*t*c[1]+t*t*b[1]]});
+const norm=(pts,W,H)=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const [a,b] of pts){x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)}return pts.map(([a,b])=>[(a-x0)/(x1-x0)*W,(b-y0)/(y1-y0)*H])};
+/* har shakl: f(W,H,p)->nuqtalar, c(W,H)->matn markazi, a = tabiiy nisbat (eni/bo‘yi) yoki auto(tw,th,m) */
+const SH={
+  tort:{n:"To‘rtburchak",f:(W,H,p)=>{const R=Math.max(0,Math.min(+p.rr||0,W/2-.01,H/2-.01));if(!R)return [[0,0],[W,0],[W,H],[0,H]];
+      return [...arcPts(W-R,R,R,-Math.PI/2,0,10),...arcPts(W-R,H-R,R,0,Math.PI/2,10),...arcPts(R,H-R,R,Math.PI/2,Math.PI,10),...arcPts(R,R,R,Math.PI,1.5*Math.PI,10)]},
+    auto:(tw,th,m)=>[tw+2*m,th+2*m]},
+  doira:{n:"Doira",f:(W,H)=>arcPts(W/2,H/2,W/2,0,2*Math.PI,119).slice(0,-1),a:1},
+  oval:{n:"Oval",f:(W,H)=>arcPts(0,0,1,0,2*Math.PI,159).slice(0,-1).map(([a,b])=>[W/2+a*W/2,H/2+b*H/2]),auto:(tw,th,m)=>[(tw+2*m)*Math.SQRT2,(th+2*m)*Math.SQRT2]},
+  lenta:{n:"Lenta (uchlari kesik)",f:(W,H)=>{const d=H*.3;return [[0,0],[W,0],[W-d,H/2],[W,H],[0,H],[d,H/2]]},auto:(tw,th,m)=>{const H=th+2*m;return [tw+2*m+.6*H,H]}},
+  strelka:{n:"Ko‘rsatkich (strelka)",f:(W,H)=>{const d=Math.min(H*.5,W*.4);return [[0,0],[W-d,0],[W,H/2],[W-d,H],[0,H]]},c:(W,H)=>[(W-Math.min(H*.5,W*.4))/2,H/2],auto:(tw,th,m)=>{const H=th+2*m;return [tw+2*m+H*.5,H]}},
+  uy:{n:"Uycha (uy raqami)",f:(W,H)=>[[0,0],[W,0],[W,H*.72],[W/2,H],[0,H*.72]],c:(W,H)=>[W/2,H*.36],auto:(tw,th,m)=>[tw+2*m,(th+2*m)/.72]},
+  arka:{n:"Arka (tepasi yarim doira)",f:(W,H)=>{const r=W/2,hb=Math.max(H-r,0);return [[0,0],[W,0],...arcPts(r,hb,r,0,Math.PI,40).map(([a,b])=>[a,Math.min(b,H)])]},c:(W,H)=>[W/2,Math.max(H-W/2,H*.3)*.5+W*.1],auto:(tw,th,m)=>{const W=tw+2*m;return [W,th+2*m+W/2]}},
+  romb:{n:"Romb",f:(W,H)=>[[W/2,0],[W,H/2],[W/2,H],[0,H/2]],auto:(tw,th,m)=>[2*(tw+2*m),2*(th+2*m)]},
+  olti:{n:"Olti burchak",f:(W,H)=>norm(Array.from({length:6},(_,i)=>[Math.cos(i*Math.PI/3),Math.sin(i*Math.PI/3)]),W,H),a:2/Math.sqrt(3)},
+  sakkiz:{n:"Sakkiz burchak",f:(W,H)=>norm(Array.from({length:8},(_,i)=>[Math.cos((i+.5)*Math.PI/4),Math.sin((i+.5)*Math.PI/4)]),W,H),a:1},
+  yulduz:{n:"Yulduz",f:(W,H)=>norm(Array.from({length:10},(_,i)=>{const a=Math.PI/2+i*Math.PI/5,r=i%2?.55:1;return [r*Math.cos(a),r*Math.sin(a)]}),W,H),c:(W,H)=>[W/2,H*.553],a:1.902/1.809},
+  yurak:{n:"Yurak",f:(W,H)=>norm(Array.from({length:120},(_,i)=>{const t=i/120*2*Math.PI;return [16*Math.sin(t)**3,13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)]}),W,H),c:(W,H)=>[W/2,H*.6],a:32/29},
+  qalqon:{n:"Qalqon",f:(W,H)=>[[0,H],[W*.25,H*.94],[W/2,H],[W*.75,H*.94],[W,H],[W,H*.5],...qPts([W,H*.5],[W,H*.12],[W/2,0],14).slice(1),...qPts([W/2,0],[0,H*.12],[0,H*.5],14).slice(1,-1)],c:(W,H)=>[W/2,H*.6],a:.85},
+  bulut:{n:"Bulut",f:(W,H)=>{const c=[[.5,.3,.3],[.27,.42,.22],[.5,.62,.3],[.76,.45,.22]];const pts=[];for(let i=0;i<360;i++){const a=i/360*2*Math.PI,dx=Math.cos(a),dy=Math.sin(a);let best=0;
+        for(const [cx,cy,r] of c){const bx=cx-.5,by=cy-.46,b=bx*dx+by*dy,disc=b*b-(bx*bx+by*by-r*r);if(disc>=0)best=Math.max(best,b+Math.sqrt(disc))}pts.push([dx*best,dy*best*.82])}
+      return norm(pts,W,H)},c:(W,H)=>[W/2,H*.47],a:1.35}};
+const SHOPTS=[["yoq","Shaklsiz — faqat harflar"]].concat(Object.entries(SH).map(([k,s])=>[k,s.n]));
+const isSh=p=>p.sh&&p.sh!=="yoq";
+P.fields=P.fields.filter(f=>!["fr","mh"].includes(f[0]));
+P.fields.push(["sh","Shakl (matn ichida)","yoq","select",SHOPTS],
+  ["us","Kesish usuli","oy","select",[["oy","Harflar plastinkadan o‘yiladi"],["traf","Trafaret — harf ichlari tushmaydi"],["ramka","Ramka + harflar (bir bo‘lak)"]],isSh],
+  ["bar","Harflar ramkaga ulanadi","past","select",[["past","Pastdan chiziq bilan"],["ikki","Pastdan va tepadan"]],p=>isSh(p)&&p.us==="ramka"],
+  ["fr","Chet oralig‘i (mm, 0=avto)",0],
+  ["sw","Shakl eni (mm, 0=avto)",0,"num",null,isSh],["shh","Shakl bo‘yi (mm, 0=avto)",0,"num",null,isSh],
+  ["rr","Burchak radiusi (mm)",10,"num",null,p=>p.sh==="tort"],
+  ["fw","Ramka eni (mm)",8,"num",null,p=>isSh(p)&&p.us==="ramka"],
+  ["kw","Ko‘prik qalinligi (mm)",5,"num",null,p=>isSh(p)&&p.us!=="oy"],
+  ["mh","Mahkamlash teshigi Ø (0=yo‘q)",0]);
+P.rerender=["sh","us"];
+P.note="Pastdagi namunalardan shriftni tanlang. “Faqat lotin” shriftlarda kirill harflari oddiy shriftdan olinadi. Shakl tanlasangiz, matn uning ichiga joylanadi. «O‘yiladi» usulida O, A, B, 0, 8 ning ichki qismi tushib ketadi — tushmasin desangiz «Trafaret»ni tanlang. «Ramka + harflar»da harflar ramkaga chiziq bilan ulanadi (i, j nuqtasi va ‘ belgisi alohida tushadi).";
+const pip=(pts,x,y)=>{let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const [xi,yi]=pts[i],[xj,yj]=pts[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c};
+const fits=(pts,cx,cy,hw,hh)=>{for(let i=0;i<=24;i++){const t=i/24,X=cx-hw+2*hw*t,Y=cy-hh+2*hh*t;if(!pip(pts,X,cy-hh)||!pip(pts,X,cy+hh)||!pip(pts,cx-hw,Y)||!pip(pts,cx+hw,Y))return false}
+  for(const [a,b] of pts)if(a>cx-hw&&a<cx+hw&&b>cy-hh&&b<cy+hh)return false;return true};
+const cen=(S,W,H)=>S.c?S.c(W,H):[W/2,H/2];
+P.build=function(p){if(!isSh(p))return orig.call(this,p);const S=SH[p.sh];if(!S)throw"Shakl topilmadi.";
+  const F=LZF[p.font];if(!F)throw"Shrift yuklanmadi.";
+  const lines=String(p.txt||"").split(/\r?\n/).map(s=>s.replace(/\s+$/,"")).filter((s,i,a)=>s||i<a.length-1);
+  if(!lines.join("").trim())throw"Matn yozing.";if(p.h<=0)throw"Harf balandligi 0 dan katta bo‘lsin.";
+  const k0=p.h/F.cap,step=1000*k0*(p.lh>0?p.lh:1.3),miss=new Set(),glyphs=[],bases=[];let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  const GL=ch=>{const g=F.g[ch];if(g)return [g,k0];const Sx=LZF.sans;if(Sx&&Sx.g[ch])return [Sx.g[ch],p.h/Sx.cap];miss.add(ch);return [F.g["?"]||Sx.g["?"],k0]};
+  const widths=lines.map(l=>[...l].reduce((w,ch,i)=>{const [g,kk]=GL(ch);return w+g[0]*kk+(i?p.ls:0)},0)),wmax=Math.max(...widths);
+  lines.forEach((l,li)=>{let x=(wmax-widths[li])/2;const y=-li*step;bases.push(y);
+    [...l].forEach((ch,i)=>{if(i)x+=p.ls;const [g,kk]=GL(ch),gp=[];
+      for(const c of g[1]){const pts=c.map(([u,v])=>[x+u*kk,y+v*kk]);pts.forEach(([a,b])=>{minx=Math.min(minx,a);maxx=Math.max(maxx,a);miny=Math.min(miny,b);maxy=Math.max(maxy,b)});gp.push(pts)}
+      if(gp.length)glyphs.push(gp);x+=g[0]*kk})});
+  if(!glyphs.length)throw"Matnda kesiladigan harf yo‘q.";
+  const tw=maxx-minx,th=maxy-miny,m=p.fr>0?p.fr:Math.max(8,p.h*.3),warn=[];if(miss.size)warn.push("Shriftda yo‘q belgilar «?» bilan almashtirildi: "+[...miss].join(" "));
+  const ok=(W,H,t)=>{const [cx,cy]=cen(S,W,H);return fits(S.f(W,H,p),cx,cy,tw*t/2+m,th*t/2+m)};
+  let W,H;
+  if(S.auto){[W,H]=S.auto(tw,th,m);for(let i=0;i<300&&!ok(W,H,1);i++){W*=1.02;H*=1.02}}
+  else{let lo=1,hi=20*(tw+th+2*m);for(let i=0;i<40;i++){const s=(lo+hi)/2;ok(S.a*s,s,1)?hi=s:lo=s}H=hi;W=S.a*hi}
+  let t=1;const sw=+p.sw>0?+p.sw:0,sh=+p.shh>0?+p.shh:0;
+  if(sw||sh){if(sw&&sh){W=sw;H=sh}else if(sw){H=H*sw/W;W=sw}else{W=W*sh/H;H=sh}
+    if(!ok(W,H,1)){let lo=0,hi=1;for(let i=0;i<30;i++){const s=(lo+hi)/2;ok(W,H,s)?lo=s:hi=s}t=lo;
+      if(t<.05)throw"Matn bu shaklga sig‘maydi — shaklni kattalashtiring yoki chet oralig‘ini kamaytiring.";warn.push(`Harflar shaklga sig‘ishi uchun ${(p.h*t).toFixed(1)} mm gacha kichraytirildi.`)}}
+  if(W>6000||H>6000)throw"Shakl juda katta chiqdi — matnni qisqartiring yoki o‘lchamni kiriting.";
+  const pts=S.f(W,H,p),[cx,cy]=cen(S,W,H),tx=v=>cx+(v[0]-(minx+maxx)/2)*t,ty=v=>cy+(v[1]-(miny+maxy)/2)*t,G=glyphs.map(gp=>gp.map(c=>c.map(v=>[tx(v),ty(v)])));
+  // teshiklar
+  const holes=[];if(p.mh>0&&p.us==="ramka")warn.push("«Ramka» usulida mahkamlash teshigi qo‘yilmaydi — ramkaning o‘zidan mahkamlang.");if(p.mh>0&&p.us!=="ramka"){const r=p.mh/2,hw=tw*t/2,hh=th*t/2;
+    if(p.sh==="tort"){const q=Math.max(r+3,(+p.rr||0)*.6,Math.min(m/2,30));[[q,q],[W-q,q],[W-q,H-q],[q,H-q]].forEach(h=>holes.push(h))}
+    else if(["yurak","yulduz","qalqon","uy","arka","bulut"].includes(p.sh)){let yt=cy;while(yt<H*2&&pip(pts,cx,yt))yt+=.5;const y=(yt+cy+hh)/2;holes.push([cx,y])}
+    else{let xl=cx,xr=cx;while(xl>-W&&pip(pts,xl,cy))xl-=.5;while(xr<2*W&&pip(pts,xr,cy))xr+=.5;holes.push([(xl+cx-hw)/2,cy],[(xr+cx+hw)/2,cy])}
+    for(const [a,b] of holes){let good=true;for(let i=0;i<16;i++){const g=i*Math.PI/8;if(!pip(pts,a+(r+2)*Math.cos(g),b+(r+2)*Math.sin(g)))good=false}
+      if(!good||(a+r>cx-hw-1&&a-r<cx+hw+1&&b+r>cy-hh-1&&b-r<cy+hh+1))throw"Mahkamlash teshigi sig‘maydi — chet oralig‘ini kattalashtiring yoki teshikni kichraytiring."}}
+  this.warn=warn.join(" ");
+  if(p.us==="oy"){let out=p.sh==="doira"?E.circle(W/2,H/2,W/2):p.sh==="tort"&&+p.rr>0?roundRect(W,H,Math.min(+p.rr,W/2-.01,H/2-.01)):E.poly(pts);
+    for(const gp of G)for(const c of gp)out+=E.poly(c);for(const [a,b] of holes)out+=E.circle(a,b,p.mh/2);return out}
+  const kw=+p.kw>0?+p.kw:5,O=2;
+  return E.poly(pts.map(([a,b])=>[a+O,b+O]))+rcut(W+2*O,H+2*O,T=>{const x=T.x,sp=T.poly(pts.map(([a,b])=>[a+O,b+O]));
+    if(p.us==="ramka"){const fw=+p.fw>0?+p.fw:8;x.save();x.clip(sp);x.fillStyle="#000";x.fill(sp);x.strokeStyle="#fff";x.lineJoin="round";x.lineWidth=2*fw*T.sc;x.stroke(sp);
+      for(const gp of G)T.metal(T.contours(gp,O,O),"evenodd");
+      const cap=p.h*t;bases.forEach(b=>{const y=ty([0,b])+O;const bar=yy=>{x.fillStyle="#fff";x.fillRect(0,T.Y(yy+kw),x.canvas.width,kw*T.sc)};bar(y-kw*.4);if(p.bar==="ikki")bar(y+cap-kw*.6)});x.restore()}
+    else{for(const gp of G){T.cut(T.contours(gp,O,O),"evenodd");
+        gp.forEach((c,i)=>{const [a,b]=c[0];if(!gp.some((d,j)=>j!==i&&pip(d,a,b)))return;let x0=1e9,x1=-1e9;c.forEach(v=>{x0=Math.min(x0,v[0]);x1=Math.max(x1,v[0])});
+          let y0=1e9,y1=-1e9;gp.forEach(d=>d.forEach(v=>{y0=Math.min(y0,v[1]);y1=Math.max(y1,v[1])}));T.line([(x0+x1)/2+O,y0-1+O],[(x0+x1)/2+O,y1+1+O],kw,true,"butt")})}}
+    for(const [a,b] of holes)T.cut(T.circ(a+O,b+O,p.mh/2))}).out};
+P.label=p=>(isSh(p)?SH[p.sh]?.n+" ":"")+"Matn "+String(p.txt||"").split(/\r?\n/)[0].slice(0,20);
+HEAVY.add("text");
+const v=vals.text;P.fields.forEach(([id,,d])=>{if(v[id]===undefined)v[id]=d})})();
+
 /* ---------- start ---------- */
 function sampleDXF(){let s=E.circle(0,0,100)+E.circle(0,0,40);for(let k=0;k<4;k++){const a=(k+.5)*Math.PI/2;s+=E.circle(70*Math.cos(a),70*Math.sin(a),9)}return wrapDXF(s)}
 renderTiers();$("thk").value="t2";$("nthk").value="t2";
