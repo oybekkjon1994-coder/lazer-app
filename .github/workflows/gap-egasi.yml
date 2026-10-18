@@ -3,7 +3,7 @@ name: Gap daftari — egasi (bepul Premium)
 on:
   push:
     branches: [egasi]
-    paths: ['gap/**', '.github/workflows/gap.yml']
+    paths: ['gap/**', '.github/workflows/gap-egasi.yml']
   workflow_dispatch:
 
 permissions:
