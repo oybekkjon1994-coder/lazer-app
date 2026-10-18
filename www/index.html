@@ -100,6 +100,10 @@ input,select{font:500 16px var(--mono);padding:10px 12px;border-radius:7px;borde
 .pgroup{flex-basis:100%;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-top:4px}
 .field.wide,.note.wide{grid-column:1/-1}
 textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;resize:vertical}
+.gal{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:340px;overflow-y:auto;padding:2px}
+.gal button{padding:2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:1px;font:500 11px var(--mono);color:var(--muted)}
+.gal button img{width:100%;aspect-ratio:1;border-radius:4px;display:block}
+.gal button[aria-pressed="true"]{border-color:var(--accent);outline:2px solid var(--accent);color:var(--accent)}
 .soon{display:flex;flex-direction:column;gap:8px;max-width:60ch}
 .soon h2{font-family:var(--display);font-weight:700;font-size:22px;margin:0}
 </style>
@@ -698,7 +702,10 @@ Object.assign(PARTS,{
     label:p=>`Doira naqsh ${p.W}×${p.H}`}
 });
 /* ---------- islomiy naqshlar (girih, Hankin usuli) ---------- */
-const GIRIH={k8:{t:"488",a:67.5},xot:{t:"488",a:45},k12:{t:"31212",a:72},k126:{t:"4612",a:70},k6:{t:"666",a:60},k4:{t:"4444",a:67.5}};
+const GFAM={"4612":"12–6 rozetka","31212":"12 qirrali rozetka","488":"8 qirrali (Xotam)","666":"6 qirrali yulduz","3636":"Olti-uch (kagome)","3464":"6–4–3 aralash","4444":"Kvadrat to‘r","333333":"Uchburchak to‘r","33344":"Uchburchak-kvadrat qator"};
+const GCAT={"4612":[70,25,30,40,45,50,60,75,80],"31212":[72,25,35,45,55,65,75,80],"488":[45,67.5,20,30,40,55,60,75,80,85],"666":[60,20,35,45,55,65,70,80],"3636":[70,20,40,50,55,65,75,85],"3464":[65,25,30,40,60,75,85],"4444":[60,25,40,70,80],"333333":[45,30,70,85],"33344":[40,25,65,85]};
+const GIRIH={};let gNo=0;for(const [t,as] of Object.entries(GCAT))for(const a of as){gNo++;GIRIH[t+"_"+a]={t,a,n:`${gNo}. ${GFAM[t]} · ${a}°`}}
+Object.assign(GIRIH,{k126:GIRIH["4612_70"],k12:GIRIH["31212_72"],xot:GIRIH["488_45"],k8:GIRIH["488_67.5"],k6:GIRIH["666_60"],k4:GIRIH["4444_60"]});
 function regPoly(cx,cy,n,s,a0){const R=s/(2*Math.sin(Math.PI/n)),v=[];for(let k=0;k<n;k++){const a=(a0*Math.PI/180)+2*Math.PI*k/n;v.push([cx+R*Math.cos(a),cy+R*Math.sin(a)])}return v}
 function girihTiles(kind,s,W,H){const T=[],cx=W/2,cy=H/2,ext=Math.max(W,H)/2+6*s;
   const lat=(d,f)=>{const h=d*Math.sqrt(3)/2,nj=Math.ceil(ext/h)+1,ni=Math.ceil(ext/d)+1;for(let j=-nj;j<=nj;j++)for(let i=-ni;i<=ni;i++){f(cx+i*d+(Math.abs(j)%2)*d/2,cy+j*h,d,h)}};
@@ -710,6 +717,15 @@ function girihTiles(kind,s,W,H){const T=[],cx=W/2,cy=H/2,ext=Math.max(W,H)/2+6*s
   else if(kind==="4612"){const r=s*(2+Math.sqrt(3))/2;lat(2*r+s,(x,y,d,h)=>{if(!near(x,y))return;T.push(regPoly(x,y,12,s,15));
     [[d/2,0,45],[d/4,h/2,105],[-d/4,h/2,165]].forEach(([dx,dy,a])=>T.push(regPoly(x+dx,y+dy,4,s,a)));
     T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,6,s,0));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,6,s,0))})}
+  else if(kind==="3636"){lat(2*s,(x,y,d)=>{if(!near(x,y))return;T.push(regPoly(x,y,6,s,0));T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,3,s,270));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,3,s,90))})}
+  else if(kind==="3464"){lat(s*(Math.sqrt(3)+1),(x,y,d,h)=>{if(!near(x,y))return;T.push(regPoly(x,y,6,s,30));
+    [[d/2,0,45],[d/4,h/2,105],[-d/4,h/2,165]].forEach(([dx,dy,a])=>T.push(regPoly(x+dx,y+dy,4,s,a)));
+    T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,3,s,90));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,3,s,30))})}
+  else if(kind==="333333"){lat(s,(x,y,d)=>{if(!near(x,y))return;T.push(regPoly(x+d/2,y+d*Math.sqrt(3)/6,3,s,90));T.push(regPoly(x+d/2,y-d*Math.sqrt(3)/6,3,s,30))})}
+  else if(kind==="33344"){const h=s*Math.sqrt(3)/2,P=s+h,nk=Math.ceil(ext/P)+1,ni=Math.ceil(ext/s)+2;
+    for(let k=-nk;k<=nk;k++){const yc=cy+k*P,off=((k%2)+2)%2*s/2,yt=yc+s/2;
+      for(let i=-ni;i<=ni;i++){const xc=cx+off+i*s;T.push(regPoly(xc,yc,4,s,45));const xL=xc-s/2;
+        T.push(regPoly(xL+s/2,yt+h/3,3,s,90));T.push(regPoly(xL+s,yt+2*h/3,3,s,30))}}}
   return T}
 function hankin(T,deg,dl=0){const th=deg*Math.PI/180,c=Math.cos(th),sn=Math.sin(th),V=[];
   for(const v of T){const n=v.length,R=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1])*4,mid=k=>{const a=v[k%n],b=v[(k+1)%n];return [(a[0]+b[0])/2,(a[1]+b[1])/2]};
@@ -722,9 +738,9 @@ function hankin(T,deg,dl=0){const th=deg*Math.PI/180,c=Math.cos(th),sn=Math.sin(
       if(t<=0||u<=0||t>R||u>R)continue;
       V.push([m1,[m1[0]+t*r1[0],m1[1]+t*r1[1]],m2])}}
   return V}
-PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Naqsh chiziqlari (metall) qoladi, oradagi shakllar kesiladi. Burchakni o‘zgartirib, yulduz shaklini moslang. Katta panelda hisoblash bir necha soniya olishi mumkin.",
-  fields:[["pat","Naqsh turi","k126","select",[["k126","12–6 aralash rozetka"],["k12","12 qirrali rozetka"],["xot","Xotam (8 yulduz va xoch)"],["k8","8 qirrali yulduz"],["k6","6 qirrali yulduz"],["k4","Kvadrat yulduz"]]],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["s","Naqsh o‘lchami (mm)",40],["t","Chiziq qalinligi (mm)",4],["a","Yulduz burchagi (0=avto)",0],["m","Rama eni (mm)",10],["min","Mayda bo‘laklarni o‘chirish (mm²)",3]],
-  build(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH.k126,ang=p.a>0?p.a:G.a;
+PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Pastdagi rasmchalardan naqshni tanlang. Naqsh chiziqlari (metall) qoladi, oradagi shakllar kesiladi. Burchakni o‘zgartirib, yulduz shaklini moslang. Katta panelda hisoblash bir necha soniya olishi mumkin.",
+  fields:[["pat","Naqsh turi","4612_70","select",Object.entries(GIRIH).filter(([k])=>k.includes("_")).map(([k,g])=>[k,g.n])],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["s","Naqsh o‘lchami (mm)",40],["t","Chiziq qalinligi (mm)",4],["a","Yulduz burchagi (0=avto)",0],["m","Rama eni (mm)",10],["min","Mayda bo‘laklarni o‘chirish (mm²)",3]],
+  build(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH["4612_70"],ang=p.a>0?p.a:G.a;
     if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
     if(s<5)throw"Naqsh o‘lchami kamida 5 mm bo‘lsin.";
     if(t<1||t>=s)throw"Chiziq qalinligi 1 mm dan katta va naqsh o‘lchamidan kichik bo‘lsin.";
@@ -743,6 +759,21 @@ PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Naqsh chiziqlari (me
     if(!n)throw"Naqsh chiqmadi — chiziq qalinligini kamaytiring yoki o‘lchamni oshiring.";
     return out},
   label:p=>`Naqsh ${p.W}×${p.H}`};
+
+let gThumbs=null;
+function girihGallery(){const host=$("params");if(!host)return;
+  if(!gThumbs){gThumbs={};for(const [k,g] of Object.entries(GIRIH)){if(!k.includes("_"))continue;const S=72,c=document.createElement("canvas");c.width=c.height=S;const x=c.getContext("2d");
+    const css=getComputedStyle(document.documentElement);x.fillStyle=css.getPropertyValue("--fg").trim()||"#222";x.fillRect(0,0,S,S);x.strokeStyle=css.getPropertyValue("--cut").trim()||"#d9481a";x.lineWidth=1.6;x.lineJoin="miter";x.beginPath();
+    for(const [a,b,cc] of hankin(girihTiles(g.t,12,S,S),g.a)){x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(cc[0],cc[1])}x.stroke();gThumbs[k]=c.toDataURL()}}
+  const cur=vals.girih.pat in GIRIH&&String(vals.girih.pat).includes("_")?vals.girih.pat:(Object.entries(GIRIH).find(([k,g])=>!k.includes("_")&&k===vals.girih.pat)||[])[1];
+  const curKey=typeof cur==="string"?cur:Object.keys(GIRIH).find(k=>k.includes("_")&&GIRIH[k]===cur);
+  const div=document.createElement("div");div.className="gal wide";div.innerHTML=Object.entries(gThumbs).map(([k,u])=>`<button type="button" data-g="${k}" aria-pressed="${k===curKey}" title="${GIRIH[k].n}"><img src="${u}" alt="${GIRIH[k].n}"><span>${GIRIH[k].n.split(".")[0]}</span></button>`).join("");
+  host.appendChild(div);
+  div.addEventListener("click",e=>{const b=e.target.closest("button[data-g]");if(!b)return;vals.girih.pat=b.dataset.g;vals.girih.a=0;
+    const sel=$("g-girih-pat");if(sel)sel.value=b.dataset.g;const af=$("g-girih-a");if(af)af.value=0;
+    div.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};build()});
+  const sel=$("g-girih-pat");if(sel)sel.addEventListener("input",()=>div.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.g===sel.value)));
+}
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
@@ -794,6 +825,7 @@ renderParams=function(){
       try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};clearTimeout(tm);tm=setTimeout(build,part==="image"?250:60)})});
   build()};
 const _build=build;build=function(){PARTS[part].warn="";_build();const ex=PARTS[part].warn;if(ex){const w=$("gwarn");w.textContent=(w.hidden?"":w.textContent+" ")+ex;w.hidden=false}};
+const _rpG=renderParams;renderParams=function(){_rpG();if(part==="girih")girihGallery()};
 document.querySelectorAll("#parts button").forEach(b=>b.addEventListener("click",()=>{part=b.dataset.part;
   document.querySelectorAll("#parts button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderParams()}));
 $("toPrice").addEventListener("click",()=>{if(!gen)return;load(genText,genName);showTab("narx")});
