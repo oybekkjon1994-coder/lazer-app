@@ -1,0 +1,6 @@
+{
+  "appId": "uz.gap.daftari",
+  "appName": "Gap daftari",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}

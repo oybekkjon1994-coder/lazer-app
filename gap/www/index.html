@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gap daftari</title>
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1d2a26;--muted:#66736e;--line:#e2ded5;--acc:#0f7a5c;--acc2:#e9a23b;--bad:#c9472f;--ok:#178a52;--soft:#e7f2ed}
+@media (prefers-color-scheme:dark){:root{--bg:#121816;--card:#1b2320;--ink:#e8efec;--muted:#93a39c;--line:#2c3733;--acc:#3fbf93;--acc2:#f0b456;--bad:#ef7a62;--ok:#4cc98a;--soft:#1f3029}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 90px) max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:28px;margin:6px 0 2px;letter-spacing:-.02em}h2{font-size:21px;margin:0}
+.sub{color:var(--muted);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 12px}
+button{font:600 16px system-ui,sans-serif;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 16px;cursor:pointer;min-height:48px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.warn{color:var(--bad)}
+button.big{width:100%;font-size:18px;min-height:56px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:10px}.top h2{flex:1}
+.back{flex:0 0 auto;min-width:48px;padding:10px 14px}
+label{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+input,select{width:100%;font:17px system-ui,sans-serif;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:50px}
+.gap{display:block;width:100%;text-align:left;padding:16px;margin:0 0 12px;border-radius:16px}
+.gap b{font-size:20px;display:block}.meta{color:var(--muted);font-size:15px}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:10px 0 4px}.bar i{display:block;height:100%;background:var(--ok)}
+.who{font-size:26px;font-weight:800;margin:4px 0}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;background:var(--soft);color:var(--acc)}
+.pill.bad{background:#c9472f22;color:var(--bad)}.pill.ok{background:#178a5222;color:var(--ok)}
+.mem{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}.mem:first-child{border-top:0}
+.mem .nm{flex:1;min-width:0}.mem .nm b{display:block;font-size:17px}.mem .nm span{color:var(--muted);font-size:14px}
+.pay{min-width:118px;flex:0 0 auto}.pay.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.ic{flex:0 0 auto;min-width:48px;padding:10px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:12px}
+.tabs button{border:0;min-height:44px;padding:8px 2px;font-size:14px;background:transparent;color:var(--muted)}.tabs button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.rnd{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.rnd:first-child{border-top:0}
+.num{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--acc);font-weight:800;flex:0 0 auto}
+.rnd.now .num{background:var(--acc);color:#fff}.rnd.done .num{background:var(--ok);color:#fff}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:min(520px,calc(100% - 32px));box-shadow:0 8px 24px #0003}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.empty .ico{font-size:60px}
+.ov{position:fixed;inset:0;background:var(--bg);z-index:30;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 40px}
+.lot{font-size:30px;font-weight:800;text-align:center;padding:30px 0;min-height:110px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center;z-index:50}.toast.on{opacity:1}
+.code{font:800 30px ui-monospace,monospace;letter-spacing:.08em;text-align:center;padding:8px 0;user-select:all}
+.note{color:var(--muted);font-size:14px}
+.sum{font-size:15px;color:var(--muted)}.sum b{color:var(--ink)}
+.hdr{display:flex;align-items:center;gap:10px}.hdr .logo{width:46px;height:46px;border-radius:12px;background:var(--acc);display:grid;place-items:center;color:#fff;font-weight:900;font-size:18px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),app=$("app");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>Math.round(+n||0).toLocaleString("ru-RU").replace(/,/g," ");
+const isNative=()=>!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const P=()=>window.Capacitor?.Plugins||{};
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
+/* ---------- ma'lumot ---------- */
+let D={gaps:[],key:""};try{D=Object.assign(D,JSON.parse(localStorage.getItem("gapData")||"{}"))}catch(_){}
+const save=()=>{try{localStorage.setItem("gapData",JSON.stringify(D))}catch(_){toast("Saqlab bo‘lmadi — xotira to‘lgan")}scheduleAll()};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const todayS=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const pd=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const ds=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const OYLAR=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"];
+const nice=s=>{const d=pd(s);return `${d.getDate()}-${OYLAR[d.getMonth()]}`};
+const PERIODS=[["oy","Har oy"],["2hafta","Har 2 haftada"],["hafta","Har hafta"]];
+function roundDate(g,i){const d=pd(g.start);if(g.period==="hafta")d.setDate(d.getDate()+7*i);else if(g.period==="2hafta")d.setDate(d.getDate()+14*i);
+  else{const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+i);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last))}return ds(d)}
+const N=g=>g.order.length;
+function recipient(g,i){return g.members.find(m=>m.id===g.order[i%N(g)])}
+function paidSet(g,i){return g.pay[i]||(g.pay[i]={})}
+function payers(g,i){const r=recipient(g,i);return g.members.filter(m=>!(r&&m.id===r.id&&!g.selfPay))}
+function curRound(g){if(!N(g))return 0;const t=todayS();let i=0;const max=N(g)*(g.cycles||1);
+  // birinchi to'liq yig'ilmagan yoki sanasi o'tmagan navbat
+  while(i<max-1){const done=payers(g,i).every(m=>paidSet(g,i)[m.id]);if(roundDate(g,i)>=t||!done)break;i++}return i}
+const PREMIUM=()=>LIC.ok;
+const FREE_GAPS=1,FREE_MEM=12;
+/* ---------- matnlar ---------- */
+function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>pay[m.id]),no=ps.filter(m=>!pay[m.id]);
+  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${fmt(g.amount)} so‘m\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}): ${no.map(m=>m.name).join(", ")||"—"}\n\nJami: ${fmt(ok.length*g.amount)} / ${fmt(ps.length*g.amount)} so‘m`}
+function orderText(g){return `📋 ${g.name} — navbat\n💰 ${fmt(g.amount)} so‘m, ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}\n\n`+g.order.map((id,i)=>`${i+1}. ${nice(roundDate(g,i))} — ${g.members.find(m=>m.id===id)?.name||"?"}`).join("\n")}
+async function shareText(t){try{if(isNative()&&P().Share){await P().Share.share({text:t});return}if(navigator.share){await navigator.share({text:t});return}}catch(_){return}
+  try{await navigator.clipboard.writeText(t);toast("Matn nusxalandi — Telegramga qo‘ying")}catch(_){toast("Ulashib bo‘lmadi")}}
+const telLink=p=>"tel:"+String(p||"").replace(/[^\d+]/g,"");
+const smsLink=(p,t)=>"sms:"+String(p||"").replace(/[^\d+]/g,"")+"?body="+encodeURIComponent(t);
+/* ---------- ko'rinishlar ---------- */
+let view={name:"home"};
+function go(v){view=v;render();window.scrollTo(0,0)}
+function render(){({home:vHome,gap:vGap,edit:vEdit,lot:vLot,set:vSet}[view.name]||vHome)()}
+function vHome(){
+  app.innerHTML=`<div class="hdr"><div class="logo">GAP</div><div><h1>Gap daftari</h1></div></div><p class="sub">Gap va «chernaya kassa» hisobi: navbat, to‘lovlar, eslatmalar.</p>
+  <div id="list"></div>
+  <div class="row" style="margin-top:6px"><button id="bSet">⚙️ Sozlamalar</button></div>
+  <button class="pri big fab" id="bNew">+ Yangi gap ochish</button>`;
+  const L=$("list");if(!D.gaps.length)L.innerHTML=`<div class="empty"><div class="ico">🤝</div><p><b>Hali gap yo‘q</b><br>«Yangi gap ochish» tugmasini bosing: a’zolarni yozasiz, qancha pul qo‘shilishini va navbatni belgilaysiz.</p></div>`;
+  D.gaps.forEach(g=>{const i=curRound(g),r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>pay[m.id]).length,b=document.createElement("button");b.className="gap";
+    b.innerHTML=`<b>${esc(g.name)}</b><span class="meta">${N(g)} kishi · ${fmt(g.amount)} so‘m · ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}</span>
+      <div style="margin-top:8px">📅 <b style="display:inline;font-size:17px">${nice(roundDate(g,i))}</b> — navbat: <b style="display:inline;font-size:17px">${esc(r?.name||"—")}</b></div>
+      <div class="bar"><i style="width:${ps.length?k/ps.length*100:0}%"></i></div><span class="meta">${k} / ${ps.length} kishi to‘ladi</span>`;
+    b.addEventListener("click",()=>go({name:"gap",id:g.id,tab:"now"}));L.appendChild(b)});
+  $("bNew").addEventListener("click",()=>{if(!PREMIUM()&&D.gaps.length>=FREE_GAPS){licOpen(`Bepul versiyada ${FREE_GAPS} ta gap ochiladi. Ko‘proq gap uchun Premium’ni faollashtiring.`);return}go({name:"edit",id:null})});
+  $("bSet").addEventListener("click",()=>go({name:"set"}))}
+function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"home"});const tab=view.tab||"now";
+  app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>${esc(g.name)}</h2></div>
+   <div class="tabs">${[["now","Joriy"],["jad","Navbat"],["mem","A’zolar"],["his","Hisob"]].map(([k,t])=>`<button data-t="${k}" aria-pressed="${k===tab}">${t}</button>`).join("")}</div><div id="body"></div>`;
+  $("bk").addEventListener("click",()=>go({name:"home"}));app.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{view.tab=b.dataset.t;render()}));
+  const B=$("body");
+  if(!N(g)){B.innerHTML=`<div class="card empty">A’zolar yo‘q. «A’zolar» bo‘limida qo‘shing.</div>`;if(tab==="mem")memTab(g,B);return}
+  if(tab==="now"){let i=view.round??curRound(g);const max=N(g)*(g.cycles||1);i=Math.max(0,Math.min(max-1,i));const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>pay[m.id]).length;
+    B.innerHTML=`<div class="card"><div class="row" style="flex-wrap:nowrap"><button class="ic" id="pv">‹</button><div style="text-align:center;flex:3"><span class="pill">${i%N(g)+1}-navbat${(g.cycles||1)>1?` · ${Math.floor(i/N(g))+1}-aylanma`:""}</span><div class="meta" style="margin-top:6px">📅 ${nice(roundDate(g,i))}</div></div><button class="ic" id="nx">›</button></div>
+      <div style="text-align:center;margin-top:8px"><div class="meta">Pulni oladi</div><div class="who">🎁 ${esc(r?.name||"—")}</div><div class="sum">Yig‘ildi: <b>${fmt(k*g.amount)}</b> / ${fmt(ps.length*g.amount)} so‘m</div></div>
+      <div class="bar"><i style="width:${ps.length?k/ps.length*100:0}%"></i></div></div>
+      <div class="card" id="pl"></div>
+      <button class="pri big" id="bRem">📣 Eslatma yuborish (Telegram)</button>
+      <p class="note">«To‘ladi» tugmasini bosing — sana yoziladi. Qayta bossangiz bekor qilinadi. Qarzdorga SMS yoki qo‘ng‘iroq tugmasi yonida.</p>`;
+    const L=$("pl");ps.forEach(m=>{const p=pay[m.id],d=document.createElement("div");d.className="mem";
+      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${p?"✅ "+nice(p.d):"⏳ to‘lamagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${fmt(g.amount)} so‘m to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic" aria-label="SMS">✉️</button></a><a href="${telLink(m.phone)}"><button class="ic" aria-label="Qo‘ng‘iroq">📞</button></a>`:""}<button class="pay ${p?"on":""}">${p?"To‘ladi ✓":"To‘ladi"}</button>`;
+      d.querySelector(".pay").addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else pay[m.id]={d:todayS()};save();render()});L.appendChild(d)});
+    if(!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
+    $("pv").addEventListener("click",()=>{view.round=i-1;render()});$("nx").addEventListener("click",()=>{view.round=i+1;render()});
+    $("bRem").addEventListener("click",()=>shareText(remindText(g,i)));
+    if(i===max-1&&ps.every(m=>pay[m.id])){const c=document.createElement("div");c.className="card";c.innerHTML=`<b>🎉 Aylanma tugadi!</b><p class="note">Hamma o‘z navbatini oldi. Shu a’zolar bilan yangi aylanma boshlaysizmi?</p><button class="pri big" id="bCyc">Yangi aylanma boshlash</button>`;B.appendChild(c);
+      $("bCyc").addEventListener("click",()=>{g.cycles=(g.cycles||1)+1;save();view.round=max;render()})}}
+  if(tab==="jad"){const cur=curRound(g),c0=Math.floor(cur/N(g))*N(g);
+    B.innerHTML=`<div class="card" id="rl"></div><div class="row"><button id="bLot">🎲 Qur’a tashlash</button><button id="bShO">📤 Navbatni yuborish</button></div><p class="note">Tartibni ↑ ↓ tugmalari bilan o‘zgartirasiz. Qur’a navbatni tasodifiy qiladi — natijani hammaga yuborish mumkin.</p>`;
+    const L=$("rl");g.order.forEach((id,j)=>{const i=c0+j,m=g.members.find(x=>x.id===id),ps=payers(g,i),pay=paidSet(g,i),done=ps.every(x=>pay[x.id])&&ps.length,d=document.createElement("div");d.className="rnd"+(i===cur?" now":done?" done":"");
+      d.innerHTML=`<div class="num">${j+1}</div><div style="flex:1;min-width:0"><b>${esc(m?.name||"?")}</b><div class="meta">${nice(roundDate(g,i))}${i===cur?" · <span class='pill'>joriy</span>":done?" · <span class='pill ok'>yig‘ildi</span>":""}</div></div><button class="ic" data-u="${j}" aria-label="Yuqoriga">↑</button><button class="ic" data-d="${j}" aria-label="Pastga">↓</button>`;L.appendChild(d)});
+    L.addEventListener("click",e=>{const u=e.target.closest("[data-u]"),dn=e.target.closest("[data-d]");if(!u&&!dn)return;const j=+(u?u.dataset.u:dn.dataset.d),k=u?j-1:j+1;if(k<0||k>=N(g))return;[g.order[j],g.order[k]]=[g.order[k],g.order[j]];save();render()});
+    $("bLot").addEventListener("click",()=>{if(Object.keys(g.pay).some(k=>Object.keys(g.pay[k]).length)&&!confirm("To‘lovlar yozilgan. Navbatni qayta qur’a qilsangiz, kim qachon olishi o‘zgaradi. Davom etamizmi?"))return;go({name:"lot",id:g.id})});
+    $("bShO").addEventListener("click",()=>shareText(orderText(g)))}
+  if(tab==="mem")memTab(g,B);
+  if(tab==="his"){const max=N(g)*(g.cycles||1);let tot=0,debt=[];for(let i=0;i<=Math.min(curRound(g),max-1);i++){const ps=payers(g,i),pay=paidSet(g,i);tot+=ps.filter(m=>pay[m.id]).length*g.amount;if(roundDate(g,i)<=todayS())ps.filter(m=>!pay[m.id]).forEach(m=>debt.push([m,i]))}
+    B.innerHTML=`<div class="card"><div class="sum">Jami yig‘ilgan: <b>${fmt(tot)} so‘m</b></div><div class="sum">Bir navbatdagi pul: <b>${fmt(g.amount*payers(g,0).length)} so‘m</b></div></div>
+      <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${fmt(g.amount)}</span></div>`).join(""):`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
+      <div class="card"><b>Sozlamalar</b><div class="row" style="margin-top:10px"><button id="bEd">✏️ Tahrirlash</button><button class="warn" id="bDel">🗑 O‘chirish</button></div></div>`;
+    $("bEd").addEventListener("click",()=>go({name:"edit",id:g.id}));
+    $("bDel").addEventListener("click",()=>{if(confirm(`«${g.name}» gapi butunlay o‘chiriladi. Ishonchingiz komilmi?`)){D.gaps=D.gaps.filter(x=>x!==g);save();go({name:"home"})}})}}
+function memTab(g,B){B.innerHTML=`<div class="card" id="ml"></div><div class="card"><b>+ A’zo qo‘shish</b><label for="mn">Ismi</label><input id="mn" autocomplete="off" placeholder="masalan, Dilnoza opa"><label for="mp">Telefoni (ixtiyoriy)</label><input id="mp" type="tel" inputmode="tel" placeholder="+998 90 123 45 67"><div style="margin-top:12px"><button class="pri big" id="madd">Qo‘shish</button></div></div>`;
+  const L=$("ml");if(!g.members.length)L.innerHTML=`<p class="note">Hali a’zo yo‘q.</p>`;
+  g.members.forEach(m=>{const d=document.createElement("div");d.className="mem";d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${esc(m.phone||"telefon yo‘q")}</span></div><button class="ic" aria-label="Tahrirlash">✏️</button><button class="ic warn" aria-label="O‘chirish">✕</button>`;
+    const [be,bd]=d.querySelectorAll("button");be.addEventListener("click",()=>{const n=prompt("Ismi",m.name);if(n===null)return;const p=prompt("Telefoni",m.phone||"");if(n.trim())m.name=n.trim();if(p!==null)m.phone=p.trim();save();render()});
+    bd.addEventListener("click",()=>{if(!confirm(`${m.name} gapdan chiqariladimi?`))return;g.members=g.members.filter(x=>x!==m);g.order=g.order.filter(id=>id!==m.id);save();render()});L.appendChild(d)});
+  $("madd").addEventListener("click",()=>{const n=$("mn").value.trim();if(!n){toast("Ismini yozing");return}if(!PREMIUM()&&g.members.length>=FREE_MEM){licOpen(`Bepul versiyada bitta gapda ${FREE_MEM} kishigacha. Ko‘proq a’zo uchun Premium’ni faollashtiring.`);return}
+    const m={id:uid(),name:n,phone:$("mp").value.trim()};g.members.push(m);g.order.push(m.id);save();render();setTimeout(()=>$("mn")?.focus(),50)})}
+function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{name:"",amount:500000,period:"oy",start:todayS(),members:[],order:[],pay:{},cycles:1,selfPay:false};
+  app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>${g0?"Gapni tahrirlash":"Yangi gap"}</h2></div>
+   <div class="card"><label for="gn">Gap nomi</label><input id="gn" placeholder="masalan, Qizlar gapi, Ishxona kassasi" value="${esc(g.name)}">
+   <label for="ga">Har kim qo‘shadigan pul, so‘m</label><input id="ga" type="number" inputmode="numeric" value="${g.amount}">
+   <label for="gp">Qanchada bir marta</label><select id="gp">${PERIODS.map(([k,t])=>`<option value="${k}"${k===g.period?" selected":""}>${t}</option>`).join("")}</select>
+   <label for="gs">Birinchi gap sanasi</label><input id="gs" type="date" value="${g.start}">
+   <label for="gf">Navbati kelgan odam ham pul qo‘shadimi?</label><select id="gf"><option value="0"${!g.selfPay?" selected":""}>Yo‘q — o‘zi to‘lamaydi</option><option value="1"${g.selfPay?" selected":""}>Ha — u ham qo‘shadi</option></select></div>
+   ${g0?"":`<div class="card"><b>A’zolar</b><p class="note">Har qatorga bitta ism yozing. Telefonni ism yoniga vergul bilan qo‘shsa bo‘ladi: <i>Dilnoza, 901234567</i></p><textarea id="gm" rows="7" style="width:100%;font:17px system-ui;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea></div>`}
+   <button class="pri big" id="gsave">${g0?"Saqlash":"Gapni ochish"}</button>`;
+  $("bk").addEventListener("click",()=>go(g0?{name:"gap",id:g0.id,tab:"his"}:{name:"home"}));
+  $("gsave").addEventListener("click",()=>{const name=$("gn").value.trim(),amount=parseFloat($("ga").value)||0;if(!name){toast("Gap nomini yozing");return}if(!(amount>0)){toast("Pul miqdorini yozing");return}if(!$("gs").value){toast("Sanani tanlang");return}
+    Object.assign(g,{name,amount,period:$("gp").value,start:$("gs").value,selfPay:$("gf").value==="1"});
+    if(!g0){const lines=$("gm").value.split(/\n/).map(s=>s.trim()).filter(Boolean);if(!PREMIUM()&&lines.length>FREE_MEM){licOpen(`Bepul versiyada ${FREE_MEM} kishigacha. Ko‘proq a’zo uchun Premium’ni faollashtiring.`);return}
+      g.id=uid();g.members=lines.map(l=>{const [n,...p]=l.split(",");return {id:uid(),name:n.trim(),phone:p.join(",").trim()}});g.order=g.members.map(m=>m.id);D.gaps.push(g);save();
+      if(g.members.length>1&&confirm("Navbatni qur’a bilan aniqlaymizmi?\n«Bekor qilish» bossangiz, yozilgan tartibda qoladi."))go({name:"lot",id:g.id});else go({name:"gap",id:g.id,tab:"jad"})}
+    else{save();go({name:"gap",id:g.id,tab:"now"})}})}
+function vLot(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"home"});
+  app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>Qur’a</h2></div><div class="card"><div class="lot" id="lt">🎲</div><div id="res"></div></div><button class="pri big" id="go">Qur’ani boshlash</button>`;
+  $("bk").addEventListener("click",()=>go({name:"gap",id:g.id,tab:"jad"}));
+  $("go").addEventListener("click",async()=>{const b=$("go");b.disabled=true;const ids=g.members.map(m=>m.id),out=[],rnd=new Uint32Array(ids.length);crypto.getRandomValues(rnd);
+    for(let i=ids.length-1;i>0;i--){const j=rnd[i]%(i+1);[ids[i],ids[j]]=[ids[j],ids[i]]}
+    const R=$("res");R.innerHTML="";for(let k=0;k<ids.length;k++){const rest=ids.slice(k);for(let t=0;t<12;t++){$("lt").textContent=g.members.find(m=>m.id===rest[(t*7+k)%rest.length]).name;await new Promise(r=>setTimeout(r,60+t*8))}
+      const m=g.members.find(x=>x.id===ids[k]);$("lt").textContent=`${k+1}. ${m.name}`;out.push(ids[k]);const d=document.createElement("div");d.className="rnd";d.innerHTML=`<div class="num">${k+1}</div><div style="flex:1"><b>${esc(m.name)}</b><div class="meta">${nice(roundDate(g,k))}</div></div>`;R.appendChild(d);await new Promise(r=>setTimeout(r,350))}
+    g.order=out;g.pay={};save();$("lt").textContent="✅ Navbat tayyor";b.disabled=false;b.textContent="📤 Natijani hammaga yuborish";b.onclick=()=>shareText("🎲 Qur’a natijasi\n"+orderText(g));
+    const c=document.createElement("button");c.className="big";c.style.marginTop="10px";c.textContent="Davom etish";c.onclick=()=>go({name:"gap",id:g.id,tab:"jad"});b.after(c)},{once:true})}
+function vSet(){app.innerHTML=`<div class="top"><button class="back" id="bk">←</button><h2>Sozlamalar</h2></div>
+  <div class="card"><b>${PREMIUM()?"⭐ Premium faol":"Bepul versiya"}</b><p class="note">${PREMIUM()?"Cheksiz gap va a’zolar.":`Bepul: ${FREE_GAPS} ta gap, ${FREE_MEM} kishigacha. Premium: cheksiz gap va a’zolar.`}</p>${PREMIUM()?"":`<button class="pri big" id="bPrem">⭐ Premium’ni faollashtirish</button>`}</div>
+  <div class="card"><b>Eslatmalar</b><p class="note">Gapdan bir kun oldin soat 19:00 da va gap kuni 09:00 da telefoningiz eslatadi.</p><button class="big" id="bNot">🔔 Eslatmaga ruxsat berish</button></div>
+  <div class="card"><b>Zaxira nusxa</b><p class="note">Telefon almashsa yoki ilova o‘chsa ma’lumot yo‘qolmasligi uchun nusxani Telegramga (Saqlangan xabarlar) yuborib qo‘ying.</p><div class="row"><button id="bExp">📤 Nusxa olish</button><label class="btnlike" style="margin:0"><button id="bImpB" type="button" style="width:100%">📥 Tiklash</button><input id="bImp" type="file" accept=".json,application/json,text/plain" hidden></label></div></div>`;
+  $("bk").addEventListener("click",()=>go({name:"home"}));if($("bPrem"))$("bPrem").addEventListener("click",()=>licOpen());
+  $("bNot").addEventListener("click",async()=>{try{const L=P().LocalNotifications;if(!L){toast("Bu yerda eslatma ishlamaydi");return}const r=await L.requestPermissions();if(r.display==="granted"){await scheduleAll();toast("Eslatmalar yoqildi")}else toast("Ruxsat berilmadi")}catch(e){toast("Eslatmani yoqib bo‘lmadi")}});
+  $("bExp").addEventListener("click",async()=>{const t=JSON.stringify({gapDaftari:1,date:todayS(),gaps:D.gaps});const nm=`gap-daftari-${todayS()}.json`;
+    try{if(isNative()){const b64=btoa(unescape(encodeURIComponent(t)));const r=await P().Filesystem.writeFile({path:nm,data:b64,directory:"CACHE"});await P().Share.share({title:nm,files:[r.uri]});return}}catch(_){}
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"application/json"}));a.download=nm;a.click()});
+  $("bImpB").addEventListener("click",()=>$("bImp").click());
+  $("bImp").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.gaps))throw 0;if(!confirm(`${j.gaps.length} ta gap tiklanadi. Hozirgi ma’lumotlar almashtiriladi. Davom etamizmi?`))return;D.gaps=j.gaps;save();toast("Tiklandi");go({name:"home"})}catch(_){toast("Bu fayl Gap daftari nusxasi emas")}})}
+/* ---------- telefon eslatmalari ---------- */
+async function scheduleAll(){const L=P().LocalNotifications;if(!L||!isNative())return;try{const pend=await L.getPending();if(pend.notifications.length)await L.cancel({notifications:pend.notifications.map(n=>({id:n.id}))});
+  const list=[];let id=1;const now=Date.now();
+  for(const g of D.gaps){if(!N(g))continue;const i=curRound(g);for(const k of [i,i+1]){if(k>=N(g)*(g.cycles||1))break;const r=recipient(g,k),d=pd(roundDate(g,k));
+      const a=new Date(d);a.setDate(a.getDate()-1);a.setHours(19,0,0,0);const b=new Date(d);b.setHours(9,0,0,0);
+      if(a>now)list.push({id:id++,title:`Ertaga: ${g.name}`,body:`Navbat — ${r?.name}. ${fmt(g.amount)} so‘m. Eslatma yuborishni unutmang.`,schedule:{at:a}});
+      if(b>now)list.push({id:id++,title:`Bugun: ${g.name}`,body:`Navbat — ${r?.name}. Kim to‘lamaganini tekshiring.`,schedule:{at:b}})}}
+  if(list.length)await L.schedule({notifications:list})}catch(_){}}
+/* ---------- Premium (faollashtirish) ---------- */
+const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_BOT="lazer_uz77_bot";
+const LIC={ok:false,code:""};
+const b32=u=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let bits=0,v=0,o="";for(const b of u){v=((v<<8)|b)&0xffff;bits+=8;while(bits>=5){o+=A[(v>>>(bits-5))&31];bits-=5}}return o};
+const b64u=s=>{s=String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
+async function licCode(){let id="";try{const Dv=P().Device;if(Dv)id=(await Dv.getId()).identifier||""}catch(_){}
+  if(!id){try{id=localStorage.getItem("gapDev")||""}catch(_){}if(!id){id=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join("");try{localStorage.setItem("gapDev",id)}catch(_){}}}
+  const h=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode("gap:"+id))),c=b32(h).slice(0,10);return c.slice(0,5)+"-"+c.slice(5)}
+async function licCheck(code,key){try{const k=await crypto.subtle.importKey("jwk",LIC_PUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);return await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},k,b64u(key),new TextEncoder().encode("GP1|"+code))}catch(_){return false}}
+function licOpen(msg){let o=$("licOv");if(o)o.remove();o=document.createElement("div");o.id="licOv";o.className="ov";
+  o.innerHTML=`<div class="top"><button class="back" id="lx">←</button><h2>⭐ Premium</h2></div><div class="card"><p>${esc(msg||"Premium: cheksiz gap va a’zolar, hamma imkoniyatlar.")}</p>
+   <label>Telefoningiz kodi</label><div class="code">${LIC.code||"…"}</div><div class="row"><button id="lc">Nusxalash</button><button class="pri" id="lb">Botga o‘tish</button></div>
+   <ol class="note" style="padding-left:20px"><li>Kodni botga yuboring: <b>@${LIC_BOT}</b></li><li>To‘lov qiling, chek rasmini yuboring.</li><li>Bot yuborgan kalitni pastga qo‘ying.</li></ol>
+   <label for="lk">Faollashtirish kaliti</label><textarea id="lk" rows="3" style="width:100%;font:15px ui-monospace,monospace;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea>
+   <div style="margin-top:12px"><button class="pri big" id="lg">Faollashtirish</button></div></div>`;document.body.appendChild(o);
+  $("lx").onclick=()=>o.remove();$("lc").onclick=()=>navigator.clipboard.writeText(LIC.code).then(()=>toast("Kod nusxalandi")).catch(()=>toast("Kodni qo‘lda yozib oling"));
+  $("lb").onclick=()=>{location.href="https://t.me/"+LIC_BOT+"?start=g_"+LIC.code.replace("-","")};
+  $("lg").onclick=async()=>{const k=$("lk").value.trim();if(await licCheck(LIC.code,k)){D.key=k;save();LIC.ok=true;toast("⭐ Premium faollashtirildi!");o.remove();render()}else toast("Kalit noto‘g‘ri yoki boshqa telefon uchun")}}
+(async()=>{LIC.code=await licCode();if(D.key&&await licCheck(LIC.code,D.key))LIC.ok=true;render();scheduleAll()})();
+render();
+document.addEventListener("backbutton",()=>{});try{P().App?.addListener?.("backButton",()=>{if($("licOv")){$("licOv").remove();return}if(view.name==="home")P().App.exitApp();else if(view.name==="gap")go({name:"home"});else history.back?go({name:"home"}):0})}catch(_){}
+</script>
+</body>
+</html>
