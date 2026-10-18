@@ -107,6 +107,9 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 .fgal button span{font:500 11px var(--body);text-align:center}
 .gal button img{width:100%;aspect-ratio:1;border-radius:4px;display:block}
 .gal button[aria-pressed="true"]{border-color:var(--accent);outline:2px solid var(--accent);color:var(--accent)}
+.chkbox{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.chkbox ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.chkbox li.ok{color:var(--muted)}.chkbox li.bad{color:var(--accent);font-weight:600}
 .soon{display:flex;flex-direction:column;gap:8px;max-width:60ch}
 .soon h2{font-family:var(--display);font-weight:700;font-size:22px;margin:0}
 </style>
@@ -142,6 +145,7 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
         </div>
         <label class="chk" id="frameRow" hidden><input type="checkbox" id="frameChk" checked> <span id="frameTxt"></span></label>
         <div class="warn" id="warn" hidden></div>
+        <div class="chkbox" id="chk" hidden></div>
       </section>
 
       <section class="card">
@@ -778,6 +782,124 @@ function girihGallery(){const host=$("params");if(!host)return;
     div.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};build()});
   const sel=$("g-girih-pat");if(sel)sel.addEventListener("input",()=>div.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.g===sel.value)));
 }
+/* ---------- shakllar: panel konturi va ichki chegara ---------- */
+function offsetConvex(P,d){const n=P.length,L=[];
+  for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy);L.push([a[0]-dy/l*d,a[1]+dx/l*d,dx,dy])}
+  return L.map((B,i)=>{const A=L[(i+n-1)%n],den=A[2]*B[3]-A[3]*B[2],t=((B[0]-A[0])*B[3]-(B[1]-A[1])*B[2])/den;return [A[0]+A[2]*t,A[1]+A[3]*t]})}
+const SHAPES_P=[["rect","To‘rtburchak"],["ellipse","Doira / oval"],["arch","Arka (tepasi yarim doira)"],["hex","Olti burchak"],["oct","Sakkiz burchak"]];
+function shapeGeom(sh,W,H,d){
+  if(sh==="ellipse"){const rx=W/2-d,ry=H/2-d;return rx>1&&ry>1?{t:"e",cx:W/2,cy:H/2,rx,ry}:null}
+  if(sh==="arch"){const R=W/2;if(H<R)throw"Arka uchun bo‘yi enining yarmidan kam bo‘lmasin.";const r=R-d,cy=H-R;return r>1&&cy-d>=0?{t:"a",x0:d,x1:W-d,y0:d,cy,cx:W/2,r}:null}
+  let P;if(sh==="hex")P=[[0,H/2],[W/4,0],[3*W/4,0],[W,H/2],[3*W/4,H],[W/4,H]];
+  else if(sh==="oct"){const c=Math.min(W,H)*(1-Math.SQRT1_2);P=[[c,0],[W-c,0],[W,c],[W,H-c],[W-c,H],[c,H],[0,H-c],[0,c]]}
+  else P=[[0,0],[W,0],[W,H],[0,H]];
+  const Q2=d>0?offsetConvex(P,d):P;let a=0;for(let i=0;i<Q2.length;i++){const [x1,y1]=Q2[i],[x2,y2]=Q2[(i+1)%Q2.length];a+=x1*y2-x2*y1}
+  return a>4?{t:"p",P:Q2}:null}
+function shapeDXF(g){if(!g)return"";
+  if(g.t==="e"){if(Math.abs(g.rx-g.ry)<1e-6)return E.circle(g.cx,g.cy,g.rx);const v=[];for(let i=0;i<180;i++){const a=2*Math.PI*i/180;v.push([g.cx+g.rx*Math.cos(a),g.cy+g.ry*Math.sin(a)])}return E.poly(v)}
+  if(g.t==="a")return E.poly([[g.x0,g.y0],[g.x1,g.y0],[g.x1,g.cy,1],[g.x0,g.cy]]);
+  return E.poly(g.P)}
+function shapeFill(x,g,sc,H,o){if(!g)return;x.beginPath();const X=v=>o+v*sc,Y=v=>o+(H-v)*sc;
+  if(g.t==="e")x.ellipse(X(g.cx),Y(g.cy),g.rx*sc,g.ry*sc,0,0,2*Math.PI);
+  else if(g.t==="a"){x.moveTo(X(g.x0),Y(g.y0));x.lineTo(X(g.x1),Y(g.y0));x.lineTo(X(g.x1),Y(g.cy));x.arc(X(g.cx),Y(g.cy),g.r*sc,0,Math.PI,true);x.closePath()}
+  else{g.P.forEach(([a,b],i)=>i?x.lineTo(X(a),Y(b)):x.moveTo(X(a),Y(b)));x.closePath()}x.fill()}
+
+/* matn joylash (naqsh ichidagi yozuv uchun) */
+function layoutText(txt,font,h,ls=0,lh=1.3){const F=LZF[font]||LZF.sans,S=LZF.sans,k=h/F.cap,miss=new Set(),polys=[];let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  const GL=ch=>{const g=F.g[ch];if(g)return [g,k];if(S&&S.g[ch])return [S.g[ch],h/S.cap];miss.add(ch);return [F.g["?"]||S.g["?"],k]};
+  const lines=String(txt||"").split(/\r?\n/).filter(s=>s.trim()),step=1000*k*lh;
+  const widths=lines.map(l=>[...l].reduce((w,ch,i)=>{const [g,kk]=GL(ch);return w+g[0]*kk+(i?ls:0)},0)),wmax=Math.max(0,...widths);
+  lines.forEach((l,li)=>{let x=(wmax-widths[li])/2;const y=-li*step;[...l].forEach((ch,i)=>{if(i)x+=ls;const [g,kk]=GL(ch);
+    for(const c of g[1]){const pts=c.map(([u,v])=>[x+u*kk,y+v*kk]);pts.forEach(([a,b])=>{minx=Math.min(minx,a);maxx=Math.max(maxx,a);miny=Math.min(miny,b);maxy=Math.max(maxy,b)});polys.push(pts)}
+    x+=g[0]*kk})});
+  return {polys,minx,maxx,miny,maxy,miss}}
+
+/* 1, 2, 4: islomiy naqsh — shakl, hoshiya, yozuv */
+const FONT_OPTS=()=>Object.entries(LZF).map(([k,f])=>[k,f.name]);
+PARTS.girih.fields=[PARTS.girih.fields[0],["shp","Panel shakli","rect","select",SHAPES_P],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["s","Naqsh o‘lchami (mm)",40],["t","Chiziq qalinligi (mm)",4],["a","Yulduz burchagi (0=avto)",0],["m","Rama eni (mm)",10],
+  ["zone","Naqsh joyi","full","select",[["full","Butun panel"],["ring","Faqat hoshiya — o‘rtasi butun metall"],["ringopen","Faqat hoshiya — o‘rtasi ochiq"]]],["bw","Hoshiya eni (mm)",80],
+  ["txt","O‘rtadagi yozuv (bo‘sh = yo‘q)","","area"],["tf","Yozuv shrifti","sans","select",FONT_OPTS()],["th","Yozuv balandligi (mm)",50],["tp","Yozuv atrofi bo‘sh joy (mm)",15],["min","Mayda bo‘laklarni o‘chirish (mm²)",3]];
+PARTS.girih.note="Pastdagi rasmchalardan naqshni tanlang. Naqsh chiziqlari (metall) qoladi, oradagi shakllar kesiladi. Panel shaklini (doira, arka…), hoshiyani va o‘rtadagi yozuvni ham tanlash mumkin. Yozuvdagi O, A, B kabi harflarning ichi tushib ketadi.";
+PARTS.girih.build=function(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH["4612_70"],ang=p.a>0?p.a:G.a,shp=p.shp||"rect",zone=p.zone||"full";
+  if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+  if(s<5)throw"Naqsh o‘lchami kamida 5 mm bo‘lsin.";
+  if(t<1||t>=s)throw"Chiziq qalinligi 1 mm dan katta va naqsh o‘lchamidan kichik bo‘lsin.";
+  if(m<t/2)throw"Rama eni chiziq qalinligining yarmidan kam bo‘lmasin.";
+  if(ang<5||ang>89)throw"Burchak 5–89° oralig‘ida bo‘lsin.";
+  if(W*H/(s*s)>40000)throw"Naqsh juda mayda — o‘lchamini kattalashtiring.";
+  const outer=shapeGeom(shp,W,H,0),inner=shapeGeom(shp,W,H,m);if(!inner)throw"Rama eni juda katta — panelga sig‘maydi.";
+  let solid=null,open=null;
+  if(zone!=="full"){if(p.bw<s/2)throw"Hoshiya eni naqsh o‘lchamining yarmidan kam bo‘lmasin.";
+    solid=shapeGeom(shp,W,H,m+p.bw);if(!solid)throw"Hoshiya juda keng — o‘rtada joy qolmayapti.";
+    if(zone==="ringopen"){open=shapeGeom(shp,W,H,2*m+p.bw);if(!open)throw"O‘rtadagi ochiq joyga o‘rin qolmayapti.";}}
+  const sc=Math.min(8,3200/Math.max(W,H)),o=1,cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+  const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";shapeFill(x,inner,sc,H,o);
+  const V=hankin(girihTiles(G.t,s,W,H),ang);x.strokeStyle="#fff";x.lineWidth=t*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
+  for(const [a,b,c] of V){x.moveTo(o+a[0]*sc,o+a[1]*sc);x.lineTo(o+b[0]*sc,o+b[1]*sc);x.lineTo(o+c[0]*sc,o+c[1]*sc)}x.stroke();
+  x.fillStyle="#fff";if(solid)shapeFill(x,solid,sc,H,o);
+  let textOut="",warn="";const txt=String(p.txt||"").trim();
+  if(txt){if(zone==="ringopen")warn="O‘rtasi ochiq panelda yozuv qo‘yilmaydi. ";
+    else{if(p.th<=0)throw"Yozuv balandligi 0 dan katta bo‘lsin.";const T=layoutText(txt,p.tf,p.th);
+      const tw=T.maxx-T.minx,thh=T.maxy-T.miny,ox=W/2-(T.minx+tw/2),oy=H/2-(T.miny+thh/2),pad=Math.max(0,p.tp);
+      if(tw+2*pad>W-2*m||thh+2*pad>H-2*m)throw"Yozuv panelga sig‘mayapti — balandligini kamaytiring.";
+      if(!solid){const bx=W/2-tw/2-pad,by=H/2-thh/2-pad,r=Math.min(pad,12)*sc;x.beginPath();x.roundRect?x.roundRect(o+bx*sc,o+(H-by-thh-2*pad)*sc,(tw+2*pad)*sc,(thh+2*pad)*sc,r):x.rect(o+bx*sc,o+(H-by-thh-2*pad)*sc,(tw+2*pad)*sc,(thh+2*pad)*sc);x.fill()}
+      for(const pts of T.polys)textOut+=E.poly(pts.map(([a,b])=>[a+ox,b+oy]));
+      if(T.miss.size)warn+="Shriftda yo‘q belgilar: "+[...T.miss].join(" ")+". "}}
+  const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;
+  const loops=traceBin(bin,cw,ch,0);let out=shapeDXF(outer),n=0;const minA=Math.max(0,p.min);
+  for(const L of loops){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+    if(Math.abs(ar/2)/(sc*sc)<minA)continue;out+=E.poly(L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]));n++}
+  if(!n)throw"Naqsh chiqmadi — chiziq qalinligini kamaytiring yoki o‘lchamni oshiring.";
+  if(open)out+=shapeDXF(open);
+  this.warn=warn;return out+textOut};
+
+/* 3: o‘z DXF kutubxonasi */
+let LIB=[];try{LIB=JSON.parse(localStorage.getItem("lazerLib")||"[]")}catch(_){LIB=[]}
+const libSave=()=>{try{localStorage.setItem("lazerLib",JSON.stringify(LIB));return true}catch(_){return false}};
+function libAdd(name,text){try{analyse(text)}catch(e){return "Bu DXF o‘qilmadi: "+(e.message||e)}
+  const id=Math.random().toString(36).slice(2,9);LIB.push({id,name:name.replace(/\.dxf$/i,""),text});
+  if(!libSave()){LIB.pop();return "Telefon xotirasiga sig‘madi — fayl juda katta yoki kutubxona to‘lgan."}return id}
+PARTS.lib={group:"gen",name:"Mening DXF larim",note:"O‘zingizdagi naqsh yoki detal DXF ini kutubxonaga qo‘shing. Keyin uni kerakli o‘lchamga cho‘zish yoki ko‘paytirib (takrorlab) panel yasash mumkin. Kutubxona shu telefonda saqlanadi.",
+  fields:[["mode","Usul","fit","select",[["fit","O‘lchamga moslash (proporsiya saqlanadi)"],["stretch","O‘lchamga cho‘zish (eni va bo‘yi alohida)"],["tile","Takrorlash (asl o‘lchamda)"]]],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["nx","Takror: ustunlar",3],["ny","Takror: qatorlar",2],["gap","Takrorlar orasi (mm)",0],["rot","Burish (0/90/180/270)",0],["fr","Atrofiga rama (mm, 0=yo‘q)",0]],
+  build(p){const it=LIB.find(x=>x.id===p.item)||LIB[0];if(!it)throw"Kutubxona bo‘sh. Yuqoridagi “DXF qo‘shish” tugmasi bilan fayl qo‘shing.";
+    const A=analyse(it.text),u=A.unit;let P=A.paths.filter(q=>!(A.frame&&q.frame)).map(q=>({c:q.closed,pts:q.pts.map(([a,b])=>[a*u,b*u])}));
+    const rot=((Math.round(p.rot/90)%4)+4)%4;if(rot)P=P.map(q=>({c:q.c,pts:q.pts.map(([a,b])=>rot===1?[-b,a]:rot===2?[-a,-b]:[b,-a])}));
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const q of P)for(const [a,b] of q.pts){x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)}
+    const bw=x1-x0||1,bh=y1-y0||1,fr=Math.max(0,p.fr);let tr=[];
+    if(p.mode==="tile"){const nx=Math.round(p.nx),ny=Math.round(p.ny);if(nx<1||ny<1||nx*ny>400)throw"Takrorlar soni 1 dan 400 gacha bo‘lsin.";
+      for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)tr.push(([a,b])=>[fr+(a-x0)+i*(bw+p.gap),fr+(b-y0)+j*(bh+p.gap)])}
+    else{if(p.W<=2*fr||p.H<=2*fr)throw"Eni va bo‘yi ramadan katta bo‘lsin.";const iw=p.W-2*fr,ih=p.H-2*fr;let sx=iw/bw,sy=ih/bh;
+      if(p.mode==="fit"){const k=Math.min(sx,sy);sx=sy=k}const ox=fr+(iw-bw*sx)/2,oy=fr+(ih-bh*sy)/2;tr.push(([a,b])=>[ox+(a-x0)*sx,oy+(b-y0)*sy])}
+    const seen=new Set();let out="",dup=0;
+    for(const f of tr)for(const q of P){const pts=q.pts.map(f),key=pts.map(([a,b])=>Math.round(a*10)+","+Math.round(b*10)).sort().join(";");if(seen.has(key)){dup++;continue}seen.add(key);out+=E.poly(pts,q.c)}
+    if(fr>0){let W2,H2;if(p.mode==="tile"){W2=2*fr+Math.round(p.nx)*bw+(Math.round(p.nx)-1)*p.gap;H2=2*fr+Math.round(p.ny)*bh+(Math.round(p.ny)-1)*p.gap}else{W2=p.W;H2=p.H}out=roundRect(W2,H2,0)+out}
+    this.warn=dup?`${dup} ta ustma-ust tushgan chiziq bitta qilindi.`:"";return out},
+  label:p=>{const it=LIB.find(x=>x.id===p.item)||LIB[0];return it?it.name:"Kutubxona"}};
+function libUI(){const host=$("params");if(!host)return;const box=document.createElement("div");box.className="field wide";
+  box.innerHTML=`<label class="label" for="g-lib-item">Saqlangan DXF (${LIB.length} ta)</label><div class="actions"><select id="g-lib-item" style="flex:1;min-width:0">${LIB.length?LIB.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(""):"<option value=''>— bo‘sh —</option>"}</select>
+    <label class="btn primary">DXF qo‘shish<input id="g-lib-add" type="file" accept=".dxf" multiple hidden></label><button type="button" id="g-lib-del">O‘chirish</button></div>`;
+  host.prepend(box);const sel=$("g-lib-item");if(LIB.find(x=>x.id===vals.lib.item))sel.value=vals.lib.item;
+  sel.addEventListener("input",()=>{vals.lib.item=sel.value;try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};build()});
+  $("g-lib-add").addEventListener("change",async e=>{let last=null,err="";for(const f of e.target.files){const r=libAdd(f.name,await f.text());if(r.length>12)err+=f.name+": "+r+" ";else last=r}
+    if(last)vals.lib.item=last;renderParams();if(err){$("gwarn").textContent=err;$("gwarn").hidden=false}});
+  let arm=false;$("g-lib-del").addEventListener("click",e=>{if(!LIB.length)return;if(!arm){arm=true;e.target.textContent="Ha, o‘chirilsin";return}
+    LIB=LIB.filter(x=>x.id!==sel.value);libSave();vals.lib.item=LIB[0]?.id||"";renderParams()});}
+
+/* 5: bukish yoyilmasi */
+PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",note:"Tokcha uzunliklarini tashqi o‘lcham bo‘yicha, oralariga bukish burchagini yozing. Masalan U-profil: 50 90 100 90 50. K-faktor odatda 0.33–0.45. Bukish joylariga chetdan kichik belgi (kesik) qo‘yiladi.",
+  fields:[["prof","Tokchalar va burchaklar","50 90 100 90 50","text"],["W","Detal eni (mm)",200],["t","List qalinligi (mm)",2],["r","Ichki radius (mm)",2],["K","K-faktor",0.4],["nt","Bukish belgilari","ha","select",[["ha","Ha — chetga kichik kesik"],["yoq","Yo‘q"]]]],
+  build(p){const nums=String(p.prof||"").replace(/,/g,".").trim().split(/[\s;]+/).map(Number);
+    if(nums.length<3||nums.length%2===0||nums.some(v=>!isFinite(v)))throw"Format: uzunlik burchak uzunlik … (masalan 50 90 100 90 50).";
+    const {t,r,K,W}=p;if(t<=0||r<0||K<0||K>1||W<=0)throw"Qalinlik, radius, K-faktor (0–1) va enini tekshiring.";
+    const Ls=nums.filter((_,i)=>i%2===0),As=nums.filter((_,i)=>i%2===1);if(As.some(a=>a<=0||a>=180))throw"Bukish burchagi 1° dan 179° gacha bo‘lsin.";
+    const ss=As.map(a=>(r+t)*Math.tan(a*Math.PI/360)),ba=As.map(a=>Math.PI*a/180*(r+K*t));
+    let x=0;const lines=[];Ls.forEach((L,i)=>{const fl=L-(i>0?ss[i-1]:0)-(i<As.length?ss[i]:0);if(fl<=0)throw`${i+1}-tokcha juda qisqa — radius va qalinlikka sig‘maydi.`;x+=fl;if(i<As.length){lines.push(x+ba[i]/2);x+=ba[i]}});
+    const Lf=x,nd=1.5,nw=1.5;let v=[[0,0]];
+    if(p.nt==="ha"){for(const b of lines)v.push([b-nw,0],[b,nd],[b+nw,0]);v.push([Lf,0],[Lf,W]);for(const b of [...lines].reverse())v.push([b+nw,W],[b,W-nd],[b-nw,W]);v.push([0,W])}
+    else v=[[0,0],[Lf,0],[Lf,W],[0,W]];
+    this.warn=`Yoyilma: ${Lf.toFixed(2)} × ${W} mm. Bukish chiziqlari chap chetdan: ${lines.map(b=>b.toFixed(1)).join(", ")} mm.`;
+    return E.poly(v)},
+  label:p=>"Yoyilma "+String(p.prof).replace(/\s+/g,"-")};
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
@@ -829,7 +951,7 @@ renderParams=function(){
       try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};clearTimeout(tm);tm=setTimeout(build,part==="image"?250:60)})});
   build()};
 const _build=build;build=function(){PARTS[part].warn="";_build();const ex=PARTS[part].warn;if(ex){const w=$("gwarn");w.textContent=(w.hidden?"":w.textContent+" ")+ex;w.hidden=false}};
-const _rpG=renderParams;renderParams=function(){_rpG();if(part==="girih")girihGallery();if(part==="text")fontGallery()};
+const _rpG=renderParams;renderParams=function(){_rpG();if(part==="girih")girihGallery();if(part==="text")fontGallery();if(part==="lib")libUI()};
 let fThumbs=null;
 function fontGallery(){const host=$("params");if(!host)return;
   if(!fThumbs){fThumbs={};const css=getComputedStyle(document.documentElement),fg=css.getPropertyValue("--fg").trim()||"#222",bg=css.getPropertyValue("--bg").trim()||"#fff";
@@ -1094,6 +1216,35 @@ $("oCsv").addEventListener("click",async()=>{
   if(!dl){$("otoast").textContent="Bu ko‘rinishda fayl saqlash ishlamaydi.";return}
   try{await dl.save({filename:"buyurtmalar.csv",data:csv});$("otoast").textContent="buyurtmalar.csv saqlandi — Excel da ochiladi."}
   catch(e){$("otoast").textContent=e&&e.code==="declined"?"Saqlash bekor qilindi.":"Faylni saqlab bo‘lmadi."}});
+/* 6: DXF tekshiruv va tozalash */
+function dxfIssues(obj){const u=obj.unit,ps=obj.paths.filter(p=>!(obj.frame&&obj.excludeFrame&&p.frame));
+  const keyOf=p=>p.pts.map(([a,b])=>Math.round(a*u*20)+","+Math.round(b*u*20)).sort().join(";");
+  const seen=new Map(),dups=[],tiny=[];
+  for(const p of ps){const L=pathLen(p)*u;if(L<1){tiny.push(p);continue}const k=keyOf(p);if(seen.has(k))dups.push(p);else seen.set(k,p)}
+  const ends=new Map(),K=pt=>Math.round(pt[0]*u*20)+","+Math.round(pt[1]*u*20);
+  for(const p of ps){if(p.closed||dups.includes(p)||tiny.includes(p))continue;const a=p.pts[0],b=p.pts[p.pts.length-1];if(Math.hypot((a[0]-b[0])*u,(a[1]-b[1])*u)<.05)continue;
+    for(const e of [a,b]){const k=K(e);ends.set(k,(ends.get(k)||0)+1)}}
+  const openEnds=[...ends.values()].filter(v=>v===1).length;
+  return {dups,tiny,openEnds,skipped:obj.skipped||[]}}
+function dxfCheck(){const box=$("chk");if(!box||!current)return;const r=dxfIssues(current);
+  const row=(ok,t)=>`<li class="${ok?"ok":"bad"}">${ok?"✓":"⚠"} ${t}</li>`;
+  const dupLen=r.dups.reduce((s,p)=>s+pathLen(p)*current.unit,0);
+  box.innerHTML=`<div class="label">DXF tekshiruvi</div><ul>`+
+    row(!r.dups.length,r.dups.length?`${r.dups.length} ta ustma-ust tushgan (takror) chiziq — kesish ${(dupLen/1000).toFixed(2)} m ga ortiqcha hisoblangan`:"Takror chiziq yo‘q")+
+    row(!r.tiny.length,r.tiny.length?`${r.tiny.length} ta juda kichik bo‘lak (1 mm dan qisqa)`:"Mayda ortiqcha bo‘lak yo‘q")+
+    row(!r.openEnds,r.openEnds?`${Math.ceil(r.openEnds/2)} ta ochiq kontur (uchlari tutashmagan) — detal to‘liq kesilmasligi mumkin`:"Hamma konturlar yopiq")+
+    row(!r.skipped.length,r.skipped.length?`Hisobga olinmagan obyektlar: ${r.skipped.join(", ")}`:"Notanish obyekt yo‘q")+`</ul>`+
+    `<div class="actions">${r.dups.length||r.tiny.length?`<button id="chkFix" class="primary">Takror va maydalarni olib tashlash</button>`:""}<button id="chkSave">DXF ni yuklab olish</button><button id="chkLib">Kutubxonaga saqlash</button></div>`;
+  box.hidden=false;
+  const fx=$("chkFix");if(fx)fx.addEventListener("click",()=>{const bad=new Set([...r.dups,...r.tiny]);current.paths=current.paths.filter(p=>!bad.has(p));current.m=measureObj(current);current.cleaned=true;showStats();dxfCheck();$("toast").textContent=`${bad.size} ta ortiqcha chiziq olib tashlandi.`});
+  const curDXF=()=>{const u=current.unit;let s="";
+    for(const p0 of current.paths){if(current.frame&&current.excludeFrame&&p0.frame)continue;const p=xform(p0,([a,b])=>[a*u,b*u],0,u),g=p.geo;
+      if(g&&g.t==="c")s+=E.circle(g.x,g.y,g.r);else if(g&&g.t==="a")s+=E.arc(g.x,g.y,g.r,g.a0,g.a1);else if(g&&g.t==="p")s+=E.poly(g.v,g.closed);
+      else if(g&&g.t==="l")s+=E.line(p.pts[0][0],p.pts[0][1],p.pts[1][0],p.pts[1][1]);else s+=E.poly(p.pts,p.closed)}return wrapDXF(s)};
+  $("chkSave").addEventListener("click",()=>{const base=(safeName(String(current.name||"detal").replace(/\.dxf$/i,""))||"detal")+(current.cleaned?"_toza":"");offerZip(base,[[base+".dxf",curDXF()]],$("toast"))});
+  $("chkLib").addEventListener("click",()=>{const r2=libAdd(String(current.name||"detal"),current.cleaned?curDXF():current.text);$("toast").textContent=r2.length>12?r2:"Kutubxonaga saqlandi — DXF yasash → Mening DXF larim.";});
+}
+const _loadC=load;load=function(t,n){_loadC(t,n);try{dxfCheck()}catch(e){console.log(e)}};
 /* ---------- start ---------- */
 function sampleDXF(){let s=E.circle(0,0,100)+E.circle(0,0,40);for(let k=0;k<4;k++){const a=(k+.5)*Math.PI/2;s+=E.circle(70*Math.cos(a),70*Math.sin(a),9)}return wrapDXF(s)}
 renderTiers();$("thk").value="t2";$("nthk").value="t2";
