@@ -1548,7 +1548,7 @@ async function offerZip(base,files,toast){
 const safeName=s=>s.replace(/[Ø×,]/g,m=>({"Ø":"D","×":"x",",":""}[m])).replace(/\s+/g,"_").replace(/[^A-Za-z0-9_\-]/g,"");
 $("save").addEventListener("click",()=>{if(!gen)return;const base=safeName(genName)||"detal";offerZip(base,[[base+".dxf",genText]],$("gtoast"))});
 /* ---------- litsenziya: 3 kun sinov, keyin kalit bilan (faqat APK) ---------- */
-const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=3,LIC_BOT="__BOT__";
+const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=3,LIC_BOT="lazer_uz77_bot";
 const LIC={ok:false,code:"",left:0,ready:false};
 const b32=u=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let bits=0,v=0,o="";for(const b of u){v=((v<<8)|b)&0xffff;bits+=8;while(bits>=5){o+=A[(v>>>(bits-5))&31];bits-=5}}return o};
 const b64u=s=>{s=String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
