@@ -84,6 +84,12 @@ function paidSet(g,i){return g.pay[i]||(g.pay[i]={})}
 function payers(g,i){const r=recipient(g,i);return g.members.filter(m=>!(r&&m.id===r.id&&!g.selfPay))}
 const mAmt=(g,m)=>m&&+m.amount>0?+m.amount:+g.amount;
 const paidAmt=(g,i,m)=>{const p=paidSet(g,i)[m.id];return p?(+p.a>0?+p.a:mAmt(g,m)):0};
+const full=(g,i,m)=>paidAmt(g,i,m)>=mAmt(g,m)-1e-9;
+const owe=(g,i,m)=>Math.max(0,mAmt(g,m)-paidAmt(g,i,m));
+function hostOf(g,i){g.host=g.host||{};const h=g.host[i]||{};const r=recipient(g,i);return {who:h.who||r?.id,addr:h.addr||"",time:h.time||""}}
+function expOf(g,i){g.exp=g.exp||{};return g.exp[i]||(g.exp[i]=[])}
+function expSplit(g,i){const E=expOf(g,i),tot=E.reduce((s,e)=>s+(+e.a||0),0),a=attSet(g,i),n=g.members.filter(m=>a[m.id]===1).length||g.members.length;return {tot,n,per:n?tot/n:0,byAtt:g.members.some(m=>a[m.id]===1)}}
+const sum=v=>fmt(v)+" so‘m";
 const expect=(g,i)=>payers(g,i).reduce((s,m)=>s+mAmt(g,m),0);
 const got=(g,i)=>payers(g,i).reduce((s,m)=>s+paidAmt(g,i,m),0);
 function noSet(g,i){g.nopay=g.nopay||{};return g.nopay[i]||(g.nopay[i]={})}
@@ -92,15 +98,20 @@ function attText(g,i){const a=attSet(g,i),y=g.members.filter(m=>a[m.id]===1),n=g
   return `🙋 ${g.name} — davomat\n📅 ${nice(roundDate(g,i))}\n\n✅ Keldi (${y.length}): ${y.map(m=>m.name).join(", ")||"—"}\n🚫 Kelmadi (${n.length}): ${n.map(m=>m.name).join(", ")||"—"}`+(u.length?`\n❔ Belgilanmagan: ${u.map(m=>m.name).join(", ")}`:"")}
 function curRound(g){if(!N(g))return 0;const t=todayS();let i=0;const max=N(g)*(g.cycles||1);
   // birinchi to'liq yig'ilmagan yoki sanasi o'tmagan navbat
-  while(i<max-1){const done=payers(g,i).every(m=>paidSet(g,i)[m.id]);if(roundDate(g,i)>=t||!done)break;i++}return i}
+  while(i<max-1){const done=payers(g,i).every(m=>full(g,i,m));if(roundDate(g,i)>=t||!done)break;i++}return i}
 const PREMIUM=()=>LIC.ok;
 const FREE_GAPS=1,FREE_MEM=Infinity;
 /* ---------- matnlar ---------- */
-function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>pay[m.id]),no=ps.filter(m=>!pay[m.id]);
-  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}${(()=>{const x=noSet(g,i),c=no.filter(m=>x[m.id]).length;return c?`, ${c} tasi «bermadi» deb belgilangan`:""})()}): ${no.map(m=>m.name+(+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
+function placeText(g,i){const h=hostOf(g,i),w=g.members.find(m=>m.id===h.who);return (w?`🏠 Kimnikida: ${w.name}\n`:"")+(h.addr?`📍 ${h.addr}\n`:"")+(h.time?`🕖 Soat ${h.time}\n`:"")}
+function remindText(g,i){const r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),ok=ps.filter(m=>full(g,i,m)),no=ps.filter(m=>!full(g,i,m));
+  return `🔔 ${g.name}\n📅 ${nice(roundDate(g,i))}\n${placeText(g,i)}💰 ${money(g,g.amount)}\n🎁 Navbat: ${r?r.name:"—"} (${i%N(g)+1}/${N(g)})\n\n✅ To‘laganlar (${ok.length}): ${ok.map(m=>m.name).join(", ")||"—"}\n⏳ To‘lamaganlar (${no.length}${(()=>{const x=noSet(g,i),c=no.filter(m=>x[m.id]).length;return c?`, ${c} tasi «bermadi» deb belgilangan`:""})()}): ${no.map(m=>m.name+(paidAmt(g,i,m)>0?` (qoldi ${money(g,owe(g,i,m))})`:+m.amount>0&&+m.amount!==+g.amount?` (${money(g,m.amount)})`:"")).join(", ")||"—"}\n\nJami: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`}
+function expText(g,i){const E=expOf(g,i),x=expSplit(g,i);return `🧾 ${g.name} — gap xarajati\n📅 ${nice(roundDate(g,i))}\n\n`+E.map(e=>`• ${e.t}: ${sum(e.a)}`).join("\n")+`\n\nJami: ${sum(x.tot)}\n👥 ${x.n} kishiga bo‘linadi${x.byAtt?" (kelganlar)":""}\n💵 Har kimga: ${sum(Math.ceil(x.per/1000)*1000)}`}
 function orderText(g){return `📋 ${g.name} — navbat\n💰 ${money(g,g.amount)}, ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}\n\n`+g.order.map((id,i)=>`${i+1}. ${nice(roundDate(g,i))} — ${g.members.find(m=>m.id===id)?.name||"?"}`).join("\n")}
 async function shareText(t){try{if(isNative()&&P().Share){await P().Share.share({text:t});return}if(navigator.share){await navigator.share({text:t});return}}catch(_){return}
   try{await navigator.clipboard.writeText(t);toast("Matn nusxalandi — Telegramga qo‘ying")}catch(_){toast("Ulashib bo‘lmadi")}}
+function tgUrl(v){v=String(v||"").trim();if(!v)return "";if(/^@?[A-Za-z0-9_]{4,}$/.test(v))return "https://t.me/"+v.replace(/^@/,"");if(/^(https?:\/\/)?(t\.me|telegram\.me)\//i.test(v))return v.replace(/^(?!https?:)/,"https://");return ""}
+async function sendGroup(g,t){const u=tgUrl(g.tg);if(!u)return shareText(t);try{await navigator.clipboard.writeText(t)}catch(_){}
+  toast("Xabar nusxalandi — guruhda yozish joyini bosib turib «Qo‘yish»ni tanlang");setTimeout(()=>{location.href=u},900)}
 const telLink=p=>"tel:"+String(p||"").replace(/[^\d+]/g,"");
 const smsLink=(p,t)=>"sms:"+String(p||"").replace(/[^\d+]/g,"")+"?body="+encodeURIComponent(t);
 function pickImage(cb){const i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=()=>{const f=i.files[0];if(!f)return;const u=URL.createObjectURL(f),im=new Image();
@@ -117,7 +128,7 @@ function vHome(){
   <div class="row" style="margin-top:6px"><button id="bSet">⚙️ Sozlamalar</button></div>
   <button class="pri big fab" id="bNew">+ Yangi gap ochish</button>`;
   const L=$("list");if(!D.gaps.length)L.innerHTML=`<div class="empty"><div class="ico">🤝</div><p><b>Hali gap yo‘q</b><br>«Yangi gap ochish» tugmasini bosing: a’zolarni yozasiz, qancha pul qo‘shilishini va navbatni belgilaysiz.</p></div>`;
-  D.gaps.forEach(g=>{const i=curRound(g),r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>pay[m.id]).length,b=document.createElement("button");b.className="gap"+(g.img?" ph":"");if(g.img)b.style.backgroundImage=shade(g.img);
+  D.gaps.forEach(g=>{const i=curRound(g),r=recipient(g,i),ps=payers(g,i),pay=paidSet(g,i),k=ps.filter(m=>full(g,i,m)).length,b=document.createElement("button");b.className="gap"+(g.img?" ph":"");if(g.img)b.style.backgroundImage=shade(g.img);
     b.innerHTML=`<b>${esc(g.name)}</b><span class="meta">${N(g)} kishi · ${money(g,g.amount)} · ${PERIODS.find(p=>p[0]===g.period)[1].toLowerCase()}</span>
       <div style="margin-top:8px">📅 <b style="display:inline;font-size:17px">${nice(roundDate(g,i))}</b> — navbat: <b style="display:inline;font-size:17px">${esc(r?.name||"—")}</b></div>
       <div class="bar"><i style="width:${ps.length?k/ps.length*100:0}%"></i></div><span class="meta">${k} / ${ps.length} kishi to‘ladi</span>`;
@@ -134,39 +145,74 @@ function vGap(){const g=D.gaps.find(x=>x.id===view.id);if(!g)return go({name:"ho
     B.innerHTML=`<div class="card"><div class="row" style="flex-wrap:nowrap"><button class="ic" id="pv">‹</button><div style="text-align:center;flex:3"><span class="pill">${i%N(g)+1}-navbat${(g.cycles||1)>1?` · ${Math.floor(i/N(g))+1}-aylanma`:""}</span><div class="meta" style="margin-top:6px">📅 ${nice(roundDate(g,i))}</div></div><button class="ic" id="nx">›</button></div>
       <div style="text-align:center;margin-top:8px"><div class="meta">Pulni oladi</div><div class="who">🎁 ${esc(r?.name||"—")}</div><div class="sum">Yig‘ildi: <b>${money(g,got(g,i))}</b> / ${money(g,expect(g,i))}</div></div>
       <div class="bar"><i style="width:${expect(g,i)?got(g,i)/expect(g,i)*100:0}%"></i></div></div>
+      <div class="card" id="plc"></div>
       <div class="card"><div class="seg"><button data-m="pay" aria-pressed="${view.mode!=="att"}">💰 To‘lov</button><button data-m="att" aria-pressed="${view.mode==="att"}">🙋 Davomat</button></div><div id="pl"></div></div>
       <button class="pri big" id="bRem">${view.mode==="att"?"📣 Davomatni yuborish (Telegram)":"📣 Eslatma yuborish (Telegram)"}</button>
-      <p class="note">${view.mode==="att"?"Gap kuni kim keldi — «Keldi», kelmagan bo‘lsa — «Kelmadi». Qayta bossangiz belgi olib tashlanadi.":"Pul bergan bo‘lsa — «Berdi» (sana yoziladi), bermagan bo‘lsa — «Bermadi». Qayta bossangiz belgi olib tashlanadi. Bermaganlarga ✉️ bilan SMS eslatma yuborasiz."}</p>`;
+      <button class="big" id="bImg" style="margin-top:10px">🖼 Rasm qilib yuborish</button>
+      ${tgUrl(g.tg)?`<a href="${esc(tgUrl(g.tg))}"><button class="big" style="margin-top:10px;width:100%">✈️ Telegram guruhini ochish</button></a>`:`<p class="note">💡 Gapning Telegram guruhini ulab qo‘ysangiz, eslatmalar to‘g‘ri o‘sha guruhga boradi: Hisob → Tahrirlash → «Telegram guruhi».</p>`}
+      <p class="note">${view.mode==="att"?"Gap kuni kim keldi — «Keldi», kelmagan bo‘lsa — «Kelmadi». Qayta bossangiz belgi olib tashlanadi.":"Pul bergan bo‘lsa — «Berdi», bermagan bo‘lsa — «Bermadi». Qisman bergan bo‘lsa — ismini bosib, qancha berganini yozing. Bermaganlarga ✉️ bilan SMS eslatma yuborasiz."}</p>
+      <div class="card" id="exc"></div>`;
     app.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{view.mode=b.dataset.m;render()}));
     const L=$("pl");if(view.mode==="att"){const a=attSet(g,i);g.members.forEach(m=>{const v=a[m.id],d=document.createElement("div");d.className="mem";
         d.innerHTML=`<div class="nm"><b>${esc(m.name)}${r&&m.id===r.id?" 🎁":""}</b><span>${v===1?"✅ keldi":v===0?"🚫 kelmadi":"❔ belgilanmagan"}</span></div><button class="att ${v===1?"yes":""}">Keldi</button><button class="att ${v===0?"no":""}">Kelmadi</button>`;
         const [by,bn]=d.querySelectorAll(".att");by.addEventListener("click",()=>{if(a[m.id]===1)delete a[m.id];else a[m.id]=1;save();render()});bn.addEventListener("click",()=>{if(a[m.id]===0)delete a[m.id];else a[m.id]=0;save();render()});L.appendChild(d)});
       const y=g.members.filter(m=>a[m.id]===1).length,n=g.members.filter(m=>a[m.id]===0).length,sm=document.createElement("p");sm.className="sum";sm.style.marginTop="8px";sm.innerHTML=`Keldi: <b>${y}</b> · Kelmadi: <b>${n}</b> · Jami: ${g.members.length}`;L.appendChild(sm)}
-    else{const no=noSet(g,i);ps.forEach(m=>{const p=pay[m.id],x=!p&&no[m.id],d=document.createElement("div");d.className="mem";
-      d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${money(g,mAmt(g,m))} · ${p?"✅ berdi "+nice(p.d):x?"🚫 bermadi":"⏳ belgilanmagan"}</span></div>${m.phone&&!p?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,mAmt(g,m))} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic sm" aria-label="SMS">✉️</button></a>`:""}<button class="att ${p?"yes":""}">Berdi</button><button class="att ${x?"no":""}">Bermadi</button>`;
+    else{const no=noSet(g,i);ps.forEach(m=>{const p=pay[m.id],F=p&&full(g,i,m),x=!p&&no[m.id],d=document.createElement("div");d.className="mem";
+      d.innerHTML=`<div class="nm" style="cursor:pointer"><b>${esc(m.name)}</b><span>${p&&!F?`🟡 qisman: ${money(g,paidAmt(g,i,m))} / ${money(g,mAmt(g,m))} · qoldi ${money(g,owe(g,i,m))}`:`${money(g,mAmt(g,m))} · ${F?"✅ berdi "+nice(p.d):x?"🚫 bermadi":"⏳ belgilanmagan"}`}</span></div>${m.phone&&!F?`<a href="${smsLink(m.phone,`Assalomu alaykum, ${m.name}! «${g.name}» gapi ${nice(roundDate(g,i))} kuni. ${money(g,mAmt(g,m))} to‘lovni eslatib qo‘yaman. Navbat: ${r?.name||""}.`)}"><button class="ic sm" aria-label="SMS">✉️</button></a>`:""}<button class="att ${F?"yes":""}">Berdi</button><button class="att ${x?"no":""}">Bermadi</button>`;
       const [by,bn]=d.querySelectorAll(".att");
-      by.addEventListener("click",()=>{if(pay[m.id])delete pay[m.id];else{pay[m.id]={d:todayS(),a:mAmt(g,m)};delete no[m.id]}save();render()});
+      d.querySelector(".nm").addEventListener("click",()=>{const v=prompt(`${m.name} qancha berdi? (${money(g,mAmt(g,m))} dan)`,p?paidAmt(g,i,m):"");if(v===null)return;const a=parseFloat(String(v).replace(/\s/g,"").replace(",","."));if(a>0){pay[m.id]={d:todayS(),a};delete no[m.id]}else delete pay[m.id];save();render()});
+      by.addEventListener("click",()=>{if(pay[m.id]&&full(g,i,m))delete pay[m.id];else{pay[m.id]={d:todayS(),a:mAmt(g,m)};delete no[m.id]}save();render()});
       bn.addEventListener("click",()=>{if(no[m.id])delete no[m.id];else{no[m.id]=1;delete pay[m.id]}save();render()});L.appendChild(d)});}
     if(view.mode!=="att"&&!ps.length)L.innerHTML=`<p class="note">To‘lovchi yo‘q.</p>`;
     $("pv").addEventListener("click",()=>{view.round=i-1;render()});$("nx").addEventListener("click",()=>{view.round=i+1;render()});
-    $("bRem").addEventListener("click",()=>shareText(view.mode==="att"?attText(g,i):remindText(g,i)));
-    if(i===max-1&&ps.every(m=>pay[m.id])){const c=document.createElement("div");c.className="card";c.innerHTML=`<b>🎉 Aylanma tugadi!</b><p class="note">Hamma o‘z navbatini oldi. Shu a’zolar bilan yangi aylanma boshlaysizmi?</p><button class="pri big" id="bCyc">Yangi aylanma boshlash</button>`;B.appendChild(c);
+    $("bRem").addEventListener("click",()=>sendGroup(g,view.mode==="att"?attText(g,i):remindText(g,i)));
+    placeCard(g,i);expCard(g,i);$("bImg").addEventListener("click",()=>shareImage(g,i));
+    if(i===max-1&&ps.every(m=>full(g,i,m))){const c=document.createElement("div");c.className="card";c.innerHTML=`<b>🎉 Aylanma tugadi!</b><p class="note">Hamma o‘z navbatini oldi. Shu a’zolar bilan yangi aylanma boshlaysizmi?</p><button class="pri big" id="bCyc">Yangi aylanma boshlash</button>`;B.appendChild(c);
       $("bCyc").addEventListener("click",()=>{g.cycles=(g.cycles||1)+1;save();view.round=max;render()})}}
   if(tab==="jad"){const cur=curRound(g),c0=Math.floor(cur/N(g))*N(g);
     B.innerHTML=`<div class="card" id="rl"></div><div class="row"><button id="bLot">🎲 Qur’a tashlash</button><button id="bShO">📤 Navbatni yuborish</button></div><p class="note">Tartibni ↑ ↓ tugmalari bilan o‘zgartirasiz. Qur’a navbatni tasodifiy qiladi — natijani hammaga yuborish mumkin.</p>`;
-    const L=$("rl");g.order.forEach((id,j)=>{const i=c0+j,m=g.members.find(x=>x.id===id),ps=payers(g,i),pay=paidSet(g,i),done=ps.every(x=>pay[x.id])&&ps.length,d=document.createElement("div");d.className="rnd"+(i===cur?" now":done?" done":"");
+    const L=$("rl");g.order.forEach((id,j)=>{const i=c0+j,m=g.members.find(x=>x.id===id),ps=payers(g,i),pay=paidSet(g,i),done=ps.every(x=>full(g,i,x))&&ps.length,d=document.createElement("div");d.className="rnd"+(i===cur?" now":done?" done":"");
       d.innerHTML=`<div class="num">${j+1}</div><div style="flex:1;min-width:0"><b>${esc(m?.name||"?")}</b><div class="meta">${nice(roundDate(g,i))}${i===cur?" · <span class='pill'>joriy</span>":done?" · <span class='pill ok'>yig‘ildi</span>":""}</div></div><button class="ic" data-u="${j}" aria-label="Yuqoriga">↑</button><button class="ic" data-d="${j}" aria-label="Pastga">↓</button>`;L.appendChild(d)});
     L.addEventListener("click",e=>{const u=e.target.closest("[data-u]"),dn=e.target.closest("[data-d]");if(!u&&!dn)return;const j=+(u?u.dataset.u:dn.dataset.d),k=u?j-1:j+1;if(k<0||k>=N(g))return;[g.order[j],g.order[k]]=[g.order[k],g.order[j]];save();render()});
     $("bLot").addEventListener("click",()=>{if(Object.keys(g.pay).some(k=>Object.keys(g.pay[k]).length)&&!confirm("To‘lovlar yozilgan. Navbatni qayta qur’a qilsangiz, kim qachon olishi o‘zgaradi. Davom etamizmi?"))return;go({name:"lot",id:g.id})});
-    $("bShO").addEventListener("click",()=>shareText(orderText(g)))}
+    $("bShO").addEventListener("click",()=>sendGroup(g,orderText(g)))}
   if(tab==="mem")memTab(g,B);
-  if(tab==="his"){const max=N(g)*(g.cycles||1);let tot=0,debt=[];for(let i=0;i<=Math.min(curRound(g),max-1);i++){const ps=payers(g,i),pay=paidSet(g,i);tot+=got(g,i);if(roundDate(g,i)<=todayS())ps.filter(m=>!pay[m.id]).forEach(m=>debt.push([m,i]))}
+  if(tab==="his"){const max=N(g)*(g.cycles||1);let tot=0,debt=[];for(let i=0;i<=Math.min(curRound(g),max-1);i++){const ps=payers(g,i),pay=paidSet(g,i);tot+=got(g,i);if(roundDate(g,i)<=todayS())ps.filter(m=>!full(g,i,m)).forEach(m=>debt.push([m,i]))}
     B.innerHTML=`<div class="card"><div class="sum">Jami yig‘ilgan: <b>${money(g,tot)}</b></div><div class="sum">Bir navbatdagi pul: <b>${money(g,expect(g,0))}</b></div></div>
       ${(()=>{const A=g.att||{},ks=Object.keys(A).filter(k=>Object.keys(A[k]).length);if(!ks.length)return "";return `<div class="card"><b>🙋 Davomat (${ks.length} ta gap belgilangan)</b>`+g.members.map(m=>{let y=0,n=0;ks.forEach(k=>{if(A[k][m.id]===1)y++;else if(A[k][m.id]===0)n++});return `<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>keldi ${y} · kelmadi ${n}</span></div>${n?`<span class="pill bad">${n} marta</span>`:`<span class="pill ok">👍</span>`}</div>`}).join("")+`</div>`})()}
-      <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${money(g,mAmt(g,m))}</span></div>`).join(""):`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
+      <div class="card"><b>⏳ Qarzdorlar</b>${debt.length?debt.map(([m,i])=>`<div class="mem"><div class="nm"><b>${esc(m.name)}</b><span>${nice(roundDate(g,i))} · ${i%N(g)+1}-navbat</span></div><span class="pill bad">${money(g,owe(g,i,m))}</span></div>`).join("")+`<p class="sum" style="margin-top:8px">Jami qarz: <b>${money(g,debt.reduce((s2,[m,i])=>s2+owe(g,i,m),0))}</b></p>`:`<p class="note">Qarzdor yo‘q 👍</p>`}</div>
       <div class="card"><b>Sozlamalar</b><div class="row" style="margin-top:10px"><button id="bEd">✏️ Tahrirlash</button><button class="warn" id="bDel">🗑 O‘chirish</button></div></div>`;
     $("bEd").addEventListener("click",()=>go({name:"edit",id:g.id}));
     $("bDel").addEventListener("click",()=>{if(confirm(`«${g.name}» gapi butunlay o‘chiriladi. Ishonchingiz komilmi?`)){D.gaps=D.gaps.filter(x=>x!==g);save();go({name:"home"})}})}}
+function placeCard(g,i){const C=$("plc"),h=hostOf(g,i);
+  C.innerHTML=`<b>📍 Gap joyi va vaqti</b><label for="hw">Kimnikida (mezbon)</label><select id="hw">${g.members.map(m=>`<option value="${m.id}"${m.id===h.who?" selected":""}>${esc(m.name)}</option>`).join("")}</select>
+   <label for="ha">Manzil</label><input id="ha" placeholder="masalan, Chilonzor 9-kvartal, 12-uy" value="${esc(h.addr)}"><label for="ht">Soati</label><input id="ht" type="time" value="${esc(h.time)}">
+   ${h.addr?`<div class="row" style="margin-top:10px"><a href="https://yandex.uz/maps/?text=${encodeURIComponent(h.addr)}" style="flex:1"><button style="width:100%">🗺 Xaritada ochish</button></a></div>`:""}`;
+  const upd=()=>{g.host=g.host||{};g.host[i]={who:$("hw").value,addr:$("ha").value.trim(),time:$("ht").value};save()};
+  ["hw","ht"].forEach(id=>$(id).addEventListener("change",()=>{upd();toast("Saqlandi")}));$("ha").addEventListener("change",()=>{upd();render()})}
+function expCard(g,i){const C=$("exc"),E=expOf(g,i),x=expSplit(g,i);
+  C.innerHTML=`<b>🧾 Gap xarajati</b><p class="note">Osh, tort, ichimlik… — jami kelganlar soniga bo‘linadi (davomat belgilanmagan bo‘lsa — hamma a’zolarga).</p><div id="exl"></div>
+   <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="ext" placeholder="nima (masalan, osh)" style="flex:2"><input id="exa" type="number" inputmode="numeric" placeholder="so‘m" style="flex:1.3"></div>
+   <div class="row" style="margin-top:8px"><button id="exAdd">+ Qo‘shish</button>${E.length?`<button class="pri" id="exSh">📤 Yuborish</button>`:""}</div>
+   ${E.length?`<div class="sum" style="margin-top:10px">Jami: <b>${sum(x.tot)}</b> · ${x.n} kishi${x.byAtt?" (kelganlar)":""} · har kimga: <b>${sum(Math.ceil(x.per/1000)*1000)}</b></div>`:""}`;
+  const L=$("exl");E.forEach((e,k)=>{const d=document.createElement("div");d.className="mem";d.innerHTML=`<div class="nm"><b>${esc(e.t)}</b><span>${sum(e.a)}</span></div><button class="ic warn" aria-label="O‘chirish">✕</button>`;d.querySelector("button").addEventListener("click",()=>{E.splice(k,1);save();render()});L.appendChild(d)});
+  $("exAdd").addEventListener("click",()=>{const t=$("ext").value.trim(),a=parseFloat($("exa").value);if(!t||!(a>0)){toast("Nomi va summasini yozing");return}E.push({t,a});save();render()});
+  if($("exSh"))$("exSh").addEventListener("click",()=>sendGroup(g,expText(g,i)))}
+async function shareImage(g,i){const r=recipient(g,i),ps=payers(g,i),no=noSet(g,i),h=hostOf(g,i),w=g.members.find(m=>m.id===h.who),W=1080,rowH=78,top=430,H=top+ps.length*rowH+260,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  x.fillStyle="#0f7a5c";x.fillRect(0,0,W,H);
+  if(g.img){try{const im=new Image();im.src=g.img;await im.decode();const k=Math.max(W/im.width,360/im.height);x.save();x.beginPath();x.rect(0,0,W,360);x.clip();x.drawImage(im,(W-im.width*k)/2,(360-im.height*k)/2,im.width*k,im.height*k);x.restore();const gr=x.createLinearGradient(0,0,0,360);gr.addColorStop(0,"#0004");gr.addColorStop(1,"#0f7a5cff");x.fillStyle=gr;x.fillRect(0,0,W,360)}catch(_){}}
+  x.fillStyle="#fff";x.font="800 64px system-ui,sans-serif";x.fillText(g.name.slice(0,26),50,120);x.font="500 38px system-ui,sans-serif";x.fillStyle="#e3f1ec";
+  x.fillText(`📅 ${nice(roundDate(g,i))}${h.time?"  🕖 "+h.time:""}${w?"  🏠 "+w.name:""}`,50,185);x.fillText(`🎁 Navbat: ${r?.name||"—"}  (${i%N(g)+1}/${N(g)})`,50,245);
+  x.font="700 44px system-ui,sans-serif";x.fillStyle="#fff";x.fillText(`Yig‘ildi: ${money(g,got(g,i))} / ${money(g,expect(g,i))}`,50,320);
+  x.fillStyle="#ffffff";x.beginPath();x.roundRect?x.roundRect(30,top-50,W-60,ps.length*rowH+70,28):x.rect(30,top-50,W-60,ps.length*rowH+70);x.fill();
+  ps.forEach((m,k)=>{const y=top+k*rowH,F=full(g,i,m),pa=paidAmt(g,i,m)>0;x.fillStyle=k%2?"#ffffff":"#f3f7f5";x.fillRect(40,y-38,W-80,rowH-4);
+    x.font="600 38px system-ui,sans-serif";x.fillStyle="#1d2a26";x.fillText(m.name.slice(0,22),70,y+12);
+    x.textAlign="right";x.font="700 34px system-ui,sans-serif";x.fillStyle=F?"#178a52":pa?"#c27c0e":no[m.id]?"#c9472f":"#8a958f";
+    x.fillText(F?`✅ ${money(g,paidAmt(g,i,m))}`:pa?`🟡 ${money(g,paidAmt(g,i,m))} / ${money(g,mAmt(g,m))}`:no[m.id]?"🚫 bermadi":"⏳ —",W-70,y+12);x.textAlign="left"});
+  x.fillStyle="#e3f1ec";x.font="500 30px system-ui,sans-serif";x.fillText(`✅ ${ps.filter(m=>full(g,i,m)).length} berdi   ⏳ ${ps.filter(m=>!full(g,i,m)).length} qoldi`,50,H-120);x.fillStyle="#ffffffaa";x.fillText("Gap daftari",50,H-60);
+  c.toBlob(async b=>{if(!b)return;const nm=`gap-${todayS()}.png`;try{if(isNative()){const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(",")[1]);fr.readAsDataURL(b)});const f=await P().Filesystem.writeFile({path:nm,data:b64,directory:"CACHE"});await P().Share.share({title:g.name,files:[f.uri]});return}
+    if(navigator.canShare&&navigator.canShare({files:[new File([b],nm,{type:"image/png"})]})){await navigator.share({files:[new File([b],nm,{type:"image/png"})]});return}}catch(_){return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=nm;a.click()},"image/png")}
 function memTab(g,B){B.innerHTML=`<div class="card" id="ml"></div><div class="card"><b>+ A’zo qo‘shish</b><label for="mn">Ismi</label><input id="mn" autocomplete="off" placeholder="masalan, Dilnoza opa"><label for="mp">Telefoni (ixtiyoriy)</label><input id="mp" type="tel" inputmode="tel" placeholder="+998 90 123 45 67"><label for="ma">Qancha qo‘shadi (bo‘sh = umumiy summa)</label><input id="ma" type="number" inputmode="decimal" step="any" placeholder="${esc(money(g,g.amount))}"><div style="margin-top:12px"><button class="pri big" id="madd">Qo‘shish</button></div></div>`;
   const L=$("ml");if(!g.members.length)L.innerHTML=`<p class="note">Hali a’zo yo‘q.</p>`;
   g.members.forEach(m=>{const d=document.createElement("div");d.className="mem";d.innerHTML=`<div class="nm"><b>${esc(m.name)}</b><span>${money(g,mAmt(g,m))}${+m.amount>0&&+m.amount!==+g.amount?" · alohida":""} · ${esc(m.phone||"telefon yo‘q")}</span></div><button class="ic" aria-label="Tahrirlash">✏️</button><button class="ic warn" aria-label="O‘chirish">✕</button>`;
@@ -181,6 +227,8 @@ function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{nam
    <label for="gp">Qanchada bir marta</label><select id="gp">${PERIODS.map(([k,t])=>`<option value="${k}"${k===g.period?" selected":""}>${t}</option>`).join("")}</select>
    <label for="gs">Birinchi gap sanasi</label><input id="gs" type="date" value="${g.start}">
    <label>Gap rasmi (fon)</label><div class="prev" id="gimg" style="${g.img?`background-image:url('${g.img}')`:""}">${g.img?"":"Rasm tanlanmagan"}</div><div class="row" style="margin-top:8px"><button type="button" id="gimgB">🖼 Rasm tanlash</button>${g.img?`<button type="button" class="warn" id="gimgX">Olib tashlash</button>`:""}</div>
+   <label for="gt">Telegram guruhi (havola yoki @nomi, ixtiyoriy)</label><input id="gt" placeholder="https://t.me/+AbCdEf…  yoki  @gap_guruh" value="${esc(g.tg||"")}" autocomplete="off">
+   <p class="note" style="margin:4px 0 0">Guruhda: guruh nomini bosing → «Taklif havolasi» (Invite link) → nusxalab shu yerga qo‘ying.</p>
    <label for="gf">Navbati kelgan odam ham pul qo‘shadimi?</label><select id="gf"><option value="0"${!g.selfPay?" selected":""}>Yo‘q — o‘zi to‘lamaydi</option><option value="1"${g.selfPay?" selected":""}>Ha — u ham qo‘shadi</option></select></div>
    ${g0?"":`<div class="card"><b>A’zolar</b><p class="note">Har qatorga bitta ism yozing. Telefon va alohida summani vergul bilan qo‘shsa bo‘ladi: <i>Dilnoza, 901234567</i> yoki ko‘proq qo‘shadigan bo‘lsa: <i>Bobur, 901112233, 1000000</i></p><textarea id="gm" rows="7" style="width:100%;font:17px system-ui;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea></div>`}
    <button class="pri big" id="gsave">${g0?"Saqlash":"Gapni ochish"}</button>`;
@@ -188,7 +236,7 @@ function vEdit(){const g0=view.id?D.gaps.find(x=>x.id===view.id):null,g=g0||{nam
   let img=g.img||"";const setPrev=()=>{const e=$("gimg");e.style.backgroundImage=img?`url('${img}')`:"";e.textContent=img?"":"Rasm tanlanmagan"};
   $("gimgB").addEventListener("click",()=>pickImage(u=>{img=u;setPrev()}));if($("gimgX"))$("gimgX").addEventListener("click",()=>{img="";setPrev()});
   $("gsave").addEventListener("click",()=>{const name=$("gn").value.trim(),amount=parseFloat($("ga").value)||0;if(!name){toast("Gap nomini yozing");return}if(!(amount>0)){toast("Pul miqdorini yozing");return}if(!$("gs").value){toast("Sanani tanlang");return}
-    Object.assign(g,{name,amount,img,cur:$("gc").value,period:$("gp").value,start:$("gs").value,selfPay:$("gf").value==="1"});
+    Object.assign(g,{name,amount,img,tg:$("gt").value.trim(),cur:$("gc").value,period:$("gp").value,start:$("gs").value,selfPay:$("gf").value==="1"});
     if(!g0){const lines=$("gm").value.split(/\n/).map(s=>s.trim()).filter(Boolean);if(!PREMIUM()&&lines.length>FREE_MEM){licOpen(`Bepul versiyada ${FREE_MEM} kishigacha. Ko‘proq a’zo uchun Premium’ni faollashtiring.`);return}
       g.id=uid();g.members=lines.map(l=>{const [n,p="",a=""]=l.split(",");const v=parseFloat(String(a).replace(/\s/g,"").replace("$",""));return {id:uid(),name:n.trim(),phone:p.trim(),amount:v>0?v:0}});g.order=g.members.map(m=>m.id);D.gaps.push(g);save();
       if(g.members.length>1&&confirm("Navbatni qur’a bilan aniqlaymizmi?\n«Bekor qilish» bossangiz, yozilgan tartibda qoladi."))go({name:"lot",id:g.id});else go({name:"gap",id:g.id,tab:"jad"})}
