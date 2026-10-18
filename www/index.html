@@ -2140,7 +2140,7 @@ P.build=function(p){if(!isSh(p))return orig.call(this,p);const S=SH[p.sh];if(!S)
       for(const c of g[1]){const pts=c.map(([u,v])=>[x+u*kk,y+v*kk]);pts.forEach(([a,b])=>{minx=Math.min(minx,a);maxx=Math.max(maxx,a);miny=Math.min(miny,b);maxy=Math.max(maxy,b)});gp.push(pts)}
       if(gp.length)glyphs.push(gp);x+=g[0]*kk})});
   if(!glyphs.length)throw"Matnda kesiladigan harf yo‘q.";
-  const tw=maxx-minx,th=maxy-miny,m=p.fr>0?p.fr:Math.max(8,p.h*.3),warn=[];if(miss.size)warn.push("Shriftda yo‘q belgilar «?» bilan almashtirildi: "+[...miss].join(" "));
+  const tw=maxx-minx,th=maxy-miny,m=(p.fr>0?p.fr:Math.max(8,p.h*.3))+(p.us==="ramka"?(+p.fw>0?+p.fw:8):0),warn=[];if(miss.size)warn.push("Shriftda yo‘q belgilar «?» bilan almashtirildi: "+[...miss].join(" "));
   const ok=(W,H,t)=>{const [cx,cy]=cen(S,W,H);return fits(S.f(W,H,p),cx,cy,tw*t/2+m,th*t/2+m)};
   let W,H;
   if(S.auto){[W,H]=S.auto(tw,th,m);for(let i=0;i<300&&!ok(W,H,1);i++){W*=1.02;H*=1.02}}

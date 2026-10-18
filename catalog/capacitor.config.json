@@ -1,0 +1,8 @@
+{
+  "appId": "uz.ish.katalogi",
+  "appName": "Ish katalogi",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
