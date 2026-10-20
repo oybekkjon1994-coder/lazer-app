@@ -1104,6 +1104,33 @@ function geomLine(g){if(g.t==="e"){const v=[];for(let i=0;i<360;i++){const a=2*M
 function resample(P,N){const L=[0];for(let i=1;i<=P.length;i++){const a=P[i-1],b=P[i%P.length];L.push(L[i-1]+Math.hypot(b[0]-a[0],b[1]-a[1]))}const T=L[L.length-1],out=[];let j=0;
   for(let k=0;k<N;k++){const d=T*k/N;while(L[j+1]<d)j++;const a=P[j],b=P[(j+1)%P.length],f=(d-L[j])/Math.max(1e-9,L[j+1]-L[j]);out.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f])}return out}
 /* rastr: qora = kesiladigan joy, oq = metall */
+/* rastrdan olingan konturni asl vektor chiziqlarga yopishtirish (harflar silliq va aniq chiqishi uchun) */
+function snapIndex(loops,tol){const segs=[],cs=Math.max(tol*4,.5),grid=new Map(),key=(i,j)=>i*1048576+j;
+  loops.forEach((L,c)=>{const n=L.length;for(let k=0;k<n;k++){const a=L[k],b=L[(k+1)%n];if(a[0]===b[0]&&a[1]===b[1])continue;const id=segs.length;segs.push({a,b,c,k,n});
+    const i0=Math.floor((Math.min(a[0],b[0])-tol)/cs),i1=Math.floor((Math.max(a[0],b[0])+tol)/cs),j0=Math.floor((Math.min(a[1],b[1])-tol)/cs),j1=Math.floor((Math.max(a[1],b[1])+tol)/cs);
+    if((i1-i0+1)*(j1-j0+1)>4000)continue;for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const q=key(i,j);(grid.get(q)||grid.set(q,[]).get(q)).push(id)}}});
+  return {segs,grid,cs,key,loops,tol}}
+function snapLoop(L,X){const {segs,grid,cs,key,loops,tol}=X,step=tol/3,S=[];
+  for(let i=0;i<L.length;i++){const a=L[i],b=L[(i+1)%L.length],d=Math.hypot(b[0]-a[0],b[1]-a[1]),m=Math.max(1,Math.ceil(d/step));for(let t=0;t<m;t++)S.push([a[0]+(b[0]-a[0])*t/m,a[1]+(b[1]-a[1])*t/m])}
+  const hit=q=>{const ids=grid.get(key(Math.floor(q[0]/cs),Math.floor(q[1]/cs)));if(!ids)return null;let best=null,bd=tol;
+    for(const id of ids){const g=segs[id],dx=g.b[0]-g.a[0],dy=g.b[1]-g.a[1],l2=dx*dx+dy*dy;let t=((q[0]-g.a[0])*dx+(q[1]-g.a[1])*dy)/l2;t=Math.max(0,Math.min(1,t));
+      const px=g.a[0]+t*dx,py=g.a[1]+t*dy,dd=Math.hypot(q[0]-px,q[1]-py);if(dd<bd){bd=dd;best={g,p:[px,py]}}}return best};
+  const runs=[];for(const q of S){const h=hit(q),r=runs[runs.length-1];
+    if(h&&r&&r.g===h.g){r.last=h.p;continue}if(!h&&r&&!r.g){r.pts.push(q);continue}runs.push(h?{g:h.g,first:h.p,last:h.p}:{g:null,pts:[q]})}
+  if(runs.length>1){const a=runs[0],b=runs[runs.length-1];if(a.g&&a.g===b.g){a.first=b.first;runs.pop()}else if(!a.g&&!b.g){a.pts=b.pts.concat(a.pts);runs.pop()}}
+  if(runs.length===1&&!runs[0].g)return L;
+  const out=[],N=runs.length;
+  for(let i=0;i<N;i++){const r=runs[i],nx=runs[(i+1)%N];
+    if(!r.g){out.push(...r.pts);continue}
+    const pv=runs[(i-1+N)%N],joinPrev=N>1&&pv.g&&pv.g.c===r.g.c&&pv.g!==r.g,joinNext=N>1&&nx.g&&nx.g.c===r.g.c&&nx.g!==r.g;
+    if(!joinPrev)out.push(r.first);
+    if(joinNext){const L2=loops[r.g.c],n=r.g.n,f=(nx.g.k-r.g.k+n)%n,bk=(r.g.k-nx.g.k+n)%n;
+      if(f>=1&&f<=8){for(let k=1;k<=f;k++)out.push(L2[(r.g.k+k)%n])}
+      else if(bk>=1&&bk<=8){for(let k=0;k<bk;k++)out.push(L2[(r.g.k-k+n)%n])}
+      else out.push(r.last)}
+    else out.push(r.last)}
+  const o2=[];for(const p of out){const q=o2[o2.length-1];if(!q||Math.hypot(p[0]-q[0],p[1]-q[1])>1e-4)o2.push(p)}
+  return o2.length>=3?rdpClosed(o2,tol*.05):L}
 function rcut(W,H,paint,opt={}){const minA=opt.min??3,sc=Math.min(8,(opt.res||LZRES)/Math.max(W,H)),o=1,cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
   const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);const X=v=>o+v*sc,Y=v=>o+(H-v)*sc;
   const T={x,sc,W,H,X,Y,
@@ -1134,8 +1161,8 @@ function rcut(W,H,paint,opt={}){const minA=opt.min??3,sc=Math.min(8,(opt.res||LZ
       x.fillStyle="#fff";excl.forEach(e=>x.fill(e));return 1}};
   paint(T);
   const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;cv.width=cv.height=0;
-  let out="",n=0;for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
-    if(Math.abs(ar/2)/(sc*sc)<minA)continue;out+=E.poly(L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]));n++}
+  const SX=opt.snap&&opt.snap.length?snapIndex(opt.snap,1.7/sc):null;let out="",n=0;for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+    if(Math.abs(ar/2)/(sc*sc)<minA)continue;const M=L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]);out+=E.poly(SX?snapLoop(M,SX):M);n++}
   return {out,n}}
 const hasPt=p=>p.pt&&p.pt!=="yoq";
 const patFields=(def,s,w,show)=>[["pt","Naqsh",def,"select",PAT_OPTS(),show],["ps","Naqsh / teshik o‘lchami (mm)",s,"num",null,p=>(!show||show(p))&&hasPt(p)],["pw","Chiziq / oraliq qalinligi (mm)",w,"num",null,p=>(!show||show(p))&&hasPt(p)]];
@@ -2097,6 +2124,16 @@ const _rpB3=renderParams;renderParams=function(){_rpB3();if(part!=="bend")return
 
 /* ---------- matn / raqam: shakl ichida ---------- */
 (()=>{const P=PARTS.text,orig=P.build;
+/* shrift egri chiziqlarini silliqlash: burchaklar o‘tkir qoladi, egri joylarga Catmull-Rom nuqtalari qo‘shiladi */
+(()=>{const ang=(a,b,c)=>{const u=[b[0]-a[0],b[1]-a[1]],v=[c[0]-b[0],c[1]-b[1]],lu=Math.hypot(...u),lv=Math.hypot(...v);if(!lu||!lv)return Math.PI;return Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1])/(lu*lv))))};
+  const LIM=38*Math.PI/180,D=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
+  const smoothC=c=>{const n=c.length;if(n<4)return c;const sm=c.map((p,i)=>ang(c[(i-1+n)%n],p,c[(i+1)%n])<LIM),out=[];
+    for(let i=0;i<n;i++){const p0=c[(i-1+n)%n],p1=c[i],p2=c[(i+1)%n],p3=c[(i+2)%n],L=D(p1,p2);out.push(p1);
+      if(!sm[i]||!sm[(i+1)%n]||L<4)continue;const lp=D(p0,p1),ln=D(p2,p3);if(L>2.6*Math.min(lp,ln)&&L>40)continue;
+      const k=Math.min(6,Math.max(1,Math.round(L/12)));for(let j=1;j<=k;j++){const t=j/(k+1),t2=t*t,t3=t2*t;
+        out.push([0,1].map(d=>.5*(2*p1[d]+(-p0[d]+p2[d])*t+(2*p0[d]-5*p1[d]+4*p2[d]-p3[d])*t2+(-p0[d]+3*p1[d]-3*p2[d]+p3[d])*t3)))}}
+    return out};
+  for(const F of Object.values(LZF))if(F&&F.g&&!F._sm){F._sm=1;for(const g of Object.values(F.g))if(g&&g[1])g[1]=g[1].map(smoothC)}})();
 const arcPts=(cx,cy,r,a0,a1,n)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
 const qPts=(a,c,b,n)=>Array.from({length:n+1},(_,i)=>{const t=i/n,u=1-t;return [u*u*a[0]+2*u*t*c[0]+t*t*b[0],u*u*a[1]+2*u*t*c[1]+t*t*b[1]]});
 const norm=(pts,W,H)=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const [a,b] of pts){x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)}return pts.map(([a,b])=>[(a-x0)/(x1-x0)*W,(b-y0)/(y1-y0)*H])};
@@ -2267,7 +2304,7 @@ P.build=function(p){if(!isSh(p)&&!hasIc(p))return orig.call(this,p);const S=isSh
     else{for(const gp of G){T.cut(T.contours(gp,O,O),"evenodd");
         gp.forEach((c,i)=>{const [a,b]=c[0];if(!gp.some((d,j)=>j!==i&&pip(d,a,b)))return;let x0=1e9,x1=-1e9;c.forEach(v=>{x0=Math.min(x0,v[0]);x1=Math.max(x1,v[0])});
           let y0=1e9,y1=-1e9;gp.forEach(d=>d.forEach(v=>{y0=Math.min(y0,v[1]);y1=Math.max(y1,v[1])}));T.line([(x0+x1)/2+O,y0-1+O],[(x0+x1)/2+O,y1+1+O],kw,true,"butt")})}}
-    for(const [a,b] of holes)T.cut(T.circ(a+O,b+O,p.mh/2))}).out};
+    for(const [a,b] of holes)T.cut(T.circ(a+O,b+O,p.mh/2))},{res:LZRES<1500?LZRES:3600,snap:[pts,...G.flat(),...holes.map(([a,b])=>arcPts(a,b,p.mh/2,0,2*Math.PI,72).slice(0,-1))].map(c=>c.map(([a,b])=>[a+O,b+O]))}).out};
 /* rasmlar galereyasi va surish tugmalari */
 let icThumbs=null;
 const _rpT=renderParams;renderParams=function(){_rpT();if(part!=="text")return;const host=$("params");if(!host)return;const v=vals.text;
