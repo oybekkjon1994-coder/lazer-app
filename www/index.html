@@ -218,6 +218,9 @@ body.shop .card{border-radius:16px}
 .sh-tile .ta{position:absolute;right:12px;bottom:12px;z-index:3;width:48px;height:48px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .sh-tile .ill{position:absolute;left:13%;top:19%;width:74%;z-index:1;filter:drop-shadow(0 6px 8px rgba(120,50,0,.35))}.sh-tile .ill svg,.sh-row .ri svg{display:block;width:100%;height:auto}.sh-row .ri{padding:8px}
 .zbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.z3 canvas{background:#eef1f3}.z3pal{display:flex;gap:8px;justify-content:center;padding:10px 12px 0;flex-wrap:wrap}
+.z3pal button{width:auto;height:40px;padding:0 12px 0 34px;border-radius:99px;border:2px solid transparent;position:relative;background-clip:padding-box;font:600 13px var(--body);color:#fff}
+.z3pal button span{position:relative;text-shadow:0 1px 2px rgba(0,0,0,.6)}.z3pal button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg) inset}
 .zov{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column}
 .zbar{display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:#111;color:#fff}
 .zbar b{flex:1;min-width:0;font:700 17px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1482,6 +1485,83 @@ PARTS.kozpanel={group:"tpl",name:"Kozirok old paneli (yoy / friz)",gal:"pt",rere
     return s},
   label:p=>`Kozirok paneli ${p.L}×${p.h}`};
 ["kozirok","kozpanel"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}});
+/* ---------- 20. darvoza / panjara konstruktori ---------- */
+const PROFS=[["40x40","40×40"],["40x20","40×20"],["60x40","60×40"],["60x60","60×60"],["80x40","80×40"],["20x20","20×20"],["30x30","30×30"],["50x50","50×50"]];
+const fm1=v=>(v/1000).toFixed(2);
+PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender:["pt","tur","tp"],
+  note:"Naqshli panel profil truba ramaga orqa tomondan payvandlanadi. Ilova har tabaqa uchun lazerda kesiladigan panelni, ramaga kerak profil truba ro‘yxatini va taxminiy narxni chiqaradi.",
+  fields:[["tur","Turi","d2","select",[["d2","Darvoza — ikki tabaqali"],["d1","Darvoza — bir tabaqali"],["kal","Kalitka (eshik)"],["pan","Panjara (to‘siq seksiyasi)"]]],
+    ["W","Umumiy eni (mm)",3000],["H","Bo‘yi (mm)",2000],
+    ["tp","Tepasi","tekis","select",[["tekis","To‘g‘ri"],["arka","Arka (o‘rtasi baland)"],["botiq","Botiq (o‘rtasi past)"]]],["f","Yoy balandligi (mm)",200,"num",null,p=>p.tp!=="tekis"],
+    ["pr","Rama profili","60x40","select",PROFS],["nm","O‘rtadagi ko‘ndalang trubalar soni",1],["ov","Panel ramaga kirishi (mm)",15],
+    ...patFields("g:4612_70",60,6),["t","Panel list qalinligi (mm)",2],["pp","Profil narxi (so‘m / metr, 0 = hisoblanmaydi)",0],["lp","List narxi (so‘m / kg, 0 = hisoblanmaydi)",0]],
+  build(p){const {W,H}=p,[pw]=String(p.pr).split("x").map(Number),ov=Math.max(0,p.ov),nl=p.tur==="d2"?2:1,gp=nl>1?10:0,lw=(W-gp)/nl,f=p.tp==="tekis"?0:Math.max(0,p.f||0);
+    if(!(W>=300&&H>=300))throw"Eni va bo‘yi kamida 300 mm bo‘lsin.";if(!(lw>4*pw))throw"Tabaqa juda tor — profil o‘lchamiga nisbatan enini oshiring.";
+    if(f>=Math.min(W/2,H/2))throw"Yoy balandligi juda katta.";if(ov>=pw)throw"Panel ramaga kirishi profil enidan kichik bo‘lsin.";
+    const sag=x=>{if(!f)return 0;const R=(W*W/4+f*f)/(2*f);return f-(R-Math.sqrt(Math.max(0,R*R-(x-W/2)**2)))};
+    const top=x=>p.tp==="arka"?H-f+sag(x):p.tp==="botiq"?H-sag(x):H;
+    const items=[],tubes=[];let panelArea=0,info=[];const M={bars:[],boxes:[],panels:[]},pd=+String(p.pr).split("x")[1]||pw;
+    for(let i=0;i<nl;i++){const x0=i*(lw+gp),L=x0+pw-ov,R=x0+lw-pw+ov,B=pw-ov,v=[[0,0],[R-L,0]],N=40;
+      for(let k=0;k<=N;k++){const X=R-(R-L)*k/N;v.push([X-L,top(X)-pw+ov-B])}
+      const ph=Math.max(...v.map(q=>q[1]));panelArea+=shoelace(v);
+      const r=rcut(R-L,ph,T=>{const z=T.poly(v);if(hasPt(p))T.pattern(z,{pat:p.pt,s:p.ps,w:p.pw,mg:ov+8})},{min:4});
+      items.push({s:E.poly(v)+r.out,w:R-L,h:ph});M.panels.push({ox:L,oy:B,z:-pd/2-1.5,s:E.poly(v)+r.out});
+      {const ymin=Math.min(top(x0),top(x0+lw),top(x0+lw/2));M.bars.push([[x0+pw/2,0],[x0+pw/2,top(x0)],pw,pd,0,"metal"],[[x0+lw-pw/2,0],[x0+lw-pw/2,top(x0+lw)],pw,pd,0,"metal"],[[x0+pw,pw/2],[x0+lw-pw,pw/2],pw,pd,0,"metal"]);
+        for(let k=0;k<12;k++){const a=x0+pw+(lw-2*pw)*k/12,b=x0+pw+(lw-2*pw)*(k+1)/12;M.bars.push([[a,top(a)-pw/2],[b,top(b)-pw/2],pw,pd,0,"metal"])}
+        for(let k=0;k<Math.max(0,Math.round(p.nm));k++){const y=pw/2+(ymin-pw)*(k+1)/(Math.round(p.nm)+1);M.bars.push([[x0+pw,y],[x0+lw-pw,y],pw,pd,0,"metal"])}}
+      const hL=top(x0),hR=top(x0+lw);tubes.push(["Tik (chap)",hL],["Tik (o‘ng)",hR],["Pastki",lw-2*pw]);
+      let al=0,prev=null;for(let k=0;k<=60;k++){const X=x0+pw+(lw-2*pw)*k/60,q=[X,top(X)];if(prev)al+=Math.hypot(q[0]-prev[0],q[1]-prev[1]);prev=q}
+      tubes.push([f?"Yuqori (yoy — bukiladi)":"Yuqori",al]);for(let k=0;k<Math.max(0,Math.round(p.nm));k++)tubes.push(["O‘rta ko‘ndalang",lw-2*pw])}
+    const tot=tubes.reduce((s,t)=>s+t[1],0),kg=panelArea*Math.max(0,p.t)*7.85e-6;
+    const grp={};tubes.forEach(([n,l])=>{const k=n+" "+Math.round(l);grp[k]=(grp[k]||0)+1});
+    info.push(`${nl>1?nl+" tabaqa, har biri "+Math.round(lw)+" mm":"1 tabaqa"}. Profil ${p.pr.replace("x","×")}: jami ${fm1(tot)} m (6 metrlik trubadan ~${Math.ceil(tot/5900)} dona).`);
+    info.push("Kesish ro‘yxati: "+Object.entries(grp).map(([k,c])=>`${k} mm × ${c}`).join("; ")+".");
+    info.push(`Panel list: ${items.map(it=>Math.round(it.w)+"×"+Math.round(it.h)).join(", ")} mm, ~${kg.toFixed(1)} kg (${p.t} mm).`);
+    const pr=(p.pp>0?tot/1000*p.pp:0)+(p.lp>0?kg*p.lp:0);if(pr>0)info.push(`Material: ~${fmt(pr)} so‘m (kesish narxi alohida — «Narxini hisoblash»).`);
+    {const hm=Math.max(top(0),top(W/2),top(W));if(p.tur==="pan")M.boxes.push([-70,0,-30,-12,hm+40,30,"post"],[W+12,0,-30,W+70,hm+40,30,"post"]);else M.boxes.push([-260,0,-130,-12,hm+180,130,"stone"],[W+12,0,-130,W+260,hm+180,130,"stone"],[-285,hm+180,-150,13,hm+215,150,"stone"],[W-13,hm+180,-150,W+285,hm+215,150,"stone"])}
+    this._m3=M;this.warn=info.join(" ");return rowDXF(items,30).s},
+  label:p=>`${{d2:"Darvoza",d1:"Darvoza",kal:"Kalitka",pan:"Panjara"}[p.tur]||"Darvoza"} ${p.W}×${p.H}`};
+
+/* ---------- 21. uy raqami / tablichka ---------- */
+PARTS.plaque={group:"tpl",name:"Uy raqami / tablichka",gal:"pt",rerender:["pt"],
+  note:"Harflar kesib olinadi (orqasiga rangli list yoki akril qo‘yish mumkin). O, A, B kabi harflarning ichki qismi tushib ketadi. Hoshiyaga naqsh qo‘shish mumkin.",
+  fields:[["t1","Yuqori qator (ko‘cha)","NAVOIY KO‘CHASI","text"],["t2","Katta qator (uy raqami)","12","text"],["tf","Shrift","interblk","select",FONT_OPTS()],
+    ["shp","Shakli","rect","select",SHAPES_P],["W","Eni (mm)",520],["H","Bo‘yi (mm)",320],["h1","Ko‘cha harfi balandligi (mm)",24],["h2","Raqam balandligi (mm)",105],
+    ["m","Chekka (mm)",15],...patFields("g:488_67.5",22,3),["bw","Naqshli hoshiya eni (mm)",35],["d","Mahkamlash teshigi Ø (0=yo‘q)",6]],
+  build(p){const {W,H,m}=p;if(!(W>=100&&H>=60))throw"Tablichka kamida 100×60 mm bo‘lsin.";if(!(m>=5))throw"Chekka kamida 5 mm bo‘lsin.";
+    const outer=shapeGeom(p.shp,W,H,0),pat=hasPt(p),inG=pat?shapeGeom(p.shp,W,H,m+p.bw):shapeGeom(p.shp,W,H,m);if(!inG)throw"Hoshiya juda keng — o‘rtada joy qolmayapti.";
+    const T1=String(p.t1||"").trim()?layoutText(p.t1,p.tf,p.h1):null,T2=String(p.t2||"").trim()?layoutText(p.t2,p.tf,p.h2):null;
+    const bh=T=>T?T.maxy-T.miny:0,bwid=T=>T?T.maxx-T.minx:0,gap=T1&&T2?Math.max(10,p.h2*.3):0,tot=bh(T1)+gap+bh(T2);
+    const [ix0,iy0,ix1,iy1]=(g=>{const L=geomLine(g);let a=1e9,b=1e9,c=-1e9,d=-1e9;L.forEach(([x,y])=>{a=Math.min(a,x);b=Math.min(b,y);c=Math.max(c,x);d=Math.max(d,y)});return [a,b,c,d]})(inG);
+    const pad=pat?8:4;if(Math.max(bwid(T1),bwid(T2))>ix1-ix0-2*pad||tot>iy1-iy0-2*pad)throw"Yozuv sig‘mayapti — harf balandligini kamaytiring yoki tablichkani kattalashtiring.";
+    let s=shapeDXF(outer),warn="";const cy=(iy0+iy1)/2,place=(T,yTop)=>{if(!T)return;const ox=W/2-(T.minx+T.maxx)/2,oy=yTop-T.maxy;for(const pts of T.polys)s+=E.poly(pts.map(([a,b])=>[a+ox,b+oy]));if(T.miss.size)warn+="Shriftda yo‘q belgilar: "+[...T.miss].join(" ")+". "};
+    place(T1,cy+tot/2);place(T2,cy+tot/2-bh(T1)-gap);
+    if(pat){const mid=shapeGeom(p.shp,W,H,m);const r=rcut(W,H,T=>T.pattern(T.geom(mid),{pat:p.pt,s:p.ps,w:p.pw,mg:3,excl:[T.geom(inG)]}),{min:3});s+=r.out}
+    if(p.d>0){if(p.d>m-4)throw"Teshik chekkaga sig‘maydi — chekkani kengaytiring.";const hx=Math.max(m/2,p.d/2+3);
+      const pts=p.shp==="rect"?[[hx,hx],[W-hx,hx],[W-hx,H-hx],[hx,H-hx]]:[[hx+(p.shp==="ellipse"?m*.6:0),H/2],[W-hx-(p.shp==="ellipse"?m*.6:0),H/2]];pts.forEach(([x,y])=>s+=E.circle(x,y,p.d/2))}
+    this.warn=warn;return s},
+  label:p=>`Tablichka ${String(p.t2||"").trim()||p.W+"×"+p.H}`};
+
+/* ---------- 22. zinapoya perilasi ---------- */
+PARTS.perila={group:"tpl",name:"Zinapoya perilasi (panjara)",gal:"pt",rerender:["pt"],
+  note:"Zina qiyaligiga moslangan naqshli panellar. Har seksiya pastki va yuqori tomoni zina burchagida qiya, yonlari tik. Tutqich (poruchen) uzunligi pastda yoziladi.",
+  fields:[["L","Zina uzunligi — gorizontal (mm)",3000],["Hs","Zina balandligi — ko‘tarilish (mm)",1800],["h","Panjara balandligi (mm)",850],["n","Seksiyalar soni",3],
+    ["gp","Seksiyalar orasi (stoyka uchun, mm)",50],...patFields("g:666_60",45,5),["m","Rama eni (mm)",25],["d","Mahkamlash teshigi Ø (0=yo‘q)",10]],
+  build(p){const {L,Hs,h,m}=p,n=Math.max(1,Math.round(p.n)),gp=Math.max(0,p.gp);if(!(L>300&&Hs>=0&&h>200))throw"Uzunlik 300 mm dan, balandlik 200 mm dan katta bo‘lsin.";
+    const w=(L-gp*(n-1))/n;if(!(w>150))throw"Seksiya juda tor — seksiyalar sonini kamaytiring.";if(!(m>=10&&2*m<h))throw"Rama eni 10 mm dan katta bo‘lsin.";
+    const dy=w*Hs/L,v=[[0,0],[w,dy],[w,dy+h],[0,h]],ang=Math.atan2(Hs,L)*180/Math.PI;
+    const r=rcut(w,dy+h,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:p.ps,w:p.pw,mg:m})},{min:4});let s=E.poly(v)+r.out;
+    if(p.d>0){if(p.d>m-6)throw"Teshik ramaga sig‘maydi — ramani kengaytiring.";[[m/2,m*1.2],[w-m/2,dy+m*1.2],[m/2,h-m*1.2],[w-m/2,dy+h-m*1.2]].forEach(([x,y])=>s+=E.circle(x,y,p.d/2))}
+    this.warn=`Zina burchagi ${ang.toFixed(1)}°. ${n} ta seksiya, har biri ${Math.round(w)} mm (qiya bo‘yi ${Math.round(Math.hypot(w,dy))} mm). Tutqich uzunligi ~${fm1(Math.hypot(L,Hs)+100)} m.`;
+    {const M={bars:[],boxes:[],panels:[]},sl=Hs/L,N=Math.max(2,Math.round(Hs/170)),run=L/N,rise=Hs/N,base=rise+60,stTop=x=>Math.min(N,Math.max(1,Math.floor(x/run)+1))*rise;
+      for(let i=0;i<N;i++)M.boxes.push([i*run,0,-1100,(i+1)*run,(i+1)*rise,-28,"stone"]);M.boxes.push([N*run,0,-1100,N*run+900,Hs,-28,"stone"]);
+      for(let k=0;k<n;k++){const ox=k*(w+gp);M.panels.push({ox,oy:ox*sl+base,z:0,s})}
+      const xs=[-25];for(let k=1;k<n;k++)xs.push(k*(w+gp)-gp/2);xs.push(L+25);xs.forEach(x=>M.boxes.push([x-20,stTop(Math.max(0,Math.min(L-1,x))),-20,x+20,x*sl+base+h+45,20,"metal"]));
+      M.bars.push([[-70,-70*sl+base+h+70],[L+70,(L+70)*sl+base+h+70],50,50,0,"metal"]);this._m3=M}
+    const items=[];for(let k=0;k<n;k++)items.push({s,w,h:dy+h});return rowDXF(items,25).s},
+  label:p=>`Perila ${p.L}×${p.Hs}`};
+["gatek","plaque","perila"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
+
 
 
 /* 17. devor dekori (siluetlar, hayot daraxti) */
@@ -2669,7 +2749,7 @@ const v=vals.text;P.fields.forEach(([id,,d])=>{if(v[id]===undefined)v[id]=d})})(
 
 
 /* ---------- chizmani kattalashtirib ko‘rish (ikki barmoq bilan) ---------- */
-["kozirok","kozpanel"].forEach(k=>HEAVY.add(k));
+["kozirok","kozpanel","gatek","plaque","perila"].forEach(k=>HEAVY.add(k));
 function lzZoom(obj,title){if(!obj||!obj.paths||!obj.paths.length)return;
   const ov=document.createElement("div");ov.className="zov";ov.setAttribute("role","dialog");
   ov.innerHTML=`<div class="zbar"><b></b><span class="zk">100%</span><button type="button" data-z="out" aria-label="Kichraytirish">−</button><button type="button" data-z="in" aria-label="Kattalashtirish">+</button><button type="button" data-z="fit" aria-label="Butun chizma">⤢</button><button type="button" data-z="x" aria-label="Yopish">✕</button></div><canvas></canvas><p class="zhint">Ikki barmoq bilan kattalashtiring, bir barmoq bilan suring. Ikki marta bossangiz — 4×.</p>`;
@@ -2709,6 +2789,65 @@ window.lzZoom=lzZoom;
     const go=()=>{const o=get();if(o)lzZoom(o.obj,o.t)};c.nextElementSibling.addEventListener("click",go);c.addEventListener("click",go);c.style.cursor="zoom-in"};
   add("gcv",()=>{if(typeof lzDraft!=="undefined"&&lzDraft)fullBuild(true);return gen?{obj:gen,t:genName||"DXF"}:null},"DXF");
   add("cv",()=>current?{obj:current,t:$("fname").textContent||"Chizma"}:null)})();
+
+/* ---------- 3D ko‘rinish (darvoza, panjara, perila) ---------- */
+function lz3D(M,title){
+  const loops=s=>{try{return analyse(wrapDXF(s)).paths.filter(p=>p.pts.length>2).map(p=>p.pts)}catch(_){return []}};
+  const faces=[],SHADE={metal:1,post:1,stone:0},cols={metal:[43,43,43],post:[60,60,62],stone:[150,148,142]};
+  const quad=(P,n,kind,z)=>faces.push({loops:[P],n,kind,cz:P.reduce((s,p)=>s+p[2],0)/P.length,c:P.reduce((s,p)=>[s[0]+p[0]/P.length,s[1]+p[1]/P.length,s[2]+p[2]/P.length],[0,0,0])});
+  const boxP=(C,kind)=>{const F=[[0,1,2,3,[0,0,-1]],[5,4,7,6,[0,0,1]],[4,0,3,7,null],[1,5,6,2,null],[3,2,6,7,null],[4,5,1,0,null]];
+    for(const [a,b,c,d,n0] of F){const P=[C[a],C[b],C[c],C[d]];let n=n0;if(!n){const u=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]],v=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];const l=Math.hypot(...n)||1;n=n.map(x=>x/l)}quad(P,n,kind)}};
+  const box=(x0,y0,z0,x1,y1,z1,kind)=>boxP([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],kind);
+  const bar=(a,b,w,d,zc,kind)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l*w/2,ny=dx/l*w/2,z0=zc-d/2,z1=zc+d/2;
+    boxP([[a[0]-nx,a[1]-ny,z0],[b[0]-nx,b[1]-ny,z0],[b[0]+nx,b[1]+ny,z0],[a[0]+nx,a[1]+ny,z0],[a[0]-nx,a[1]-ny,z1],[b[0]-nx,b[1]-ny,z1],[b[0]+nx,b[1]+ny,z1],[a[0]+nx,a[1]+ny,z1]],kind)};
+  (M.boxes||[]).forEach(b=>box(...b));(M.bars||[]).forEach(b=>bar(...b));
+  const panels=(M.panels||[]).map(p=>({loops:loops(p.s).map(L=>L.map(([x,y])=>[p.ox+x,p.oy+y,p.z])),z:p.z}));
+  const zP=panels.length?panels[0].z:0;
+  let x0=1e9,y0=1e9,z0=1e9,x1=-1e9,y1=-1e9,z1=-1e9;const ext=p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);z0=Math.min(z0,p[2]);z1=Math.max(z1,p[2])};
+  faces.forEach(f=>f.loops[0].forEach(ext));panels.forEach(p=>p.loops.forEach(L=>L.forEach(ext)));
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2,R=Math.hypot(x1-x0,y1-y0,z1-z0)/2||1;
+  const PAL=[["Qora",[40,40,42]],["Kumush",[178,184,190]],["Oltin",[196,158,72]],["Jigarrang",[105,68,40]],["Yashil",[40,78,58]]];let pal=0;try{pal=+(localStorage.getItem("lz3dCol")||0)%PAL.length}catch(_){}
+  const ov=document.createElement("div");ov.className="zov z3";
+  ov.innerHTML=`<div class="zbar"><b></b><button type="button" data-z="r" aria-label="Boshlang‘ich ko‘rinish">⟲</button><button type="button" data-z="x" aria-label="Yopish">✕</button></div><canvas></canvas>
+  <div class="z3pal">${PAL.map(([n,c],i)=>`<button type="button" data-c="${i}" aria-pressed="${i===pal}" title="${n}" style="background:rgb(${c})"><span>${n}</span></button>`).join("")}</div>
+  <p class="zhint">Barmoq bilan aylantiring, ikki barmoq bilan yaqinlashtiring. Rang — bo‘yoq rangi.</p>`;
+  ov.querySelector("b").textContent=(title||"3D")+" — 3D";document.body.appendChild(ov);document.body.style.overflow="hidden";
+  const cv=ov.querySelector("canvas"),ctx=cv.getContext("2d");let W=1,H=1,dpr=1,yaw=-.45,pitch=.22,zoom=1,raf=0,t0=performance.now(),spin=true;
+  const size=()=>{dpr=Math.min(2.5,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)};
+  const L3=[.35,.6,.72],ln=Math.hypot(...L3),LD=L3.map(v=>v/ln);
+  function render(){raf=0;ctx.setTransform(dpr,0,0,dpr,0,0);const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#dfe7ee");g.addColorStop(1,"#f6f3ee");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),D=R*3.2,S=Math.min(W,H)*.6/R*zoom;
+    const tr=p=>{const x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,X=x*cyw+z*syw,Z1=-x*syw+z*cyw,Y=y*cp-Z1*sp,Z=y*sp+Z1*cp,k=S*D/(D-Z);return [W/2+X*k,H*.54-Y*k,Z]};
+    const rn=n=>{const X=n[0]*cyw+n[2]*syw,Z1=-n[0]*syw+n[2]*cyw;return [X,n[1]*cp-Z1*sp,n[1]*sp+Z1*cp]};
+    /* yer */ ctx.fillStyle="rgba(60,50,40,.13)";ctx.beginPath();const gp=[[x0-R*.2,y0,z0-R*.25],[x1+R*.2,y0,z0-R*.25],[x1+R*.2,y0,z1+R*.25],[x0-R*.2,y0,z1+R*.25]].map(tr);gp.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fill();
+    const mc=PAL[pal][1],shade=(base,n)=>{let d=n[0]*LD[0]+n[1]*LD[1]+n[2]*LD[2];d=Math.abs(d);const k=.42+.68*d;return `rgb(${base.map(v=>Math.min(255,Math.round(v*k+12))).join(",")})`};
+    const camSide=Math.sign(rn([0,0,1])[2])||1,layer=f=>f.cz>zP+.5?1:f.cz<zP-.5?-1:1;
+    const drawF=list=>{list.map(f=>({f,d:tr(f.c)[2]})).sort((a,b)=>a.d-b.d).forEach(({f})=>{const base=f.kind==="stone"?cols.stone:f.kind==="post"?mc.map(v=>v*.85):mc;
+      ctx.fillStyle=shade(base,rn(f.n));ctx.beginPath();f.loops[0].map(tr).forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fill();ctx.strokeStyle="rgba(0,0,0,.18)";ctx.lineWidth=.6;ctx.stroke()})};
+    drawF(faces.filter(f=>layer(f)===-camSide));
+    const pn=rn([0,0,1]);ctx.fillStyle=shade(mc,pn);ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=.5;
+    for(const p of panels){ctx.beginPath();for(const L of p.loops){L.forEach((q,i)=>{const [a,b]=tr(q);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.closePath()}ctx.fill("evenodd");ctx.stroke()}
+    drawF(faces.filter(f=>layer(f)===camSide));
+    if(spin){const t=performance.now();yaw=-.45+Math.sin((t-t0)/2600)*.35;raf=requestAnimationFrame(render)}}
+  const req=()=>{if(!raf)raf=requestAnimationFrame(render)};
+  const P=new Map();let last=null;const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  cv.style.touchAction="none";
+  cv.addEventListener("pointerdown",e=>{spin=false;cv.setPointerCapture(e.pointerId);P.set(e.pointerId,pos(e));last=null});
+  cv.addEventListener("pointermove",e=>{if(!P.has(e.pointerId))return;const q=pos(e),pr=P.get(e.pointerId);P.set(e.pointerId,q);
+    if(P.size===1){yaw+=(q[0]-pr[0])*.008;pitch=Math.max(-.2,Math.min(1.35,pitch+(q[1]-pr[1])*.006));req()}
+    else{const [a,b]=[...P.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(last)zoom=Math.max(.4,Math.min(8,zoom*d/last));last=d;req()}});
+  const up=e=>{P.delete(e.pointerId);last=null};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  cv.addEventListener("wheel",e=>{e.preventDefault();spin=false;zoom=Math.max(.4,Math.min(8,zoom*Math.exp(-e.deltaY*.0015)));req()},{passive:false});
+  const close=()=>{spin=false;cancelAnimationFrame(raf);removeEventListener("resize",rs);ov.remove();document.body.style.overflow=""};ov._close=close;
+  const rs=()=>{size();req()};addEventListener("resize",rs);
+  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.z==="x")close();else if(b.dataset.z==="r"){yaw=-.45;pitch=.22;zoom=1;req()}
+    else if(b.dataset.c!==undefined){pal=+b.dataset.c;try{localStorage.setItem("lz3dCol",pal)}catch(_){}ov.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed",x===b));req()}});
+  requestAnimationFrame(()=>{size();render()})}
+window.lz3D=lz3D;
+(()=>{const c=$("gcv");if(!c)return;const z=c.nextElementSibling;
+  (z||c).insertAdjacentHTML("afterend",`<button type="button" class="zbtn primary" id="g3d" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg> 3D ko‘rinish (yig‘ilgan holda)</button>`);
+  const b=$("g3d");b.addEventListener("click",()=>{if(typeof lzDraft!=="undefined"&&lzDraft)fullBuild(true);const M=PARTS[part]&&PARTS[part]._m3;if(gen&&M)lz3D(M,genName)});
+  const _b3=build;build=function(){if(PARTS[part])PARTS[part]._m3=null;_b3();b.hidden=!(gen&&PARTS[part]&&PARTS[part]._m3)}})();
 /* ---------- yangi menyu: pastki panel, mavzu, detal tanlash ---------- */
 (()=>{const ICO={narx:'<path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="16" r="3"/>',dxf:'<path d="M4 20 20 4M14 4h6v6"/><rect x="3" y="13" width="8" height="8" rx="1"/>',
   nest:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h9V3M12 16h9"/>',buy:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
@@ -2891,7 +3030,18 @@ metal:`<rect x="94" y="48" width="12" height="112" fill="${D}"/><rect x="58" y="
 <path d="M34 50 16 112M34 50l18 62M166 50l-18 62M166 50l18 62" stroke="${D}" stroke-width="3"/>
 <path d="M10 112h48q-3 20-24 20t-24-20z" fill="${D}"/><path d="M142 112h48q-3 20-24 20t-24-20z" fill="${D}"/>
 <path d="M18 112l6-14h22l6 14z" fill="${G}" stroke="${D}" stroke-width="3" stroke-linejoin="round"/>
-<path d="M153 112l5-20h16l5 20z" fill="${O}" stroke="${D}" stroke-width="3" stroke-linejoin="round"/><text x="166" y="109" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="11" fill="${L}">kg</text>`};
+<path d="M153 112l5-20h16l5 20z" fill="${O}" stroke="${D}" stroke-width="3" stroke-linejoin="round"/><text x="166" y="109" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="11" fill="${L}">kg</text>`,
+gate2:`<rect x="12" y="58" width="14" height="122" fill="${D}"/><rect x="174" y="58" width="14" height="122" fill="${D}"/><circle cx="19" cy="52" r="8" fill="${O}"/><circle cx="181" cy="52" r="8" fill="${O}"/>
+<path d="M30 174V78Q100 40 170 78V174Z" fill="${L}" stroke="${D}" stroke-width="7" stroke-linejoin="round"/><path d="M100 60V174M30 126H170" stroke="${D}" stroke-width="6"/>
+${[0,1,2,3].map(i=>[0,1].map(j=>`<path d="M${46+i*18+(i>1?14:0)} ${96+j*22}l7-8 7 8-7 8z" fill="${D}"/>`).join("")).join("")}
+${[0,1,2,3].map(i=>`<circle cx="${50+i*18+(i>1?14:0)}" cy="150" r="7" fill="none" stroke="${D}" stroke-width="4"/>`).join("")}<rect x="4" y="178" width="192" height="8" rx="3" fill="${D}"/>`,
+plaque:`<rect x="18" y="46" width="164" height="108" rx="14" fill="${D}"/><rect x="28" y="56" width="144" height="88" rx="8" fill="none" stroke="${O}" stroke-width="3" stroke-dasharray="7 5"/>
+<text x="100" y="80" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="13" letter-spacing="1.5" fill="${L}">KO‘CHA</text>
+<text x="100" y="134" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="54" fill="${L}">12</text><circle cx="36" cy="100" r="4.5" fill="${L}"/><circle cx="164" cy="100" r="4.5" fill="${L}"/>
+<path d="M60 46l40-26 40 26" fill="none" stroke="${D}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="100" cy="20" r="5" fill="${O}"/>`,
+stair:`<path d="M10 186V158H52V130H94V102H136V74H178V186Z" fill="${D}"/><path d="M22 150 172 66V16L22 100Z" fill="${L}" stroke="${D}" stroke-width="6" stroke-linejoin="round"/>
+${[0,1,2,3,4].map(i=>`<circle cx="${42+i*30}" cy="${116-i*16.8}" r="9" fill="none" stroke="${O}" stroke-width="4"/>`).join("")}<path d="M22 100V156M172 16V72" stroke="${D}" stroke-width="7" stroke-linecap="round"/><path d="M14 98 180 6" stroke="${O}" stroke-width="7" stroke-linecap="round"/>`
+};
 const ill=k=>`<svg viewBox="0 0 200 200" aria-hidden="true">${ILL[k]}</svg>`;
 const TG_BOT="https://t.me/lazer_uz77_bot",TG_ME="https://t.me/lazekametal",IG="https://instagram.com/metart_shop";
 const ordN=()=>{try{const a=JSON.parse(localStorage.getItem("lazerOrders")||"[]");return Array.isArray(a)?a.length:0}catch(_){return 0}};
@@ -2901,12 +3051,15 @@ const SEC=[
   {k:"dxf",s:"DXF yasash",n:"DXF yasash",d:"O‘lchamdan detal, matn, naqsh",kw:"dxf chizish detal shablon matn naqsh girih soat kozirok kronshteyn",tl:()=>`${Object.keys(PARTS).length} detal`},
   {k:"nest",s:"Nesting",n:"Nesting",d:"Detallarni listga joylash",kw:"nesting list joylash 1250 2500",tl:()=>"1250×2500"},
   {k:"buy",s:"Buyurtma",n:"Buyurtmalar",d:"Mijozlar, to‘lov, holat",kw:"buyurtma mijoz tolov qarz",tl:()=>`${ordN()} buyurtma`},
-  {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`}];
+  {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`},
+  {k:"gate2",part:"gatek",s:"Darvoza",n:"Darvoza / panjara",d:"Naqshli panel, truba ro‘yxati va narx",kw:"darvoza panjara kalitka tabaqa profil truba to‘siq",tl:()=>"konstruktor"},
+  {k:"plaque",part:"plaque",s:"Uy raqami",n:"Uy raqami / tablichka",d:"Ko‘cha nomi va raqam, naqshli hoshiya",kw:"uy raqami tablichka manzil ko‘cha belgi yozuv",tl:()=>"tablichka"},
+  {k:"stair",part:"perila",s:"Perila",n:"Zinapoya perilasi",d:"Zina qiyaligidagi naqshli panellar",kw:"zinapoya perila panjara zina poruchen",tl:()=>"zinapoya"}];
 const NM=Object.fromEntries(SEC.map(s=>[s.k,s.n]));
 document.body.classList.add("shop");
 const wrap=document.querySelector("body>.wrap"),nav=document.querySelector("nav.tabs");
-const tile=s=>`<button type="button" class="sh-tile" data-go="${s.k}"><span class="ill">${ill(s.k)}</span><span class="tl">${s.tl()}</span><span class="tn">${s.s}</span><span class="ta">${SV(I.arr,24,2.2)}</span></button>`;
-const row=s=>`<button type="button" class="sh-row" data-go="${s.k}"><span class="ri">${ill(s.k)}</span><span><b>${s.n}</b><small>${s.d}</small></span><span class="ta">${SV(I.chev,20)}</span></button>`;
+const tile=s=>`<button type="button" class="sh-tile" data-go="${s.part?"dxf:"+s.part:s.k}" data-nm="${s.n}"><span class="ill">${ill(s.k)}</span><span class="tl">${s.tl()}</span><span class="tn">${s.s}</span><span class="ta">${SV(I.arr,24,2.2)}</span></button>`;
+const row=s=>`<button type="button" class="sh-row" data-go="${s.part?"dxf:"+s.part:s.k}" data-nm="${s.n}"><span class="ri">${ill(s.k)}</span><span><b>${s.n}</b><small>${s.d}</small></span><span class="ta">${SV(I.chev,20)}</span></button>`;
 nav.insertAdjacentHTML("afterend",`
 <div class="sh-top" id="shTop" hidden><button type="button" id="shBack" aria-label="Orqaga">${SV(I.back,26,2.2)}</button><h2 id="shTitle"></h2><span></span></div>
 <div id="p-home" class="sh-home" hidden>
@@ -2947,7 +3100,7 @@ function view(v){if(cur!==v)prev=cur;cur=v;
   setNav(v);badge()}
 const base=showTab;showTab=function(t){VIEWS.forEach(k=>$("p-"+k).hidden=true);base(t);view(t)};
 $("shBack").onclick=()=>{const p=prev&&prev!==cur?prev:"home";VIEWS.includes(p)?view(p):showTab(p)};
-document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){showTab(g.dataset.go);return}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){const [t,pp]=g.dataset.go.split(":");showTab(t);if(pp&&window.lzPick){lzPick(pp);$("shTitle").textContent=g.dataset.nm||""}return}
   const n=e.target.closest("[data-nv]");if(n){const v=n.dataset.nv;v==="buy"?showTab("buy"):(view(v),window.scrollTo({top:0}))}});
 $("shQ").addEventListener("input",grid);
 $("shAll").onclick=()=>view("kat");
