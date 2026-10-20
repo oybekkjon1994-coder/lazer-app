@@ -1993,7 +1993,7 @@ const nd=$("ndrop");
 nd.addEventListener("dragover",e=>{e.preventDefault();nd.classList.add("over")});
 nd.addEventListener("dragleave",()=>nd.classList.remove("over"));
 nd.addEventListener("drop",e=>{e.preventDefault();nd.classList.remove("over");importFiles(e.dataTransfer.files)});
-$("gNest").addEventListener("click",()=>{if(!gen)return;addPart(genText,genName,1);saveParts();renderParts();runNest();$("gtoast").textContent="Nestingga qo‘shildi — sonini o‘sha bo‘limda kiriting."});
+$("gNest").addEventListener("click",()=>{if(!gen)return;addPart(genText,genName,1);saveParts();renderParts();runNest();$("gtoast").textContent="";showTab("nest")});
 $("toNest").addEventListener("click",()=>{if(!current)return;addPart(current.text,current.name,Math.max(1,parseInt($("qty").value)||1));saveParts();renderParts();runNest();$("toast").textContent="Nestingga qo‘shildi."});
 
 /* ---------- 4. buyurtmalar ---------- */
