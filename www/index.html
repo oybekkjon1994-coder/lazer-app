@@ -123,6 +123,14 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 .mockov{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(16px + env(safe-area-inset-top,0px)) 40px}
 .mockov .wrap{gap:14px}.mockov .mh{font-family:var(--display);font-size:22px;margin:0}
 #mockCv{width:100%;height:auto;aspect-ratio:auto;border-radius:8px;background:var(--panel)}
+.mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ufon .ufb{position:relative;padding:3px;width:76px;height:64px;display:flex;align-items:center;justify-content:center}
+.chips.ufon .ufb{border-radius:8px;background:var(--panel)}.chips.ufon .ufb[aria-pressed="true"]{background:var(--panel);border-color:var(--accent);outline:3px solid var(--accent)}
+.ufon .ufb img{max-width:100%;max-height:100%;border-radius:4px;display:block}
+.ufon .ufx{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--fg);color:var(--bg);font-size:12px;display:flex;align-items:center;justify-content:center}
+.mpl{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:10px}
+.mpl input[type=range]{width:100%}
+.mockbtn{width:100%;margin-top:8px}
 .licbar{position:sticky;top:0;z-index:40;display:block;width:100%;border:0;border-radius:0;padding:calc(8px + env(safe-area-inset-top,0px)) 16px 8px;background:#f0683a;color:#fff;font:600 13px var(--body);text-align:center}
 .lic-code{font:700 30px var(--mono);letter-spacing:.08em;padding:10px 0;user-select:all}
 .lic-steps{padding-left:20px;line-height:1.6}
@@ -1972,6 +1980,77 @@ const _rm4=renderMock;renderMock=function(){if(mockSt.bg!=="photo"||!mockPhoto||
   x.fillStyle="rgba(15,17,19,.92)";x.fillRect(0,Hp,W,cap);x.fillStyle="#fff";x.font="700 40px system-ui,sans-serif";x.textBaseline="middle";
   x.fillText(src.name.slice(0,40),40,Hp+cap/2-18);x.font="500 30px system-ui,sans-serif";x.fillStyle="#d9dde0";x.fillText(`${Math.round(x1-x0)} × ${Math.round(y1-y0)} mm`,40,Hp+cap/2+24);
   const br=[mockSt.brand,mockSt.phone].filter(Boolean).join("  ·  ");if(br){x.textAlign="right";x.font="700 34px system-ui,sans-serif";x.fillStyle="#f0683a";x.fillText(br,W-40,Hp+cap/2);x.textAlign="left"}};
+/* mijozga ko‘rsatish: DXF yuklash, o‘z fon rasmlari, detalni surish / kattalashtirish / burish */
+(()=>{const DB="lazerFon",ST="fon",imgs=new Map();let ufon=[];
+  const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(ST,{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+  const tx=async(mode,fn)=>{const d=await idb();return new Promise((res,rej)=>{const t=d.transaction(ST,mode),s=t.objectStore(ST),r=fn(s);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})};
+  const loadAll=async()=>{try{ufon=(await tx("readonly",s=>s.getAll()))||[];ufon.sort((a,b)=>a.t-b.t)}catch(_){ufon=[]}};
+  const pl=()=>mockSt.pl||(mockSt.pl={cx:.5,cy:.5,sz:.35,rot:0});
+  const isU=()=>String(mockSt.bg||"").startsWith("u:");
+  const getImg=id=>{if(imgs.has(id))return imgs.get(id);const f=ufon.find(f=>f.id===id);if(!f)return null;const im=new Image();im.onload=()=>{if(isU()&&mockSt.bg==="u:"+id)renderMock()};im.src=f.d;imgs.set(id,im);return im};
+  /* --- oynaga qo‘shimcha boshqaruvlar --- */
+  const card=$("mBg").closest(".card");
+  card.insertAdjacentHTML("afterbegin",`<div class="mrow"><label class="btn primary">DXF yuklash<input type="file" id="mDxf" accept=".dxf" hidden></label><span class="fname" id="mDxfN"></span></div>`);
+  $("mBg").insertAdjacentHTML("afterend",`<span class="label">Mening fonlarim (o‘z rasmlaringiz)</span><div class="chips ufon" id="mUf"></div>
+    <div class="mrow"><label class="btn">+ Fon rasmi qo‘shish<input type="file" id="mUfAdd" accept="image/*" multiple hidden></label><span class="note" style="margin:0">Mijozning devori, uyi, darvozasi rasmini tanlang — saqlanib qoladi.</span></div>
+    <div id="mPl" class="mpl" hidden><p class="note" style="margin:0">Detalni rasm ustida barmoq bilan suring. Ikki barmoq bilan kattalashtirish ham mumkin.</p>
+      <label class="label" for="mSz">Kattaligi</label><input type="range" id="mSz" min="3" max="100" step="1">
+      <label class="label" for="mRot">Burish</label><input type="range" id="mRot" min="-180" max="180" step="1">
+      <div class="mrow"><button type="button" id="mCen">Markazga</button><button type="button" id="mR0">Burishni 0 ga</button></div></div>`);
+  const syncPl=()=>{const P=pl();$("mPl").hidden=!isU();$("mSz").value=Math.round(P.sz*100);$("mRot").value=Math.round(P.rot)};
+  const drawUf=()=>{$("mUf").innerHTML=ufon.map(f=>`<button type="button" data-v="u:${f.id}" aria-pressed="${mockSt.bg==="u:"+f.id}" class="ufb"><img src="${f.th}" alt=""><span class="ufx" data-del="${f.id}" role="button" aria-label="O‘chirish">✕</span></button>`).join("")||`<span class="note" style="margin:0">Hali fon qo‘shilmagan.</span>`};
+  const markAll=()=>{["mBg","mUf"].forEach(id=>$(id).querySelectorAll("button[data-v]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===mockSt.bg)));syncPl()};
+  $("mUf").addEventListener("click",async e=>{const del=e.target.closest("[data-del]");
+    if(del){e.stopPropagation();if(!confirm("Bu fon o‘chirilsinmi?"))return;const id=del.dataset.del;try{await tx("readwrite",s=>s.delete(id))}catch(_){}ufon=ufon.filter(f=>f.id!==id);imgs.delete(id);
+      if(mockSt.bg==="u:"+id)mockSt.bg="wall";mockSave();drawUf();markAll();renderMock();return}
+    const b=e.target.closest("button[data-v]");if(!b)return;mockSt.bg=b.dataset.v;mockSave();markAll();renderMock()});
+  $("mBg").addEventListener("click",()=>setTimeout(markAll,0));
+  $("mUfAdd").addEventListener("change",async e=>{const fs=[...e.target.files];e.target.value="";let last=null;
+    for(const f of fs){const url=URL.createObjectURL(f);const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=url});URL.revokeObjectURL(url);if(!im)continue;
+      const s=Math.min(1,1800/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+      const d=c.toDataURL("image/jpeg",.86),t=document.createElement("canvas"),ts=120/Math.max(c.width,c.height);t.width=Math.round(c.width*ts);t.height=Math.round(c.height*ts);t.getContext("2d").drawImage(c,0,0,t.width,t.height);
+      const rec={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),d,th:t.toDataURL("image/jpeg",.8)};
+      try{await tx("readwrite",s=>s.put(rec))}catch(_){$("mToast").textContent="Fonni saqlab bo‘lmadi (xotira yetmadi?) — faqat shu safar ishlaydi."}ufon.push(rec);last=rec}
+    if(last){mockSt.bg="u:"+last.id;mockSave()}drawUf();markAll();renderMock()});
+  $("mDxf").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const obj=analyse(String(r.result));if(!obj.paths.length)throw"Faylda chiziq topilmadi.";const nm=f.name.replace(/\.dxf$/i,"");$("mDxfN").textContent=f.name;openMock(obj,nm)}
+      catch(err){$("mToast").textContent="DXF ni ochib bo‘lmadi: "+(typeof err==="string"?err:err.message||err)}};r.readAsText(f)});
+  $("mSz").addEventListener("input",e=>{pl().sz=e.target.value/100;mockSave();rq()});
+  $("mRot").addEventListener("input",e=>{pl().rot=+e.target.value;mockSave();rq()});
+  $("mCen").addEventListener("click",()=>{const P=pl();P.cx=.5;P.cy=.5;mockSave();renderMock()});
+  $("mR0").addEventListener("click",()=>{pl().rot=0;mockSave();syncPl();renderMock()});
+  let rqf=0;const rq=()=>{if(rqf)return;rqf=requestAnimationFrame(()=>{rqf=0;renderMock()})};
+  /* barmoq bilan surish va kattalashtirish */
+  const cv=$("mockCv"),ptr=new Map();let pinch=null;
+  cv.style.touchAction="none";
+  cv.addEventListener("pointerdown",e=>{if(!isU())return;cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);if(ptr.size===2){const [a,b]=[...ptr.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),sz:pl().sz}}});
+  cv.addEventListener("pointermove",e=>{if(!isU()||!ptr.has(e.pointerId))return;const r=cv.getBoundingClientRect(),old=ptr.get(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);const P=pl();
+    if(ptr.size>=2&&pinch){const [a,b]=[...ptr.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);P.sz=Math.max(.03,Math.min(1.5,pinch.sz*d/(pinch.d||1)));$("mSz").value=Math.round(P.sz*100)}
+    else{const ih=cv.height-110;P.cx+=(e.clientX-old[0])/r.width;P.cy+=(e.clientY-old[1])/r.height*cv.height/ih}
+    rq()});
+  const up=e=>{ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;if(!ptr.size)mockSave()};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  /* chizish */
+  const _rm=renderMock;renderMock=function(){if(!isU())return _rm();const id=mockSt.bg.slice(2),im=getImg(id);
+    if(!im){mockSt.bg="wall";markAll();return _rm()}const src=mockSrc;if(!src)return;
+    const cap=110;if(!im.complete||!im.naturalWidth){cv.width=800;cv.height=500;return}
+    const W=im.naturalWidth,Hp=im.naturalHeight;cv.width=W;cv.height=Hp+cap;const x=cv.getContext("2d");x.drawImage(im,0,0,W,Hp);
+    const loops=mockLoops(src.obj);if(!loops.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const L of loops)for(const [a,b] of L){x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)}
+    const P=pl(),pw=x1-x0,ph=y1-y0,k=P.sz*W/(pw||1),cxp=P.cx*W,cyp=P.cy*Hp,mx=(x0+x1)/2,my=(y0+y1)/2,Pa=new Path2D();
+    for(const L of loops){L.forEach(([a,b],i)=>{const X=(a-mx)*k,Y=-(b-my)*k;i?Pa.lineTo(X,Y):Pa.moveTo(X,Y)});Pa.closePath()}
+    const bw=pw*k,bh=ph*k;x.save();x.translate(cxp,cyp);x.rotate(P.rot*Math.PI/180);
+    if(mockSt.shadow){x.save();x.shadowColor="rgba(0,0,0,.5)";x.shadowBlur=Math.max(6,bw*.02);const so=Math.max(3,bw*.008);x.shadowOffsetX=so;x.shadowOffsetY=so*1.3;x.fillStyle="#000";x.fill(Pa,"evenodd");x.restore()}
+    x.fillStyle=finishFill(x,mockSt.fin,mockSt.col,-bw/2,-bh/2,bw,bh);x.fill(Pa,"evenodd");
+    x.save();x.clip(Pa,"evenodd");const sh=x.createLinearGradient(-bw/2,-bh/2,bw/2,bh/2);sh.addColorStop(0,"rgba(255,255,255,.18)");sh.addColorStop(.5,"rgba(255,255,255,0)");sh.addColorStop(1,"rgba(0,0,0,.18)");x.fillStyle=sh;x.fillRect(-bw/2,-bh/2,bw,bh);x.restore();
+    x.lineWidth=Math.max(1,bw/900);x.strokeStyle=mockSt.fin==="black"?"rgba(255,255,255,.18)":"rgba(0,0,0,.25)";x.stroke(Pa);x.restore();
+    const fs=Math.max(1,W/1600);x.fillStyle="rgba(15,17,19,.92)";x.fillRect(0,Hp,W,cap);x.fillStyle="#fff";x.font=`700 ${40*Math.min(1,fs)}px system-ui,sans-serif`;x.textBaseline="middle";x.textAlign="left";
+    x.fillText(String(src.name).slice(0,40),30,Hp+cap/2-18);x.font="500 30px system-ui,sans-serif";x.fillStyle="#d9dde0";x.fillText(`${Math.round(pw)} × ${Math.round(ph)} mm`,30,Hp+cap/2+24);
+    const br=[mockSt.brand,mockSt.phone].filter(Boolean).join("  ·  ");if(br){x.textAlign="right";x.font="700 32px system-ui,sans-serif";x.fillStyle="#f0683a";x.fillText(br,W-30,Hp+cap/2);x.textAlign="left"}};
+  const _om=openMock;openMock=function(obj,name){const keep=isU()?mockSt.bg:null;_om(obj,name);if(keep&&ufon.some(f=>"u:"+f.id===keep)){mockSt.bg=keep;renderMock()}drawUf();markAll()};
+  loadAll().then(()=>{drawUf();markAll()});
+  /* Narx bo‘limida alohida kirish tugmasi */
+  const dz=$("drop");if(dz&&!$("nMock2")){dz.insertAdjacentHTML("afterend",`<button type="button" id="nMock2" class="mockbtn">🖼 Mijozga ko‘rsatish (fon bilan)</button>`);
+    $("nMock2").addEventListener("click",()=>{if(current)openMock(current,String(current.name||"Detal").replace(/^Namuna: /,"").replace(/\.dxf$/i,""))})}
+})();
 const _rp4=renderParams;renderParams=function(){_rp4();const P=PARTS[part];if(P.gal)patGallery(P.gal);if(part==="decor")silGallery();if(part==="photo")photoUI()};
 const _b4=build;build=function(){_b4();if(part==="photo")drawPhoto()};
 HEAVY.add("gate");
