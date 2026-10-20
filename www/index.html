@@ -173,6 +173,73 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 .plist2 button{text-align:left;min-height:48px;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
 .plist2 button small{font-size:11px;color:var(--muted);font-weight:500}
 .plist2 button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+
+/* ===== do'kon uslubidagi menyu (bosh sahifa, katalog, profil) ===== */
+:root{--sh-or:#ff6a00;--sh-ink:#16181a;--sh-bg:#f6f6f3;--sh-card:#ffffff;--sh-mut:#7b8086;--sh-line:#e7e7e3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--sh-ink:#f2f3f4;--sh-bg:#13181c;--sh-card:#1b2227;--sh-mut:#93a1ab;--sh-line:#2e383f}}
+:root[data-theme="dark"]{--sh-ink:#f2f3f4;--sh-bg:#13181c;--sh-card:#1b2227;--sh-mut:#93a1ab;--sh-line:#2e383f}
+body.shop{background:var(--sh-bg);padding-top:0;padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+body.shop .wrap>header,body.shop nav.tabs{display:none!important}
+body.shop .card{border-radius:16px}
+.sh-top{position:sticky;top:0;z-index:30;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;
+  display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:6px;background:#111;color:#fff}
+.sh-top h2{margin:0;font:700 20px var(--display);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-top button{width:44px;height:44px;padding:0;border:0;background:transparent;color:#fff;display:grid;place-items:center;border-radius:50%}
+.sh-home{display:flex;flex-direction:column;gap:18px;padding-bottom:70px}
+.sh-head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding-top:calc(6px + env(safe-area-inset-top,0px))}
+.sh-logo{justify-self:center;display:flex;align-items:center;gap:8px;font:800 18px var(--display);letter-spacing:-.01em;color:var(--sh-ink)}
+.sh-logo img{width:36px;height:36px;border-radius:9px;display:block}
+.sh-iconbtn{width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--sh-line);background:var(--sh-card);color:var(--sh-ink);display:grid;place-items:center}
+.sh-search{position:relative}
+.sh-search svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--sh-mut);pointer-events:none}
+.sh-search input{font:400 17px var(--body);padding:15px 16px 15px 48px;border-radius:999px;border:1px solid var(--sh-line);background:var(--sh-card);color:var(--sh-ink)}
+.sh-promo{display:block;width:100%;border:0;border-radius:4px;background:var(--sh-or);color:#fff;font:500 16px var(--body);padding:14px 16px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.sh-hero{position:relative;display:block;width:100%;aspect-ratio:2.9/1;border:0;padding:0;border-radius:18px;overflow:hidden;cursor:pointer;
+  background:#1d1a17 url(img/hero.jpg) right center/62% auto no-repeat;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.sh-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#1d1a17 38%,rgba(29,26,23,.6) 55%,rgba(29,26,23,0) 75%)}
+.sh-hero::after{content:"";position:absolute;left:-10%;top:-40%;width:70%;height:180%;background:radial-gradient(closest-side,rgba(255,170,40,.35),transparent);pointer-events:none}
+.sh-hero .hx{position:absolute;left:5%;top:50%;transform:translateY(-50%) rotate(-4deg);z-index:1;display:flex;flex-direction:column;align-items:center;line-height:.9}
+.sh-hero .hx b{font:900 clamp(30px,10vw,52px) var(--display);color:#ffd21f;letter-spacing:-.02em;-webkit-text-stroke:2px #c62a12;paint-order:stroke fill;text-shadow:0 3px 0 #8a1608}
+.sh-hero .hx span{margin-top:6px;font:800 clamp(12px,3.6vw,17px) var(--display);color:#fff;background:#d4210f;padding:3px 12px;border-radius:6px;letter-spacing:.04em}
+.sh-hero .hs{position:absolute;right:4%;bottom:10%;z-index:1;font:600 12px var(--body);color:#fff;background:rgba(0,0,0,.45);padding:4px 10px;border-radius:99px}
+.sh-sec{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+.sh-sec h3{margin:0;font:800 32px var(--display);letter-spacing:-.02em;color:var(--sh-ink)}
+.sh-sec button{border:0;background:transparent;padding:8px 0;font:600 18px var(--body);color:var(--sh-ink);display:flex;align-items:center;gap:4px}
+.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (min-width:760px){.sh-grid{grid-template-columns:repeat(3,1fr)}}
+.sh-tile{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:22px;overflow:hidden;cursor:pointer;text-align:left;isolation:isolate;
+  background:radial-gradient(circle at 50% 62%,rgba(255,247,200,.95) 0 22%,rgba(255,220,90,0) 58%),
+    repeating-conic-gradient(from 0deg at 50% 62%,#ffc51f 0 7deg,#ffad0d 7deg 14deg),#ffb40f;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.sh-tile::after{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(180deg,rgba(255,120,0,.0) 55%,rgba(60,25,0,.55));pointer-events:none}
+.sh-tile img{position:absolute;left:4%;top:14%;width:92%;aspect-ratio:1;object-fit:cover;mix-blend-mode:multiply;z-index:1;-webkit-mask-image:radial-gradient(circle,#000 48%,transparent 66%);mask-image:radial-gradient(circle,#000 48%,transparent 66%)}
+.sh-tile .tl{position:absolute;left:14px;top:14px;z-index:3;font:700 clamp(12px,3.6vw,17px) var(--display);letter-spacing:.14em;text-transform:uppercase;color:#fff;
+  background:rgba(255,255,255,.18);padding:4px 10px;border-radius:6px;text-shadow:0 1px 2px rgba(150,60,0,.45)}
+.sh-tile .tn{position:absolute;left:16px;bottom:18px;right:66px;z-index:3;font:800 clamp(17px,5vw,23px) var(--display);color:#fff;line-height:1.1;text-shadow:0 2px 6px rgba(0,0,0,.4);overflow-wrap:normal;hyphens:none}
+.sh-tile .ta{position:absolute;right:12px;bottom:12px;z-index:3;width:48px;height:48px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.sh-empty{color:var(--sh-mut);text-align:center;padding:20px 0;grid-column:1/-1}
+.sh-list{display:flex;flex-direction:column;gap:10px}
+.sh-row{display:grid;grid-template-columns:72px 1fr 40px;gap:14px;align-items:center;padding:10px;border:1px solid var(--sh-line);border-radius:18px;background:var(--sh-card);text-align:left;color:var(--sh-ink)}
+.sh-row .ri{width:72px;height:72px;border-radius:14px;overflow:hidden;background:repeating-conic-gradient(from 0deg at 50% 60%,#ffc51f 0 9deg,#ffad0d 9deg 18deg)}
+.sh-row .ri img{width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply;display:block}
+.sh-row b{display:block;font:700 18px var(--display)}
+.sh-row small{color:var(--sh-mut);font-size:13px}
+.sh-row .ta{width:40px;height:40px;border-radius:50%;background:var(--sh-bg);display:grid;place-items:center}
+.sh-prof{display:flex;flex-direction:column;gap:14px}
+.sh-pcard{background:var(--sh-card);border:1px solid var(--sh-line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;color:var(--sh-ink)}
+.sh-pcard h4{margin:0;font:700 13px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--sh-mut)}
+.sh-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--sh-bg);border-radius:12px;padding:4px}
+.sh-seg button{border:0;background:transparent;padding:10px 4px;border-radius:9px;color:var(--sh-mut)}
+.sh-seg button[aria-pressed="true"]{background:var(--sh-or);color:#fff}
+.sh-link{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 2px;border-top:1px solid var(--sh-line);color:var(--sh-ink);text-decoration:none;font-weight:600}
+.sh-link:first-of-type{border-top:0}
+.sh-link span{color:var(--sh-mut);font-weight:400;font-size:14px}
+.sh-fab{position:fixed;right:16px;bottom:calc(100px + env(safe-area-inset-bottom,0px));z-index:45;width:66px;height:66px;border-radius:50%;background:#1b1d1f;color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(0,0,0,.3);text-decoration:none}
+.sh-nav{position:fixed;left:0;right:0;bottom:0;z-index:44;display:grid;grid-template-columns:repeat(4,1fr);background:var(--sh-card);border-top:1px solid var(--sh-line);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px))}
+.sh-nav button{position:relative;border:0;background:transparent;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:4px;font:500 15px var(--body);color:var(--sh-mut);border-radius:12px}
+.sh-nav button[aria-current="page"]{color:var(--sh-ink);font-weight:600}
+.sh-nav button[aria-current="page"] svg{stroke-width:2.2}
+.sh-nav .bd{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--sh-or);color:#fff;font:700 11px/18px var(--body);text-align:center}
 </style>
 
 <div class="wrap">
@@ -2595,8 +2662,88 @@ $("mCopy").addEventListener("click",()=>{const t=mText();if(!t)return;navigator.
 $("mOrder").addEventListener("click",()=>{if(!mLast)return;const {r,qty,price}=mLast;startOrder({detal:`${r.label} (${r.material})`,soni:qty,metr:"",summa:price?Math.round(r.total*price):null,izoh:`Metall: ${kgf(r.total)} kg`})});
 mRender();
 
-let startTab="narx";try{const s=localStorage.getItem("lazerTab");if(TABS.includes(s))startTab=s}catch(_){}
-showTab(startTab);
+
+/* ---------- do'kon uslubidagi menyu: bosh sahifa, katalog, profil ---------- */
+(()=>{
+const SV=(d,s=24,w=1.9)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I={home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',kat:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+  buy:'<path d="M3 4h2.5l2.2 11h10.6L20.5 7H7"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',prof:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  arr:'<path d="M5 12h14M13 6l6 6-6 6"/>',back:'<path d="M15 5l-7 7 7 7"/>',srch:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',chev:'<path d="m9 6 6 6-6 6"/>',
+  head:'<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/><path d="M19 20c0 1-2 2-5 2"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',auto:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>'};
+const TG_BOT="https://t.me/lazer_uz77_bot",TG_ME="https://t.me/lazekametal",IG="https://instagram.com/metart_shop";
+const ordN=()=>{try{const a=JSON.parse(localStorage.getItem("lazerOrders")||"[]");return Array.isArray(a)?a.length:0}catch(_){return 0}};
+const tierN=(typeof tiers!=="undefined"&&tiers.length)||4;
+const SEC=[
+  {k:"narx",s:"Narx",n:"Narx hisoblash",d:"DXF yuklang — kesish narxi so‘mda",kw:"narx hisob kalkulyator dxf metr so'm",tl:()=>`${tierN} qalinlik`},
+  {k:"dxf",s:"DXF yasash",n:"DXF yasash",d:"O‘lchamdan detal, matn, naqsh",kw:"dxf chizish detal shablon matn naqsh girih soat",tl:()=>`${Object.keys(PARTS).length} detal`},
+  {k:"nest",s:"Nesting",n:"Nesting",d:"Detallarni listga joylash",kw:"nesting list joylash 1250 2500",tl:()=>"1250×2500"},
+  {k:"buy",s:"Buyurtma",n:"Buyurtmalar",d:"Mijozlar, to‘lov, holat",kw:"buyurtma mijoz tolov qarz",tl:()=>`${ordN()} buyurtma`},
+  {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`},
+  {k:"qur",s:"Qurilish",n:"Qurilish hisobi",d:"Material va narx hisobi",kw:"qurilish hisob material",tl:()=>"hisob-kitob"}];
+const NM=Object.fromEntries(SEC.map(s=>[s.k,s.n]));
+document.body.classList.add("shop");
+const wrap=document.querySelector("body>.wrap"),nav=document.querySelector("nav.tabs");
+const tile=s=>`<button type="button" class="sh-tile" data-go="${s.k}"><img src="img/t-${s.k}.jpg" alt=""><span class="tl">${s.tl()}</span><span class="tn">${s.s}</span><span class="ta">${SV(I.arr,24,2.2)}</span></button>`;
+const row=s=>`<button type="button" class="sh-row" data-go="${s.k}"><span class="ri"><img src="img/t-${s.k}.jpg" alt=""></span><span><b>${s.n}</b><small>${s.d}</small></span><span class="ta">${SV(I.chev,20)}</span></button>`;
+nav.insertAdjacentHTML("afterend",`
+<div class="sh-top" id="shTop" hidden><button type="button" id="shBack" aria-label="Orqaga">${SV(I.back,26,2.2)}</button><h2 id="shTitle"></h2><span></span></div>
+<div id="p-home" class="sh-home" hidden>
+  <div class="sh-head"><span></span><div class="sh-logo"><img src="img/logo.png" alt="">Lazer ustaxona</div><button type="button" class="sh-iconbtn" id="shTh" aria-label="Mavzu"></button></div>
+  <label class="sh-search">${SV(I.srch,22)}<input id="shQ" type="search" placeholder="Bo‘limlarni qidirish" autocomplete="off"></label>
+  <button type="button" class="sh-promo" id="shPromo">Mijozlar DXF yuborib narxni darhol bilsin — Telegram bot @lazer_uz77_bot</button>
+  <button type="button" class="sh-hero" data-go="narx" aria-label="Narx hisoblash"><span class="hx"><b>LAZER</b><span>★ USTAXONA ★</span></span><span class="hs">Narxni hisoblash →</span></button>
+  <div class="sh-sec"><h3>Katalog</h3><button type="button" id="shAll">Barchasi ${SV(I.chev,20,2.2)}</button></div>
+  <div class="sh-grid" id="shGrid"></div>
+</div>
+<div id="p-kat" class="sh-list" hidden></div>
+<div id="p-prof" class="sh-prof" hidden>
+  <div class="sh-pcard"><h4>Mavzu</h4><div class="sh-seg" id="shSeg"><button type="button" data-t="auto">Avto</button><button type="button" data-t="light">Yorug‘</button><button type="button" data-t="dark">To‘q</button></div></div>
+  <div class="sh-pcard"><h4>Aloqa</h4>
+    <a class="sh-link" href="${TG_BOT}">Telegram bot <span>@lazer_uz77_bot</span></a>
+    <a class="sh-link" href="${TG_ME}">Yordam (Telegram) <span>@lazekametal</span></a>
+    <a class="sh-link" href="${IG}">Instagram <span>@metart_shop</span></a></div>
+  <div class="sh-pcard"><h4>Ilova</h4><div class="sh-link" style="border:0">Lazer ustaxona <span id="shVer">Android</span></div></div>
+</div>`);
+document.body.insertAdjacentHTML("beforeend",`<a class="sh-fab" href="${TG_ME}" aria-label="Yordam">${SV(I.head,30,2)}</a>
+<nav class="sh-nav" aria-label="Asosiy menyu">
+  <button type="button" data-nv="home">${SV(I.home,30)}Bosh sahifa</button>
+  <button type="button" data-nv="kat">${SV(I.kat,30)}Katalog</button>
+  <button type="button" data-nv="buy">${SV(I.buy,30)}Buyurtma<span class="bd" id="shBd" hidden></span></button>
+  <button type="button" data-nv="prof">${SV(I.prof,30)}Profil</button>
+</nav>`);
+const VIEWS=["home","kat","prof"];
+function grid(){const q=($("shQ").value||"").trim().toLowerCase();const L=SEC.filter(s=>!q||(s.n+" "+s.d+" "+s.kw).toLowerCase().includes(q));
+  $("shGrid").innerHTML=L.map(tile).join("")||`<p class="sh-empty">Topilmadi</p>`}
+function badge(){const n=ordN(),b=$("shBd");b.hidden=!n;b.textContent=n>99?"99+":n}
+let cur="home",prev="home";
+function setNav(v){document.querySelectorAll(".sh-nav button").forEach(b=>b.toggleAttribute("aria-current",false));
+  const t=v==="buy"?"buy":VIEWS.includes(v)?v:"kat";const b=document.querySelector(`.sh-nav [data-nv="${t}"]`);if(b)b.setAttribute("aria-current","page")}
+function view(v){if(cur!==v)prev=cur;cur=v;
+  VIEWS.forEach(k=>$("p-"+k).hidden=k!==v);
+  if(VIEWS.includes(v)){TABS.forEach(k=>$("p-"+k).hidden=true);if(v==="home")grid();if(v==="kat")$("p-kat").innerHTML=SEC.map(row).join("")}
+  const top=$("shTop");top.hidden=v==="home";$("shTitle").textContent=v==="kat"?"Katalog":v==="prof"?"Profil":NM[v]||"";
+  setNav(v);badge()}
+const base=showTab;showTab=function(t){VIEWS.forEach(k=>$("p-"+k).hidden=true);base(t);view(t)};
+$("shBack").onclick=()=>{const p=prev&&prev!==cur?prev:"home";VIEWS.includes(p)?view(p):showTab(p)};
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){showTab(g.dataset.go);return}
+  const n=e.target.closest("[data-nv]");if(n){const v=n.dataset.nv;v==="buy"?showTab("buy"):(view(v),window.scrollTo({top:0}))}});
+$("shQ").addEventListener("input",grid);
+$("shAll").onclick=()=>view("kat");
+$("shPromo").onclick=()=>{location.href=TG_BOT};
+/* mavzu */
+const thGet=()=>{try{return localStorage.getItem("lazerTheme")||"auto"}catch(_){return"auto"}};
+function thSet(t){try{localStorage.setItem("lazerTheme",t)}catch(_){};if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);thShow()}
+function thShow(){const t=thGet();$("shTh").innerHTML=SV(t==="dark"?I.moon:t==="light"?I.sun:I.auto,22);document.querySelectorAll("#shSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t))}
+$("shTh").onclick=()=>{const o=["auto","light","dark"];thSet(o[(o.indexOf(thGet())+1)%3])};
+document.querySelectorAll("#shSeg button").forEach(b=>b.onclick=()=>thSet(b.dataset.t));thShow();
+/* tizim "orqaga" tugmasi: bo'limdan bosh sahifaga */
+try{history.replaceState({sh:1},"");history.pushState({sh:2},"");addEventListener("popstate",()=>{if(cur!=="home"){view("home");history.pushState({sh:2},"")}})}catch(_){}
+window.lzView=view;
+})();
+
+showTab("narx");lzView("home");
 </script>
 
 </body></html>
