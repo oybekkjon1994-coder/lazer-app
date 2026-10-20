@@ -1489,78 +1489,126 @@ PARTS.kozpanel={group:"tpl",name:"Kozirok old paneli (yoy / friz)",gal:"pt",rere
 /* ---------- 20. darvoza / panjara konstruktori ---------- */
 const PROFS=[["40x40","40×40"],["40x20","40×20"],["60x40","60×40"],["60x60","60×60"],["80x40","80×40"],["20x20","20×20"],["30x30","30×30"],["50x50","50×50"]];
 const fm1=v=>(v/1000).toFixed(2);
-const GT=[["d2","Ikki tabaqa"],["d2k","Ikki tabaqa + kalitka"],["d1k","Bir tabaqa + kalitka"],["d1","Bir tabaqa"],["kal","Faqat kalitka"],["pan","Panjara (to‘siq, naqshli)"]];
-const GB=[["filenka","Ramkali panellar (filenka)"],["arka","Arka + medalyon + romb to‘r"],["gor","Gorizontal tasmalar"],["naqsh","To‘liq lazer naqsh"],["tekis","Tekis list (bezaksiz)"]];
-const hasK=p=>["d2k","d1k"].includes(p.tur),isPan=p=>p.tur==="pan";
-PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender:["pt","tur","tp","bz"],
-  note:"Rama profil trubadan, old tomoni list bilan qoplanadi, ustiga lazerda kesilgan bezak (ramka, arka, medalyon, tasma) yopishtiriladi. Tepada naqshli derazali fortochka bo‘lishi mumkin. Ilova lazer detallarini DXF qilib, truba kesish ro‘yxati, list o‘lchamlari va taxminiy narxni chiqaradi.",
-  fields:[["tur","Turi","d2k","select",GT],["W","Umumiy eni (mm)",3600],["H","Umumiy bo‘yi (mm)",2600],["kw","Kalitka eni (mm)",950,"num",null,hasK],
-    ["ht","Tepadagi fortochka balandligi (0 = yo‘q, mm)",450,"num",null,p=>!isPan(p)],
+const GT=[["d2","1. Ikki tabaqa"],["d2k","2. Ikki tabaqa + kalitka (o‘ngda)"],["kd2","3. Kalitka (chapda) + ikki tabaqa"],["kd2k","4. Kalitka + ikki tabaqa + kalitka"],["d1k","5. Bir tabaqa + kalitka"],["kd1","6. Kalitka + bir tabaqa"],
+  ["d1","7. Bir tabaqa"],["kal","8. Faqat kalitka"],["d2i","9. Ikki tabaqa, kalitka tabaqa ichida"],["d4","10. To‘rt tabaqa (buklanadigan)"],["sur","11. Surilma (otkatnoy) darvoza"],["pan","12. Panjara seksiyasi (naqshli)"],["pank","13. Panjara + kalitka"]];
+const GB=[["filenka","1. Ramkali panellar (filenka)"],["filenka_burchak","2. Filenka + burchak gullari"],["filenka_med","3. Filenka + o‘rtada medalyon"],["arka_med","4. Arka + medalyon + romb to‘r"],["arka_naqsh","5. Arka ichi naqsh"],
+  ["mehrob","6. Mehrob (uchli arka) + medalyon"],["mehrob_naqsh","7. Mehrob ichi naqsh"],["gor","8. Gorizontal tasmalar"],["vert","9. Vertikal tasmalar"],["jalyuzi","10. Jalyuzi (bukilgan list qanotlar)"],
+  ["romb_tor","11. Romb to‘r panel"],["shaxmat","12. Shaxmat kvadratlar"],["quyosh","13. Quyosh (nurli doira)"],["islimiy","14. Islimiy — kovaniy gul panel"],["kov_filenka","15. Filenka + kovaniy gul"],
+  ["naqsh","16. To‘liq lazer naqsh (girih)"],["naqsh_hoshiya","17. Naqshli hoshiya"],["katta_med","18. Ikki tabaqa ustida katta medalyon"],["romb_ramka","19. Romb ramka"],["tekis","20. Tekis list (bezaksiz)"]];
+const isPanT=t=>t==="pan"||t==="pank";
+function gateDesign(id,cw,ch,p,bw,api){const m=Math.max(20,Math.min(45,Math.min(cw,ch)*.06)),uw=cw-2*m,uh=ch-2*m;if(uw<80||uh<80)return;
+  const R4=(x,y,w,h)=>E.poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]),ring=(x,y,w,h,b)=>R4(x,y,w,h)+R4(x+b,y+b,w-2*b,h-2*b);
+  const med=D=>{const r=rcut(D,D,T=>{if(hasPt(p))T.pattern(T.geom(shapeGeom("ellipse",D,D,0)),{pat:p.pt,s:Math.min(p.ps,D/4),w:p.pw,mg:Math.max(8,bw*.5)})},{min:4});return E.circle(D/2,D/2,D/2)+r.out};
+  const mehrobPts=(w,h)=>{const aH=Math.min(w*.85,h*.42),s0=h-aH,v=[[0,0],[w,0],[w,s0]];for(let i=1;i<40;i++){const x=w-w*i/40,u=Math.abs(2*x/w-1);v.push([x,s0+aH*Math.pow(1-u,.6)])}v.push([0,s0]);return v};
+  const fillZone=(v,w,h)=>{const r=rcut(w,h,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:Math.min(p.ps,w/4),w:p.pw,mg:8})},{min:4});return E.poly(v)+r.out};
+  const P=(s,w,h,x,y,kind="decor")=>api.piece(s,w,h,x,y,kind);
+  switch(id){
+    case"filenka":P(ring(0,0,uw,uh,bw),uw,uh,m,m);break;
+    case"filenka_burchak":{P(ring(0,0,uw,uh,bw),uw,uh,m,m);const c=Math.min(uw,uh)*.13;if(c>25)[[1,1],[uw-1,1],[uw-1,uh-1],[1,uh-1]].forEach(([fx,fy],i)=>{const cx=m+bw+c*.9+(i===1||i===2?uw-2*bw-1.8*c-2:0),cy=m+bw+c*.9+(i>=2?uh-2*bw-1.8*c-2:0);
+      P(E.poly([[c,0],[2*c,c],[c,2*c],[0,c]])+E.circle(c,c,c*.28),2*c,2*c,cx-c,cy-c)});break}
+    case"filenka_med":{P(ring(0,0,uw,uh,bw),uw,uh,m,m);const D=Math.min(uw,uh)*.55;if(D>80)P(med(D),D,D,cw/2-D/2,ch/2-D/2);break}
+    case"arka_med":case"arka_naqsh":{if(uh<uw*.8){P(ring(0,0,uw,uh,bw),uw,uh,m,m);break}const og=shapeGeom("arch",uw,uh,0),ig=shapeGeom("arch",uw,uh,bw);P(shapeDXF(og)+shapeDXF(ig),uw,uh,m,m);
+      if(id==="arka_naqsh"){const iw=uw-2*bw-16,ih=uh-2*bw-16,g=shapeGeom("arch",iw,ih,0),L=geomLine(g);P(fillZone(L,iw,ih),iw,ih,m+bw+8,m+bw+8);break}
+      const D=Math.min(uw-2*bw-30,uh*.45),cyM=uh-uw/2;if(D>80)P(med(D),D,D,m+uw/2-D/2,m+cyM-D/2);
+      const lw2=uw-2*bw-40,lh2=cyM-D/2-bw-50;if(lw2>80&&lh2>80){const r=rcut(lw2,lh2,T=>T.pattern(T.poly([[0,0],[lw2,0],[lw2,lh2],[0,lh2]]),{pat:"perf_romb",s:Math.max(30,Math.min(70,lw2/5)),w:8,mg:10}),{min:4});P(R4(0,0,lw2,lh2)+r.out,lw2,lh2,m+bw+20,m+bw+20)}break}
+    case"mehrob":case"mehrob_naqsh":{const o=mehrobPts(uw,uh),iw=uw-2*bw,ih=uh-2*bw,iv=mehrobPts(iw,ih).map(([x,y])=>[x+bw,y+bw]);P(E.poly(o)+E.poly(iv),uw,uh,m,m);
+      if(id==="mehrob_naqsh"){const w2=iw-16,h2=ih-16;P(fillZone(mehrobPts(w2,h2),w2,h2),w2,h2,m+bw+8,m+bw+8)}else{const D=Math.min(iw-30,uh*.36);if(D>80)P(med(D),D,D,cw/2-D/2,m+uh*.62-D/2)}break}
+    case"gor":{const sh=Math.max(10,bw*.45);for(const r of [.28,.72])for(let j=-1;j<=1;j++)P(R4(0,0,uw,sh),uw,sh,m,m+uh*r+j*sh*2.2-sh/2);break}
+    case"vert":{const sw=Math.max(10,bw*.45);for(let j=-1;j<=1;j++)P(R4(0,0,sw,uh),sw,uh,cw/2+j*sw*2.4-sw/2,m);break}
+    case"jalyuzi":{const n=Math.max(2,Math.floor(uh/75)),st=uh/n,bl=60,fl=12,bs=E.poly([[0,0],[uw,0],[uw,bl+2*fl],[0,bl+2*fl]])+[[0,fl],[uw,fl],[0,fl+bl],[uw,fl+bl]].map(([x,y])=>E.poly([[x,y-2],[x+(x?-3:3),y],[x,y+2]])).join("");
+      for(let i=0;i<n;i++){const y=m+st*(i+.5);api.bar([m,y],[m+uw,y],3,bl,"decor",[0,Math.sin(.6),Math.cos(.6)]);api.lz(bs,uw,bl+2*fl,"Jalyuzi qanoti (2 joyda bukiladi)")}break}
+    case"romb_tor":{const r=rcut(uw,uh,T=>T.pattern(T.poly([[0,0],[uw,0],[uw,uh],[0,uh]]),{pat:"perf_romb",s:Math.max(40,Math.min(90,uw/5)),w:Math.max(8,bw*.3),mg:bw}),{min:4});P(R4(0,0,uw,uh)+r.out,uw,uh,m,m);break}
+    case"shaxmat":{const k=Math.max(2,Math.round(uw/150)),q=uw/k,rows=Math.max(2,Math.round(uh/q)),qh=uh/rows,s=Math.min(q,qh)*.78;for(let i=0;i<k;i++)for(let j=0;j<rows;j++)if((i+j)%2===0)P(R4(0,0,s,s),s,s,m+q*(i+.5)-s/2,m+qh*(j+.5)-s/2);break}
+    case"quyosh":{const D=Math.min(uw,uh)*.86,R=D/2,r=rcut(D,D,T=>{T.cut(T.circ(R,R,R));for(let i=0;i<24;i++){const a=i*Math.PI/12;T.line([R+R*.2*Math.cos(a),R+R*.2*Math.sin(a)],[R+R*Math.cos(a),R+R*Math.sin(a)],Math.max(8,R*.07),true,"butt")}
+        T.metal(T.circ(R,R,R*.28));const x=T.x;x.strokeStyle="#fff";x.lineWidth=Math.max(10,bw*.5)*T.sc*2;x.stroke(T.circ(R,R,R))},{min:4});P(E.circle(R,R,R)+r.out,D,D,cw/2-R,ch/2-R);break}
+    case"islimiy":{const v=[[0,0],[uw,0],[uw,uh],[0,uh]];const r=scrollPanel(v,uw,uh,{sw:Math.max(8,bw*.25),cw:Math.max(120,uw/3),m:Math.max(10,bw*.5),hi:uh},()=>0);P(E.poly(v)+r.out,uw,uh,m,m);break}
+    case"kov_filenka":{P(ring(0,0,uw,uh,bw),uw,uh,m,m);const iw=uw-2*bw-24,ih=uh-2*bw-24;if(iw>100&&ih>100){const v=[[0,0],[iw,0],[iw,ih],[0,ih]],r=scrollPanel(v,iw,ih,{sw:Math.max(8,bw*.22),cw:Math.max(110,iw/2.5),m:8,hi:ih},()=>0);P(E.poly(v)+r.out,iw,ih,m+bw+12,m+bw+12)}break}
+    case"naqsh_hoshiya":{const b2=Math.max(bw*2.2,60);const r=rcut(uw,uh,T=>{if(hasPt(p))T.pattern(T.poly([[0,0],[uw,0],[uw,uh],[0,uh]]),{pat:p.pt,s:Math.min(p.ps,b2/2),w:p.pw,mg:6,excl:[T.poly([[b2,b2],[uw-b2,b2],[uw-b2,uh-b2],[b2,uh-b2]])]})},{min:4});P(R4(0,0,uw,uh)+R4(b2,b2,uw-2*b2,uh-2*b2)+r.out,uw,uh,m,m);break}
+    case"romb_ramka":{const cx=uw/2,cy=uh/2,o=[[cx,0],[uw,cy],[cx,uh],[0,cy]],k=bw*Math.hypot(uw,uh)/uw,i=[[cx,k],[uw-k*uw/uh,cy],[cx,uh-k],[k*uw/uh,cy]];P(E.poly(o)+E.poly(i),uw,uh,m,m);const s=Math.min(uw,uh)*.18;P(E.poly([[s,0],[2*s,s],[s,2*s],[0,s]]),2*s,2*s,cw/2-s,ch/2-s);break}
+    case"katta_med":P(ring(0,0,uw,uh,bw),uw,uh,m,m);break}}
+PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender:["pt","tur","tp","bz","lb"],
+  note:"Rama profil trubadan; profillar oldinga bo‘rtib turadi, oralig‘iga list qo‘yiladi (tekis yoki qirralari bukilgan «tarelka» qilib). Har bir katakka bezak yopishtiriladi. Tepada naqshli fortochka bo‘lishi mumkin. Lazer detallari DXF da, truba kesish ro‘yxati, list o‘lchamlari va narx pastda.",
+  fields:[["tur","Turi","d2k","select",GT],["W","Umumiy eni (mm)",3600],["H","Umumiy bo‘yi (mm)",2600],["kw","Kalitka eni (mm)",950,"num",null,p=>/k/.test(p.tur)&&p.tur!=="d2i"],
+    ["ht","Tepadagi fortochka balandligi (0 = yo‘q, mm)",450,"num",null,p=>!isPanT(p.tur)],
     ["tp","Tepasi","tekis","select",[["tekis","To‘g‘ri"],["arka","Arka (o‘rtasi baland)"],["botiq","Botiq (o‘rtasi past)"]]],["f","Yoy balandligi (mm)",200,"num",null,p=>p.tp!=="tekis"],
-    ["bz","Yuz bezagi","filenka","select",GB,p=>!isPan(p)],["fn","Har tabaqada panel soni",2,"num",null,p=>!isPan(p)&&(p.bz==="filenka"||p.bz==="arka")],["bw","Bezak tasmasi eni (mm)",40,"num",null,p=>!isPan(p)&&p.bz!=="tekis"&&p.bz!=="naqsh"],
+    ["bz","Yuz bezagi","filenka","select",GB],["fn","Har tabaqada katak — ustun",2],["nr","Katak — qator",1],["bw","Bezak tasmasi eni (mm)",40],
+    ["lb","List qo‘yilishi","tekis","select",[["tekis","Orqadan tekis list (payvand)"],["buk","Har katakka qirrasi bukilgan list (tarelka)"]]],
     ...patFields("g:4612_70",50,5),
-    ["pr","Rama profili","60x40","select",PROFS],["nm","Ichki ko‘ndalang trubalar soni",2],["t","List qalinligi (mm)",1.5],
+    ["pr","Rama profili","60x40","select",PROFS],["t","List qalinligi (mm)",1.5],
     ["pp","Profil narxi (so‘m / metr, 0 = hisoblanmaydi)",0],["lp","List narxi (so‘m / kg, 0 = hisoblanmaydi)",0]],
-  build(p){const {W,H}=p,[pw,pd0]=String(p.pr).split("x").map(Number),pd=pd0||pw,gp=10,t=Math.max(.5,p.t||1.5),bw=Math.max(15,p.bw||40),pan=isPan(p),ht=pan?0:Math.max(0,p.ht||0);
+  build(p){const {W,H}=p,[pw,pd0]=String(p.pr).split("x").map(Number),pd=pd0||pw,gp=10,t=Math.max(.5,p.t||1.5),bw=Math.max(15,p.bw||40),tur=p.tur||"d2",pan=isPanT(tur),ht=pan?0:Math.max(0,p.ht||0),bz=p.bz||"filenka";
     if(!(W>=500&&H>=800))throw"Eni kamida 500 mm, bo‘yi kamida 800 mm bo‘lsin.";
-    const kinds=pan?["S"]:{d2:["L","L"],d2k:["L","L","K"],d1k:["L","K"],d1:["L"],kal:["K"]}[p.tur]||["L","L"],nL=kinds.filter(x=>x==="L").length,kw=kinds.includes("K")?(nL?Math.max(500,p.kw):W):0;
-    const lw=nL?(W-kw-gp*(kinds.length-1))/nL:0;if(nL&&lw<500)throw"Tabaqa juda tor — umumiy enini oshiring yoki kalitkani toraytiring.";
+    const kinds={d2:["L","L"],d2k:["L","L","K"],kd2:["K","L","L"],kd2k:["K","L","L","K"],d1k:["L","K"],kd1:["K","L"],d1:["L"],kal:["K"],d2i:["L","L"],d4:["L","L","L","L"],sur:["L"],pan:["S"],pank:["S","K"]}[tur]||["L","L"];
+    const nK=kinds.filter(x=>x==="K").length,nL=kinds.length-nK,kw=nK?(nL?Math.max(500,p.kw):W):0,lw=nL?(W-nK*kw-gp*(kinds.length-1))/nL:0;if(nL&&lw<400)throw"Tabaqa juda tor — umumiy enini oshiring yoki kalitkani toraytiring.";
     const Hl=H-(ht>0?ht+gp:0);if(Hl<700)throw"Fortochka juda baland — pastki qismga joy qolmayapti.";
     const f=p.tp==="tekis"?0:Math.max(0,p.f||0);if(f>=Math.min(W/2,(ht>0?ht:Hl)*.8))throw"Yoy balandligi juda katta.";
     const sag=x=>{if(!f)return 0;const R=(W*W/4+f*f)/(2*f);return f-(R-Math.sqrt(Math.max(0,R*R-(x-W/2)**2)))};
     const topY=x=>p.tp==="arka"?H-f+sag(x):p.tp==="botiq"?H-sag(x):H,lowTop=x=>ht>0?Hl:topY(x);
-    let xc=0;const parts=kinds.map(k=>{const w=k==="L"?lw:k==="K"?kw:W,o={k,x0:xc,x1:xc+w,w};xc+=w+gp;return o});
-    const M={bars:[],boxes:[],panels:[],balls:[],yaw:-.5,pitch:.18},zS=pd/2+.8,zD=pd/2+t+2,laser=[],cuts={},info=[];let sheetKg=0,decKg=0;
+    let xc=0;const parts=kinds.map(k=>{const w=k==="L"?lw:k==="K"?kw:(nK?W-kw-gp:W),o={k,x0:xc,x1:xc+w,w};xc+=w+gp;return o});
+    const M={bars:[],bars3:[],boxes:[],panels:[],balls:[],yaw:-.5,pitch:.18},zS=-pd/2+1,zD=zS+t+1.5,zF=pd/2+1.5,laser=[],cuts={},info=[],lzNotes={};let sheetKg=0,decKg=0;
     const addCut=(n,l,c=1)=>{const k=n+"|"+Math.round(l);cuts[k]=(cuts[k]||0)+c};const prof=p.pr.replace("x","×");
     const curve=(x0,x1,fy,N=40)=>{const v=[];for(let i=0;i<=N;i++){const x=x1-(x1-x0)*i/N;v.push([x,fy(x)])}return v};
-    const loc=(v,ox,oy)=>v.map(([x,y])=>[x-ox,y-oy]);
-    const pushLaser=(s,w,h,ox,oy,z,kind)=>{laser.push({s,w,h});if(kind)M.panels.push({ox,oy,z,s,kind})};
-    for(const P of parts){const {x0,x1,w}=P,inner=P.k==="K"?1:Math.max(1,Math.round(p.fn||2));
-      /* rama */
-      const hL=lowTop(x0),hR=lowTop(x1);M.bars.push([[x0+pw/2,0],[x0+pw/2,hL],pw,pd,0,"metal"],[[x1-pw/2,0],[x1-pw/2,hR],pw,pd,0,"metal"],[[x0+pw,pw/2],[x1-pw,pw/2],pw,pd,0,"metal"]);
-      for(let k=0;k<12;k++){const a=x0+pw+(w-2*pw)*k/12,b=x0+pw+(w-2*pw)*(k+1)/12;M.bars.push([[a,lowTop(a)-pw/2],[b,lowTop(b)-pw/2],pw,pd,0,"metal"])}
-      const nm=Math.max(0,Math.round(p.nm)),ymin=Math.min(hL,hR,lowTop((x0+x1)/2));for(let k=0;k<nm;k++){const y=pw/2+(ymin-pw)*(k+1)/(nm+1);M.bars.push([[x0+pw,y],[x1-pw,y],pw,pd,0,"metal"])}
-      addCut(`Tik ${prof}`,hL);addCut(`Tik ${prof}`,hR);addCut(`Ko‘ndalang ${prof}`,w-2*pw,1+nm+(ht>0||!f?1:0));if(ht===0&&f)addCut(`Yuqori ${prof} (yoy — bukiladi)`,Math.hypot(w,hR-hL)*1.01);
-      if(!pan&&(p.bz==="filenka"||p.bz==="arka")&&inner>1)for(let i=1;i<inner;i++){const x=x0+w*i/inner;M.bars.push([[x,pw],[x,ymin-pw],pw,pd,0,"metal"]);addCut(`Ichki tik ${prof}`,ymin-2*pw)}
-      /* list yoki naqsh panel */
-      const sv=[[x0,0],[x1,0],...curve(x0,x1,lowTop)];
-      if(pan||p.bz==="naqsh"){const v=loc(sv,x0,0),ph=Math.max(...v.map(q=>q[1]));const r=rcut(w,ph,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:p.ps,w:p.pw,mg:pw+10})},{min:4});pushLaser(E.poly(v)+r.out,w,ph,x0,0,zS,"metal")}
-      else M.panels.push({ox:0,oy:0,z:zS,loops:[sv],kind:"metal"});
-      sheetKg+=shoelace(sv)*t*7.85e-6;
-      /* bezak */
-      const mx=P.k==="K"?60:70,my=90,gap=60,top0=Math.min(hL,hR,lowTop((x0+x1)/2))-my,pwi=(w-2*mx-(inner-1)*gap)/inner,phi=top0-my;
-      if(!pan&&p.bz==="filenka"&&pwi>2*bw+40&&phi>2*bw+40)for(let i=0;i<inner;i++){const ox=x0+mx+i*(pwi+gap),o=[[0,0],[pwi,0],[pwi,phi],[0,phi]],q=[[bw,bw],[pwi-bw,bw],[pwi-bw,phi-bw],[bw,phi-bw]];
-        pushLaser(E.poly(o)+E.poly(q),pwi,phi,ox,my,zD,"decor");decKg+=(pwi*phi-(pwi-2*bw)*(phi-2*bw))*t*7.85e-6}
-      if(!pan&&p.bz==="arka"&&pwi>2*bw+60&&phi>pwi*.8)for(let i=0;i<inner;i++){const ox=x0+mx+i*(pwi+gap),og=shapeGeom("arch",pwi,phi,0),ig=shapeGeom("arch",pwi,phi,bw);
-        pushLaser(shapeDXF(og)+shapeDXF(ig),pwi,phi,ox,my,zD,"decor");
-        const Dm=Math.min(pwi-2*bw-30,phi*.45),cyM=phi-pwi/2;if(Dm>80){const r=rcut(Dm,Dm,T=>{const g=shapeGeom("ellipse",Dm,Dm,0);if(hasPt(p))T.pattern(T.geom(g),{pat:p.pt,s:Math.min(p.ps,Dm/4),w:p.pw,mg:Math.max(8,bw*.5)})},{min:4});
-          pushLaser(E.circle(Dm/2,Dm/2,Dm/2)+r.out,Dm,Dm,ox+pwi/2-Dm/2,my+cyM-Dm/2,zD,"decor")}
-        const lw2=pwi-2*bw-40,lh2=cyM-Dm/2-bw-50;if(lw2>80&&lh2>80){const r=rcut(lw2,lh2,T=>T.pattern(T.poly([[0,0],[lw2,0],[lw2,lh2],[0,lh2]]),{pat:"perf_romb",s:Math.max(30,Math.min(70,lw2/5)),w:8,mg:10}),{min:4});
-          pushLaser(E.poly([[0,0],[lw2,0],[lw2,lh2],[0,lh2]])+r.out,lw2,lh2,ox+bw+20,my+bw+20,zD,"decor")}}
-      if(!pan&&p.bz==="gor"){const sl=w-2*mx,sh=Math.max(10,bw*.45);for(const yc of [.3,.68].map(r=>top0*r+my*.5))for(let j=-1;j<=1;j++){const y=yc+j*sh*2.2;
-        pushLaser(E.poly([[0,0],[sl,0],[sl,sh],[0,sh]]),sl,sh,x0+mx,y,zD,"decor");decKg+=sl*sh*t*7.85e-6}}
-      /* tutqich */
-      if(!pan){const hx=P.k==="K"?x1-90:(P===parts[0]&&nL===2?x1-60:x0+60);M.boxes.push([hx-8,950,zD,hx+8,1250,zD+30,"decor"])}}
+    const loc=(v,ox,oy)=>v.map(([x,y])=>[x-ox,y-oy]),fbar=(a,b,kind="metal")=>M.bars.push([a,b,pw,pd,0,kind]);
+    const addLz=(s,w,h,note)=>{laser.push({s,w,h});if(note)lzNotes[note]=(lzNotes[note]||0)+1};
+    for(const P of parts){const {x0,x1,w}=P,hL=lowTop(x0),hR=lowTop(x1),ymin=Math.min(hL,hR,lowTop((x0+x1)/2));
+      /* tashqi rama (oldinga bo‘rtib turadi) */
+      fbar([x0+pw/2,0],[x0+pw/2,hL]);fbar([x1-pw/2,0],[x1-pw/2,hR]);fbar([x0+pw,pw/2],[x1-pw,pw/2]);
+      for(let k=0;k<12;k++){const a=x0+pw+(w-2*pw)*k/12,b=x0+pw+(w-2*pw)*(k+1)/12;fbar([a,lowTop(a)-pw/2],[b,lowTop(b)-pw/2])}
+      addCut(`Tik ${prof}`,hL);addCut(`Tik ${prof}`,hR);addCut(`Ko‘ndalang ${prof}`,w-2*pw,ht>0||!f?2:1);if(ht===0&&f)addCut(`Yuqori ${prof} (yoy — bukiladi)`,Math.hypot(w,hR-hL)*1.01);
+      /* kataklar */
+      const door=tur==="d2i"&&P===parts[0];let cells=[];
+      if(door){const dw=Math.min(900,w-2*pw-160),dh=Math.min(2000,ymin-2*pw-120),dx=x0+(w-dw)/2;fbar([dx-pw/2,pw],[dx-pw/2,pw+dh+pw]);fbar([dx+dw+pw/2,pw],[dx+dw+pw/2,pw+dh+pw]);fbar([dx-pw,pw+dh+pw/2],[dx+dw+pw,pw+dh+pw/2]);
+        addCut(`Kalitka ramasi ${prof}`,dh+pw,2);addCut(`Kalitka ramasi ${prof}`,dw+2*pw,1);cells.push({x:dx,y:pw,w:dw,h:dh});M.boxes.push([dx+dw-70,950,zF,dx+dw-54,1250,zF+30,"decor"]);
+        cells.push({x:x0+pw,y:pw,w:dx-pw-x0-pw,h:ymin-2*pw,plain:true},{x:dx+dw+pw,y:pw,w:x1-pw-dx-dw-pw,h:ymin-2*pw,plain:true},{x:dx-pw,y:pw+dh+pw,w:dw+2*pw,h:ymin-pw-(pw+dh+pw),plain:true})}
+      else if(!pan){const nc=P.k==="K"&&w<800?1:Math.max(1,Math.round(p.fn||2)),nr=Math.max(1,Math.round(p.nr||1)),cw=(w-2*pw-(nc-1)*pw)/nc,chh=(ymin-2*pw-(nr-1)*pw)/nr;
+        for(let i=1;i<nc;i++){const x=x0+pw+i*(cw+pw)-pw/2;fbar([x,pw],[x,ymin-pw]);addCut(`Ichki tik ${prof}`,ymin-2*pw)}
+        for(let j=1;j<nr;j++){const y=pw+j*(chh+pw)-pw/2;fbar([x0+pw,y],[x1-pw,y]);addCut(`Ichki ko‘ndalang ${prof}`,w-2*pw)}
+        for(let i=0;i<nc;i++)for(let j=0;j<nr;j++)cells.push({x:x0+pw+i*(cw+pw),y:pw+j*(chh+pw),w:cw,h:chh})}
+      /* list */
+      const sv=[[x0,0],[x1,0],...curve(x0,x1,lowTop)];sheetKg+=shoelace(sv)*t*7.85e-6;
+      if(pan){const v=loc(sv,x0,0),ph=Math.max(...v.map(q=>q[1]));const r=rcut(w,ph,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:p.ps,w:p.pw,mg:pw+10})},{min:4});addLz(E.poly(v)+r.out,w,ph);M.panels.push({ox:x0,oy:0,z:zS,s:E.poly(v)+r.out,kind:"metal"})}
+      else if(p.lb!=="buk"&&bz!=="naqsh")M.panels.push({ox:0,oy:0,z:zS,loops:[sv],kind:"metal"});
+      if(!pan)for(const C of cells){
+        if(p.lb==="buk"&&bz!=="naqsh"){const fl=pd-6,bw2=C.w+2*fl,bh2=C.h+2*fl,v=[[fl,0],[C.w+fl,0],[C.w+fl,fl],[bw2,fl],[bw2,C.h+fl],[C.w+fl,C.h+fl],[C.w+fl,bh2],[fl,bh2],[fl,C.h+fl],[0,C.h+fl],[0,fl],[fl,fl]];
+          addLz(E.poly(v),bw2,bh2,`Bukilgan list (tarelka) — har tomoni ${fl} mm ga 90° bukiladi`);M.panels.push({ox:C.x,oy:C.y,z:zS,loops:[[[0,0],[C.w,0],[C.w,C.h],[0,C.h]]],kind:"metal"});
+          M.boxes.push([C.x,C.y,zS,C.x+C.w,C.y+2,zS+fl,"metal"],[C.x,C.y+C.h-2,zS,C.x+C.w,C.y+C.h,zS+fl,"metal"],[C.x,C.y,zS,C.x+2,C.y+C.h,zS+fl,"metal"],[C.x+C.w-2,C.y,zS,C.x+C.w,C.y+C.h,zS+fl,"metal"])}
+        if(C.plain)continue;
+        const api={piece:(s,pw2,ph2,lx,ly,kind)=>{addLz(s,pw2,ph2);M.panels.push({ox:C.x+lx,oy:C.y+ly,z:kind==="metal"?zS:zD,s,kind});decKg+=pw2*ph2*t*7.85e-6*.35},
+          bar:(a,b,w2,d2,kind,nr)=>M.bars3.push([[C.x+a[0],C.y+a[1],zD+d2/2],[C.x+b[0],C.y+b[1],zD+d2/2],w2,d2,kind,nr]),lz:(s,w2,h2,note)=>addLz(s,w2,h2,note)};
+        if(bz==="naqsh"){const v=[[0,0],[C.w,0],[C.w,C.h],[0,C.h]],r=rcut(C.w,C.h,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:p.ps,w:p.pw,mg:12})},{min:4});addLz(E.poly(v)+r.out,C.w,C.h);M.panels.push({ox:C.x,oy:C.y,z:zS+2,s:E.poly(v)+r.out,kind:"metal"})}
+        else if(bz!=="tekis")gateDesign(bz,C.w,C.h,p,bw,api)}
+      if(!pan||P.k==="K"){const hx=P.k==="K"?(P.x0===0?x1-90:x0+90):(nL>=2&&P===parts.find(q=>q.k==="L")?x1-60:x0+60);if(!door)M.boxes.push([hx-8,950,zF,hx+8,1250,zF+30,"decor"])}}
+    /* ikki tabaqa ustida katta medalyon */
+    if(bz==="katta_med"&&nL>=2){const L1=parts.find(q=>q.k==="L"),L2=parts[parts.indexOf(L1)+1],cx=(L1.x1+L2.x0)/2,D=Math.min(lw*.8,Hl*.45),cyM=Hl*.52,R=D/2;
+      for(const sg of [-1,1]){const v2=[];for(let k=0;k<=36;k++){const a=sg<0?Math.PI/2+Math.PI*k/36:-Math.PI/2+Math.PI*k/36;v2.push(sg<0?[R+R*Math.cos(a),R+R*Math.sin(a)]:[R*Math.cos(a),R+R*Math.sin(a)])}
+        const r=rcut(R,D,T=>{if(hasPt(p))T.pattern(T.poly(v2),{pat:p.pt,s:Math.min(p.ps,D/5),w:p.pw,mg:Math.max(10,bw*.5)})},{min:4});const s=E.poly(v2)+r.out;addLz(s,R,D,"Katta medalyon yarmi");
+        M.panels.push({ox:sg<0?cx-gp/2-R:cx+gp/2,oy:cyM-R,z:zF,s,kind:"decor"})}}
+    /* surilma darvoza: konsol */
+    if(tur==="sur"){const tl=Math.round(W*.42);M.bars.push([[-tl,pw/2],[0,pw/2],pw,pd,0,"metal"],[[-tl,pw/2],[0,Hl*.55],pw*.8,pd,0,"metal"]);for(const x of [-tl*.2,-tl*.8])M.boxes.push([x-60,-90,-60,x+60,0,60,"post"]);
+      addCut(`Konsol balka ${prof}`,tl);addCut(`Konsol diagonal ${prof}`,Math.hypot(tl,Hl*.55));info.push(`Surilma: konsol ${tl} mm (ochiq holda darvoza chapga ${W} mm suriladi, devor bo‘ylab ${W+tl} mm joy kerak), 2 ta rolik-telejka.`)}
     /* fortochka */
     if(ht>0){const y0=Hl+gp;M.bars.push([[0,y0+pw/2],[W,y0+pw/2],pw,pd,0,"metal"]);for(let k=0;k<16;k++){const a=W*k/16,b=W*(k+1)/16;M.bars.push([[a,topY(a)-pw/2],[b,topY(b)-pw/2],pw,pd,0,"metal"])}
       addCut(`Fortochka pastki ${prof}`,W);addCut(`Fortochka yuqori ${prof}${f?" (yoy — bukiladi)":""}`,W*(f?1.01:1));
       const xs=[0,...parts.slice(1).map(q=>q.x0-gp/2),W];xs.forEach(x=>{M.bars.push([[x,y0],[x,topY(x)],pw,pd,0,"metal"]);addCut(`Fortochka tik ${prof}`,topY(x)-y0)});
       for(const P of parts){const {x0,x1,w}=P,v=loc([[x0,y0],[x1,y0],...curve(x0,x1,topY)],x0,y0),bh=Math.max(...v.map(q=>q[1])),nw=Math.max(1,Math.round(w/650)),m=50,ww=(w-2*m-(nw-1)*m)/nw,wh=Math.min(...v.filter(q=>q[1]>1).map(q=>q[1]))-2*m;
-        if(ww<60||wh<60){M.panels.push({ox:x0,oy:y0,z:zS,s:E.poly(v),kind:"metal"});laser.push({s:E.poly(v),w,h:bh});continue}
-        const r=rcut(w,bh,T=>{const z=new Path2D();for(let i=0;i<nw;i++){const a=m+i*(ww+m);z.addPath(T.poly([[a,m],[a+ww,m],[a+ww,m+wh],[a,m+wh]]))}if(hasPt(p))T.pattern(z,{pat:p.pt,s:Math.min(p.ps,wh/3),w:p.pw,mg:6});else{T.cut(z)}},{min:4});
-        pushLaser(E.poly(v)+r.out,w,bh,x0,y0,zS,"metal");sheetKg+=shoelace(v)*t*7.85e-6}}
+        if(ww<60||wh<60){M.panels.push({ox:x0,oy:y0,z:zS,s:E.poly(v),kind:"metal"});addLz(E.poly(v),w,bh);continue}
+        const r=rcut(w,bh,T=>{const z=new Path2D();for(let i=0;i<nw;i++){const a=m+i*(ww+m);z.addPath(T.poly([[a,m],[a+ww,m],[a+ww,m+wh],[a,m+wh]]))}if(bz==="islimiy"||bz==="kov_filenka"){T.cut(z);const x=T.x;x.save();x.clip(z);for(let i=0;i<nw;i++){const a=m+i*(ww+m),cx=a+ww/2,cy=m+wh/2,Rr=Math.min(ww,wh)*.3;
+            const S1=spiralPts([cx-Rr*.9,cy],Rr,0,1,1.4),S2=S1.map(([u,q])=>[2*cx-u,2*cy-q]).reverse();x.strokeStyle="#fff";x.lineWidth=Math.max(8,bw*.25)*T.sc;x.lineCap="round";x.beginPath();S1.concat(S2).forEach(([u,q],k)=>k?x.lineTo(T.X(u),T.Y(q)):x.moveTo(T.X(u),T.Y(q)));x.stroke();T.line([a,cy],[a+ww,cy],Math.max(8,bw*.25),true)}x.restore()}
+          else if(hasPt(p))T.pattern(z,{pat:p.pt,s:Math.min(p.ps,wh/3),w:p.pw,mg:6});else T.cut(z)},{min:4});
+        addLz(E.poly(v)+r.out,w,bh);M.panels.push({ox:x0,oy:y0,z:zS,s:E.poly(v)+r.out,kind:"metal"});sheetKg+=shoelace(v)*t*7.85e-6}}
     /* ustunlar */
     const hm=Math.max(topY(0),topY(W/2),topY(W));M.boxes.push([-300,0,-150,-12,hm+120,150,"stone"],[W+12,0,-150,W+300,hm+120,150,"stone"],[-325,hm+120,-170,13,hm+160,170,"stone"],[W-13,hm+120,-170,W+325,hm+160,170,"stone"]);
     /* hisob */
     const tot=Object.entries(cuts).reduce((s,[k,c])=>s+(+k.split("|")[1])*c,0);
-    info.push(`${parts.map(q=>q.k==="K"?"kalitka "+Math.round(q.w):q.k==="S"?"seksiya "+Math.round(q.w):"tabaqa "+Math.round(q.w)).join(" + ")} mm${ht>0?`, fortochka ${ht} mm`:""}.`);
+    info.unshift(`${parts.map(q=>q.k==="K"?"kalitka "+Math.round(q.w):q.k==="S"?"seksiya "+Math.round(q.w):"tabaqa "+Math.round(q.w)).join(" + ")} mm${ht>0?`, fortochka ${ht} mm`:""}.`);
     info.push(`Profil ${prof}: jami ${fm1(tot)} m (6 metrlik trubadan ~${Math.ceil(tot/5900)} dona). Kesish ro‘yxati: `+Object.entries(cuts).map(([k,c])=>{const [n,l]=k.split("|");return `${n} ${l} mm × ${c}`}).join("; ")+".");
-    if(!pan&&p.bz!=="naqsh")info.push(`Qoplama list ${t} mm: ${parts.map(q=>Math.round(q.w)+"×"+Math.round(lowTop((q.x0+q.x1)/2))).join(", ")} mm.`);
+    if(!pan)info.push(p.lb==="buk"&&bz!=="naqsh"?`List ${t} mm: har katakka qirrasi bukilgan tarelka (yoyilmasi DXF da, burchaklari kesilgan, bukish joylari kichik kertik bilan belgilangan).`:`Qoplama list ${t} mm: ${parts.map(q=>Math.round(q.w)+"×"+Math.round(lowTop((q.x0+q.x1)/2))).join(", ")} mm — orqadan payvandlanadi.`);
+    Object.entries(lzNotes).forEach(([n,c])=>info.push(`${n}: ${c} dona.`));
     info.push(`List og‘irligi ~${(sheetKg+decKg).toFixed(1)} kg. Lazerda: ${laser.length} ta detal.`);
     const pr=(p.pp>0?tot/1000*p.pp:0)+(p.lp>0?(sheetKg+decKg)*p.lp:0);if(pr>0)info.push(`Material: ~${fmt(pr)} so‘m (kesish narxi alohida).`);
     if(!laser.length){parts.forEach(q=>{const v=loc([[q.x0,0],[q.x1,0],...curve(q.x0,q.x1,lowTop)],q.x0,0);laser.push({s:E.poly(v),w:q.w,h:Math.max(...v.map(z=>z[1]))})});info.push("Bu variantda bezak yo‘q — DXF da faqat qoplama list konturi.")}
     this._m3=M;this.warn=info.join(" ");return rowDXF(laser,30).s},
-  label:p=>`${{d2:"Darvoza",d2k:"Darvoza",d1:"Darvoza",d1k:"Darvoza",kal:"Kalitka",pan:"Panjara"}[p.tur]||"Darvoza"} ${p.W}×${p.H}`};
+  label:p=>`${{kal:"Kalitka",pan:"Panjara",pank:"Panjara",sur:"Surilma darvoza"}[p.tur]||"Darvoza"} ${p.W}×${p.H}`};
 
 /* ---------- 21. uy raqami / tablichka ---------- */
 PARTS.plaque={group:"tpl",name:"Uy raqami / tablichka",gal:"pt",rerender:["pt"],
@@ -1585,65 +1633,122 @@ PARTS.plaque={group:"tpl",name:"Uy raqami / tablichka",gal:"pt",rerender:["pt"],
 /* ---------- 22. zinapoya perilasi (profil + stoyka + poruchen) ---------- */
 const SQP=[["40x40","40×40"],["50x50","50×50"],["60x60","60×60"],["80x80","80×80"]];
 const PORU=[["p4020","Profil 40×20",40,20],["p6040","Profil 60×40",60,40],["t50","Truba Ø50",50,50],["wood","Yog‘och 60×40",60,40]];
-const INF=[["vert","Vertikal balyasina (profil)"],["gor","Gorizontal profil (qiya)"],["x","X-xoch (diagonal profil)"],["oval","Oval halqalar (bukilgan polosa)"],["lazer","Lazer naqsh panel"],["kov","Kovaniy gul (lazer, yassi)"]];
-const isLz=p=>p.inf==="lazer"||p.inf==="kov";
-function scrollPanel(v,w,h,o){const sw=o.sw,cw=o.cw,m=o.m;
+const INF=[["vert","1. Vertikal balyasina"],["vert_halqa","2. Balyasina + o‘rtada halqalar"],["vert_halqa2","3. Balyasina + pastda halqa qatori"],["vert_shar","4. Balyasina + sharchalar"],
+  ["vert_kov","5. Balyasina + kovaniy jingalak"],["vert_arka","6. Balyasina + tepada arkachalar"],["burama","7. Burama (buralgan) balyasina"],["vert_romb","8. Balyasina + romb (har ikkinchi oraliqda)"],
+  ["gor","9. Gorizontal profil"],["gor_vert","10. Gorizontal + vertikal (ramka)"],["katak","11. Katakli to‘r"],["x","12. X-xoch"],["x2","13. Qo‘sh X-xoch"],["romb","14. Romb to‘r (diagonal)"],
+  ["zanjir","15. Romb zanjir"],["oval","16. Oval halqalar (polosa)"],["halqa","17. Ikki qator halqa"],["s_gul","18. S-gul (bukilgan polosa)"],["yurak","19. Yurak gul (polosa)"],
+  ["tolqin","20. To‘lqin (ikki polosa)"],["lazer","21. Lazer naqsh panel (girih)"],["perf","22. Lazer teshikli panel"],["kov","23. Kovaniy gul — lazer panel (islimiy)"],["shisha","24. Shisha panel (qisqichli)"]];
+const isLz=p=>["lazer","perf","kov"].includes(p.inf),usesBal=p=>!isLz(p)&&p.inf!=="shisha";
+function scrollPanel(v,w,h,o,fb){const sw=o.sw,cw=o.cw,m=o.m,hh=o.hi;
   return rcut(w,h,T=>{const z=T.poly(v);T.cut(z);const x=T.x;x.save();x.clip(z);
-    const nc=Math.max(1,Math.round(w/cw)),cwx=w/nc,dyx=(v[1][1]-v[0][1])/w,hh=h-(v[1][1]-v[0][1]),rows=Math.max(1,Math.round(hh/(cwx*1.5))),ch=hh/rows;
+    const nc=Math.max(1,Math.round(w/cw)),cwx=w/nc,rows=Math.max(1,Math.round(hh/(cwx*1.5))),ch=hh/rows;
     const sp=(c0,R,s)=>{const P=[];for(let i=0;i<=64;i++){const th=.5+i/64*3*Math.PI,r=R*(th/(3*Math.PI+.5));P.push([c0[0]+s*r*Math.cos(th),c0[1]+s*r*Math.sin(th)])}return P};
-    for(let i=0;i<nc;i++)for(let j=0;j<rows;j++){const cx=(i+.5)*cwx,cy=(j+.5)*ch+cx*dyx,R=Math.min(cwx,ch)*.27,mir=(i+j)%2?-1:1;
+    for(let i=0;i<nc;i++)for(let j=0;j<rows;j++){const cx=(i+.5)*cwx,cy=(j+.5)*ch+fb(cx),R=Math.min(cwx,ch)*.27,mir=(i+j)%2?-1:1;
       const c1=[cx-mir*(cwx/2-R*.9),cy+ch*.16],S1=sp(c1,R,mir),S2=S1.map(([a,b])=>[2*cx-a,2*cy-b]).reverse(),L=S1.concat(S2);
       x.strokeStyle="#fff";x.lineWidth=sw*T.sc;x.lineCap=x.lineJoin="round";x.beginPath();L.forEach(([a,b],k)=>k?x.lineTo(T.X(a),T.Y(b)):x.moveTo(T.X(a),T.Y(b)));x.stroke()}
-    for(let i=1;i<nc;i++){const a=i*cwx;T.line([a,a*dyx-5],[a,a*dyx+hh+5],sw,true,"butt")}
+    for(let i=1;i<nc;i++){const a=i*cwx;T.line([a,fb(a)-5],[a,fb(a)+hh+5],sw,true,"butt")}
     x.restore();x.strokeStyle="#fff";x.lineWidth=2*m*T.sc;x.lineJoin="miter";x.stroke(z)},{min:6})}
-PARTS.perila={group:"tpl",name:"Zinapoya perilasi",gal:"pt",rerender:["pt","inf","ball"],
-  note:"Stoykalar zina pog‘onasiga o‘rnatiladi, ustida poruchen, pastida pastki truba. Zina tepasida maydoncha bo‘lsa poruchen va pastki truba o‘sha joyda bukiladi. Lazerda kesiladigan qismlar: stoyka asos plitalari (flanets) va naqsh yoki kovaniy gul tanlansa — panellar.",
-  fields:[["L","Zina uzunligi — gorizontal (mm)",3200],["Hs","Zina balandligi — ko‘tarilish (mm)",1800],["Lt","Yuqori maydoncha uzunligi (0 = yo‘q, mm)",1200],["h","Perila balandligi (mm)",900],
+/* jingalak (C) va S-gul nuqtalari */
+const spiralPts=(c,R,phi,sg,turns=1.6)=>{const P=[],tm=turns*2*Math.PI;for(let i=0;i<=40;i++){const th=.7+i/40*tm,r=R*th/(tm+.7);P.push([c[0]+r*Math.cos(phi+sg*th),c[1]+r*Math.sin(phi+sg*th)])}return P};
+PARTS.perila={group:"tpl",name:"Zinapoya perilasi",gal:"pt",rerender:["pt","inf","ball","zs"],
+  note:"Stoykalar zina pog‘onasiga o‘rnatiladi, ustida poruchen, pastida pastki truba. Zina burilsa (L yoki U) perila ham maydoncha bo‘ylab burilib, ikkinchi marsh bo‘ylab davom etadi. Lazerda kesiladigan qismlar: stoyka asos plitalari (flanets) va naqsh, teshikli yoki kovaniy gul panellar.",
+  fields:[["zs","Zina shakli","togri","select",[["togri","To‘g‘ri (bitta marsh)"],["L","L — maydonchada 90° buriladi"],["U","U — maydonchadan orqaga qaytadi"]]],
+    ["tm","Perila qaysi tomonda","tash","select",[["tash","Tashqi (ochiq) tomonda"],["ich","Ichki tomonda"],["ikki","Ikkala tomonda"]]],
+    ["L","Har bir marsh uzunligi — gorizontal (mm)",3200],["Hs","Umumiy balandlik (mm)",1800],["Ws","Zina eni (mm)",1000],["g","Marshlar orasi (U uchun, mm)",150,"num",null,p=>p.zs==="U"],
+    ["Lt","Yuqori maydoncha uzunligi (0 = yo‘q, mm)",1000],["h","Perila balandligi (mm)",900],
     ["sp","Stoyka profili","60x60","select",SQP],["smax","Stoykalar orasi — eng ko‘pi (mm)",1100],["ball","Stoyka ustida sharcha","yoq","select",[["yoq","Yo‘q — poruchen stoyka ustida"],["ha","Ha — stoyka poruchendan chiqib turadi"]]],
     ["po","Poruchen","p6040","select",PORU.map(([k,n])=>[k,n])],["inf","To‘ldirish","vert","select",INF],
-    ["bp","Balyasina / profil","20x20","select",[["15x15","15×15"],["20x20","20×20"],["25x25","25×25"],["20x40","20×40"]],p=>!isLz(p)],
-    ["bo","Balyasinalar orasi (mm)",110,"num",null,p=>p.inf==="vert"||p.inf==="oval"],["ng","Gorizontal profillar soni",5,"num",null,p=>p.inf==="gor"],
-    ["pt","Naqsh","g:4612_70","select",PAT_OPTS(),p=>p.inf==="lazer"],["ps","Naqsh / teshik o‘lchami (mm)",45,"num",null,p=>p.inf==="lazer"&&hasPt(p)],["pw","Chiziq / oraliq qalinligi (mm)",5,"num",null,p=>p.inf==="lazer"&&hasPt(p)],
+    ["bp","Balyasina / profil","15x15","select",[["12x12","12×12"],["15x15","15×15"],["20x20","20×20"],["25x25","25×25"],["20x40","20×40"]],usesBal],
+    ["bo","Balyasinalar orasi (mm)",120,"num",null,usesBal],["ng","Gorizontallar soni",5,"num",null,p=>p.inf==="gor"],
+    ["pt","Naqsh","g:4612_70","select",PAT_OPTS(),p=>p.inf==="lazer"],["ps","Naqsh / teshik o‘lchami (mm)",45,"num",null,p=>p.inf==="lazer"||p.inf==="perf"],["pw","Chiziq / oraliq qalinligi (mm)",5,"num",null,p=>p.inf==="lazer"||p.inf==="perf"],
     ["kw","Gul katagi eni (mm)",160,"num",null,p=>p.inf==="kov"],["kt","Gul chizig‘i qalinligi (mm)",10,"num",null,p=>p.inf==="kov"]],
-  build(p){const {L,Hs,h}=p,Lt=Math.max(0,p.Lt||0),[pwP]=String(p.sp).split("x").map(Number),PO=PORU.find(q=>q[0]===p.po)||PORU[1],ph=PO[3],phw=PO[2];
-    const [bw,bd]=String(p.bp||"20x20").split("x").map(Number),br=40,smax=Math.max(400,p.smax||1100);
-    if(!(L>600&&Hs>=100&&h>=500))throw"Zina uzunligi 600 mm dan, balandligi 100 mm dan, perila balandligi 500 mm dan katta bo‘lsin.";
-    const N=Math.max(2,Math.round(Hs/170)),run=L/N,rise=Hs/N,k=Hs/L,xb=L-run,xe=L+Lt,ref=x=>Math.min(x*k+rise,Hs),stTop=x=>x>=xb?Hs:(Math.floor(x/run)+1)*rise,ang=Math.atan(k)*180/Math.PI;
-    const xs0=pwP/2+40,xe0=Math.max(xb+pwP,xe-pwP/2-40);const posts=[];
-    const n1=Math.max(1,Math.ceil((xb-xs0)/smax));for(let i=0;i<=n1;i++)posts.push(xs0+(xb-xs0)*i/n1);
-    if(xe0-xb>150){const n2=Math.max(1,Math.ceil((xe0-xb)/smax));for(let j=1;j<=n2;j++)posts.push(xb+(xe0-xb)*j/n2)}
-    const M={bars:[],boxes:[],panels:[],balls:[],yaw:-.55,pitch:.25},kindH=p.po==="wood"?"wood":"metal",info=[],cuts={};const addCut=(n,l,c=1)=>{const key=n+"|"+Math.round(l);cuts[key]=(cuts[key]||0)+c};
-    /* zina va maydoncha */
-    for(let i=0;i<N-1;i++){M.boxes.push([i*run,0,-1150,(i+1)*run,(i+1)*rise-40,60,"stone"],[i*run-30,(i+1)*rise-40,-1150,(i+1)*run,(i+1)*rise,90,"wood"])}
-    M.boxes.push([xb,0,-1150,xe+250,Hs-40,60,"stone"],[xb-30,Hs-40,-1150,xe+250,Hs,90,"floor"]);
-    /* stoykalar */
-    const top=x=>p.ball==="ha"?ref(x)+h+90:ref(x)+h-ph;
-    posts.forEach(x=>{const y0=stTop(Math.min(x,xe-1)),y1=top(x);addCut("Stoyka "+p.sp.replace("x","×"),y1-y0);M.boxes.push([x-pwP/2,y0,-pwP/2,x+pwP/2,y1,pwP/2,"post"]);
-      if(p.ball==="ha")M.balls.push([x,y1+pwP*.55,0,pwP*.6,"decor"])});
-    /* poruchen va pastki truba */
-    const xA=posts[0],xZ=posts[posts.length-1],bend=xZ>xb+50&&xA<xb-50,ext=p.ball==="ha"?0:60;
-    const rail=(off,w,d,kind,ex)=>{const a=[xA-ex,ref(xA-ex)+off],z=[xZ+ex,ref(xZ+ex)+off];if(bend){const m=[xb,Hs+off];M.bars.push([a,m,w,d,0,kind],[m,z,w,d,0,kind]);return Math.hypot(m[0]-a[0],m[1]-a[1])+Math.hypot(z[0]-m[0],z[1]-m[1])}M.bars.push([a,z,w,d,0,kind]);return Math.hypot(z[0]-a[0],z[1]-a[1])};
-    const lh=rail(h-ph/2,ph,phw,kindH,ext),lb=rail(100+br/2,br,20,"metal",0);
-    info.push(`Zina: ${N} pog‘ona (pog‘ona ${Math.round(run)}×${Math.round(rise)} mm), burchak ${ang.toFixed(1)}°.`);
-    info.push(`Poruchen (${PO[1]}): ${fm1(lh)} m${bend?`, zina tepasida ${ang.toFixed(0)}° ga bukiladi`:""}. Pastki truba 40×20: ${fm1(lb)} m${bend?" (shu joyda bukiladi)":""}.`);
-    /* to‘ldirish */
-    const hi=h-100-br-ph,laser=[];
-    for(let s=0;s<posts.length-1;s++){const a=posts[s]+pwP/2,b=posts[s+1]-pwP/2,slope=a<xb-1,sec=b-a;if(sec<60)continue;const yb=x=>ref(x)+100+br,yt=x=>ref(x)+h-ph;
-      if(p.inf==="vert"){const c=Math.max(1,Math.round(sec/Math.max(60,p.bo))-1);for(let i=1;i<=c;i++){const x=a+sec*i/(c+1);M.bars.push([[x,yb(x)],[x,yt(x)],bw,bd,0,"metal"])}addCut(`Balyasina ${p.bp.replace("x","×")}${slope?` (uchlari ${ang.toFixed(0)}° qiya)`:""}`,hi,c)}
-      else if(p.inf==="gor"){const n=Math.max(1,Math.round(p.ng));for(let j=1;j<=n;j++){const o=100+br+hi*j/(n+1);M.bars.push([[a,ref(a)+o],[b,ref(b)+o],bw,bd,0,"metal"])}addCut(`Gorizontal ${p.bp.replace("x","×")}`,Math.hypot(sec,ref(b)-ref(a)),n)}
-      else if(p.inf==="x"){M.bars.push([[a,yb(a)],[b,yt(b)],bw,bd,0,"metal"],[[a,yt(a)],[b,yb(b)],bw,bd,0,"metal"]);addCut(`Diagonal ${p.bp.replace("x","×")}`,Math.hypot(sec,yt(b)-yb(a)),1);addCut(`Diagonal ${p.bp.replace("x","×")}`,Math.hypot(sec,yb(b)-yt(a)),1)}
-      else if(p.inf==="oval"){const st=Math.max(50,p.bo),ow=st*1.6,c=Math.max(1,Math.floor((sec-ow)/st)+1),x0=a+(sec-((c-1)*st+ow))/2+ow/2,ry=hi/2-3,rx=ow/2;let per=0;
-        for(let i=0;i<c;i++){const xc=x0+i*st,yc=yb(xc)+hi/2;let pv=null;for(let t=0;t<=28;t++){const th=2*Math.PI*t/28,q=[xc+rx*Math.cos(th),yc+ry*Math.sin(th)];if(pv){M.bars.push([pv,q,10,20,0,"metal"]);per+=Math.hypot(q[0]-pv[0],q[1]-pv[1])}pv=q}}
-        addCut("Oval (polosa 20×4, bukiladi)",per/c,c)}
-      else{const dy=ref(b)-ref(a),v=[[0,0],[sec,dy],[sec,dy+hi],[0,hi]],r=p.inf==="kov"?scrollPanel(v,sec,dy+hi,{sw:Math.max(5,p.kt),cw:Math.max(80,p.kw),m:12}):rcut(sec,dy+hi,T=>{if(hasPt(p))T.pattern(T.poly(v),{pat:p.pt,s:p.ps,w:p.pw,mg:12})},{min:4});
-        const s2=E.poly(v)+r.out;laser.push({s:s2,w:sec,h:dy+hi});M.panels.push({ox:a,oy:yb(a),z:0,s:s2})}}
-    /* flanets */
-    const fs=pwP+60,fp=E.poly([[0,0],[fs,0],[fs,fs],[0,fs]])+[[15,15],[fs-15,15],[fs-15,fs-15],[15,fs-15]].map(([x,y])=>E.circle(x,y,5.5)).join("");
-    const items=laser.concat(posts.map(()=>({s:fp,w:fs,h:fs})));
+  build(p){const {Hs,h}=p,L=p.L,Ws=Math.max(600,p.Ws||1000),Lt=Math.max(0,p.Lt||0),gU=Math.max(0,p.g||150),[pwP]=String(p.sp).split("x").map(Number),PO=PORU.find(q=>q[0]===p.po)||PORU[1],ph=PO[3],phw=PO[2];
+    const [bw,bd]=String(p.bp||"15x15").split("x").map(Number),br=40,smax=Math.max(400,p.smax||1100),bo=Math.max(60,p.bo||120);
+    if(!(L>600&&Hs>=100&&h>=500))throw"Marsh uzunligi 600 mm dan, balandlik 100 mm dan, perila balandligi 500 mm dan katta bo‘lsin.";
+    const Nt=Math.max(2,Math.round(Hs/170)),zs=p.zs||"togri",two=zs!=="togri",N1=two?Math.max(2,Math.round(Nt/2)):Nt,N2=Nt-N1,H1=two?Hs*N1/Nt:Hs;
+    const M={bars3:[],boxes:[],panels:[],balls:[],yaw:zs==="togri"?-.55:-.8,pitch:.3},kindH=p.po==="wood"?"wood":"metal",info=[],cuts={},laser=[];
+    const addCut=(n,l,c=1)=>{if(!(l>0)||!c)return;const k=n+"|"+Math.round(l);cuts[k]=(cuts[k]||0)+c};let polosa=0;
+    /* zina geometriyasi */
+    const fl=[],paths={tash:[],ich:[]};
+    const flight=(o,d,sd,len,yS,yE,N)=>{fl.push({o,d,sd,len,yS,yE,N});const run=len/N,rise=(yE-yS)/N;
+      for(let i=0;i<N-1;i++){const a=[o[0]+d[0]*i*run,o[1]+d[1]*i*run],b=[o[0]+d[0]*(i+1)*run+sd[0]*Ws,o[1]+d[1]*(i+1)*run+sd[1]*Ws],t=yS+(i+1)*rise,
+          na=[a[0]-d[0]*30,a[1]-d[1]*30];M.boxes.push([Math.min(a[0],b[0]),0,Math.min(a[1],b[1]),Math.max(a[0],b[0]),t-40,Math.max(a[1],b[1]),"stone"],
+          [Math.min(na[0],b[0]),t-40,Math.min(na[1],b[1]),Math.max(na[0],b[0]),t,Math.max(na[1],b[1]),"wood"])}};
+    const land=(x0,z0,x1,z1,y)=>M.boxes.push([Math.min(x0,x1),0,Math.min(z0,z1),Math.max(x0,x1),y-40,Math.max(z0,z1),"stone"],[Math.min(x0,x1),y-40,Math.min(z0,z1),Math.max(x0,x1),y,Math.max(z0,z1),"floor"]);
+    const seg=(side,a,b,yS,yE,N)=>paths[side].push({a,b,yS,yE,N:N||0});
+    if(zs==="togri"){const run=L/Nt;flight([0,0],[1,0],[0,-1],L,0,Hs,Nt);land(L-run,0,L+Lt+250,-Ws,Hs);
+      seg("tash",[0,0],[L,0],0,Hs,Nt);if(Lt>0)seg("tash",[L,0],[L+Lt,0],Hs,Hs);seg("ich",[0,-Ws],[L,-Ws],0,Hs,Nt);if(Lt>0)seg("ich",[L,-Ws],[L+Lt,-Ws],Hs,Hs)}
+    else if(zs==="L"){const r1=L/N1;flight([0,0],[1,0],[0,-1],L,0,H1,N1);land(L-r1,0,L+Ws,-Ws,H1);flight([L+Ws,-Ws],[0,-1],[-1,0],L,H1,Hs,N2);land(L,-Ws-L+L/N2,L+Ws,-Ws-L-Lt-250,Hs);
+      seg("tash",[0,0],[L,0],0,H1,N1);seg("tash",[L,0],[L+Ws,0],H1,H1);seg("tash",[L+Ws,0],[L+Ws,-Ws],H1,H1);seg("tash",[L+Ws,-Ws],[L+Ws,-Ws-L],H1,Hs,N2);if(Lt>0)seg("tash",[L+Ws,-Ws-L],[L+Ws,-Ws-L-Lt],Hs,Hs);
+      seg("ich",[0,-Ws],[L,-Ws],0,H1,N1);seg("ich",[L,-Ws],[L,-Ws-L],H1,Hs,N2)}
+    else{const r1=L/N1,zf=-(2*Ws+gU);flight([0,0],[1,0],[0,-1],L,0,H1,N1);land(L-r1,0,L+Ws,zf,H1);flight([L,zf+Ws],[-1,0],[0,-1],L,H1,Hs,N2);land(L/N2,zf+Ws,-Lt-250,zf,Hs);
+      seg("tash",[0,0],[L,0],0,H1,N1);seg("tash",[L,0],[L+Ws,0],H1,H1);seg("tash",[L+Ws,0],[L+Ws,zf],H1,H1);seg("tash",[L+Ws,zf],[L,zf],H1,H1);seg("tash",[L,zf],[0,zf],H1,Hs,N2);if(Lt>0)seg("tash",[0,zf],[-Lt,zf],Hs,Hs);
+      seg("ich",[0,-Ws],[L,-Ws],0,H1,N1);seg("ich",[L,-Ws],[L,zf+Ws],H1,H1);seg("ich",[L,zf+Ws],[0,zf+Ws],H1,Hs,N2)}
+    const sides=p.tm==="ikki"?["tash","ich"]:p.tm==="ich"?["ich"]:["tash"];
+    /* bitta segment uchun funksiyalar */
+    const prep=S=>{const dx=S.b[0]-S.a[0],dz=S.b[1]-S.a[1],len=Math.hypot(dx,dz),d=[dx/len,dz/len],N=S.N,run=N?len/N:0,rise=N?(S.yE-S.yS)/N:0;
+      return {...S,len,d,nr:[d[1],0,-d[0]],sb:N?len-run:-1,floor:s=>N?S.yS+Math.min(N,Math.floor(Math.max(0,s)/run)+1)*rise:S.yS,ref:s=>N?Math.min(S.yS+rise+s*(S.yE-S.yS)/len,S.yE):S.yS,
+        W:(s,y)=>[S.a[0]+d[0]*s,y,S.a[1]+d[1]*s]}};
+    let nPost=0,railH=0,railB=0,vb=0,hbends=0,laserN=0;const top=(G,s)=>p.ball==="ha"?G.ref(s)+h+90:G.ref(s)+h-ph;
+    for(const sd of sides){const segs=paths[sd].map(prep);if(!segs.length)continue;
+      /* stoykalar */
+      const posts=[];segs.forEach((G,gi)=>{const s0=gi===0?pwP/2+40:0,s1=gi===segs.length-1?G.len-pwP/2-40:G.len,n=Math.max(1,Math.ceil((s1-s0)/smax));
+        for(let i=gi===0?0:1;i<=n;i++)posts.push({G,gi,s:s0+(s1-s0)*i/n})});
+      posts.forEach(q=>{const G=q.G,y0=G.floor(Math.min(q.s,G.len-1)),y1=top(G,q.s),c=G.W(q.s,0);addCut("Stoyka "+p.sp.replace("x","×"),y1-y0);nPost++;
+        M.boxes.push([c[0]-pwP/2,y0,c[2]-pwP/2,c[0]+pwP/2,y1,c[2]+pwP/2,"post"]);if(p.ball==="ha")M.balls.push([c[0],y1+pwP*.55,c[2],pwP*.6,"decor"])});
+      /* poruchen va pastki truba: siniq chiziq */
+      const railPts=off=>{const P=[];segs.forEach((G,gi)=>{const ss=[gi===0?posts[0].s:0];if(G.sb>0&&G.sb<G.len)ss.push(G.sb);ss.push(gi===segs.length-1?posts[posts.length-1].s:G.len);ss.forEach((s,k)=>{if(gi>0&&k===0)return;P.push(G.W(s,G.ref(s)+off))})});return P};
+      const run=(P,w,d,kind)=>{let l=0;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i],nr=[b[2]-a[2],0,-(b[0]-a[0])];M.bars3.push([a,b,w,d,kind,nr]);l+=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])}return l};
+      const pH=railPts(h-ph/2),pB=railPts(100+br/2);railH+=run(pH,ph,phw,kindH);railB+=run(pB,br,20,"metal");
+      for(let i=1;i<pH.length-1;i++){const a=pH[i-1],b=pH[i],c=pH[i+1],u=[b[0]-a[0],b[2]-a[2]],v=[c[0]-b[0],c[2]-b[2]],lu=Math.hypot(...u)||1,lv=Math.hypot(...v)||1;if(Math.abs(u[0]*v[1]-u[1]*v[0])>1e-3*lu*lv)hbends++;else if(Math.abs((b[1]-a[1])/lu-(c[1]-b[1])/lv)>1e-3)vb++}
+      /* to‘ldirish: har bir oraliq */
+      const hi=h-100-br-ph;
+      for(let k=0;k<posts.length-1;k++){const A=posts[k],B=posts[k+1];if(A.G!==B.G)continue;const G=A.G,a=A.s+pwP/2,b=B.s-pwP/2,sec=b-a;if(sec<60)continue;
+        const Wp=(s,o)=>G.W(s,G.ref(s)+100+br+o),slope=a<G.sb-1&&G.N>0,ang=G.N?Math.atan((G.yE-G.yS)/G.len)*180/Math.PI:0;
+        const line=(s1,o1,s2,o2,w=bw,d=bd,kind="metal")=>{const pts=[[s1,o1]];if(G.sb>Math.min(s1,s2)+1&&G.sb<Math.max(s1,s2)-1){const t=(G.sb-s1)/(s2-s1);pts.push([G.sb,o1+(o2-o1)*t])}pts.push([s2,o2]);let l=0;
+          for(let i=1;i<pts.length;i++){const P1=Wp(...pts[i-1]),P2=Wp(...pts[i]);M.bars3.push([P1,P2,w,d,kind,G.nr]);l+=Math.hypot(P2[0]-P1[0],P2[1]-P1[1],P2[2]-P1[2])}return l};
+        const shape=(sc,oc,pts,closed,w=10,d=20,kind="metal")=>{const by=G.ref(sc)+100+br+oc,P=pts.map(([ds,dy])=>{const c=G.W(sc+ds,0);return [c[0],by+dy,c[2]]});if(closed)P.push(P[0]);let l=0;
+          for(let i=1;i<P.length;i++){M.bars3.push([P[i-1],P[i],w,d,kind,G.nr]);l+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1],P[i][2]-P[i-1][2])}return l};
+        const circ=(r,n=24)=>Array.from({length:n},(_,i)=>[r*Math.cos(2*Math.PI*i/n),r*Math.sin(2*Math.PI*i/n)]);
+        const bp=p.bp.replace("x","×"),cutA=slope?` (uchlari ${ang.toFixed(0)}° qiya)`:"";
+        const bals=(skip)=>{const c=Math.max(1,Math.round(sec/bo)-1),st=sec/(c+1),xs=[];for(let i=1;i<=c;i++){const s=a+st*i;xs.push(s);if(!(skip&&skip(i)))line(s,0,s,hi)}return {xs,st}};
+        const inf=p.inf;
+        if(inf==="vert"||inf==="burama"){const {xs}=bals();addCut(`Balyasina ${inf==="burama"?"burama ":""}${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="vert_halqa"){const {xs,st}=bals();const r=Math.min(st/2-bw/2,hi*.15);[a,...xs].forEach((s,i)=>{const sc=s+(i===0?(xs[0]-a)/2:st/2);if(sc<b-r)polosa+=shape(sc,hi/2,circ(r),true)});addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="vert_halqa2"){const {xs,st}=bals();const r=Math.min(st/2-bw/2,70);for(let s=a+st/2;s<b-r;s+=st)polosa+=shape(s,r+15,circ(r),true);line(a,2*r+30,b,2*r+30,15,15);addCut(`Balyasina ${bp}${cutA}`,hi,xs.length);addCut("Gorizontal 15×15",Math.hypot(sec,G.ref(b)-G.ref(a)))}
+        else if(inf==="vert_shar"){const {xs}=bals();xs.forEach(s=>{const c=Wp(s,hi/2);M.balls.push([c[0],c[1],c[2],bw*1.4,"decor"])});addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="vert_kov"){const {xs,st}=bals();[a,...xs].forEach((s,i)=>{if(i%2)return;const sc=s+st/2;if(sc>b-30)return;const R=Math.min(st*.42,90);
+            polosa+=shape(sc,hi-R-10,spiralPts([0,0],R,Math.PI/2,1),false)+shape(sc,R+10,spiralPts([0,0],R,-Math.PI/2,1),false)});addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="vert_arka"){const {xs,st}=bals();[a,...xs].forEach(s=>{const r=st/2;if(s+st>b+1)return;const P=[];for(let i=0;i<=12;i++){const t=Math.PI*i/12;P.push([r-r*Math.cos(t)-r,-r*Math.sin(t)])}polosa+=shape(s+r,hi,P,false)});addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="vert_romb"){const {xs,st}=bals();[a,...xs].forEach((s,i)=>{if(i%2)return;const sc=s+st/2;if(sc>b-20)return;const rw=st/2-bw/2,rh=Math.min(hi*.3,rw*2);polosa+=shape(sc,hi/2,[[-rw,0],[0,rh],[rw,0],[0,-rh]],true,bw,bd)});addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="gor"){const n=Math.max(1,Math.round(p.ng));for(let j=1;j<=n;j++)addCut(`Gorizontal ${bp}`,line(a,hi*j/(n+1),b,hi*j/(n+1)))}
+        else if(inf==="gor_vert"){addCut(`Gorizontal ${bp}`,line(a,hi/3,b,hi/3));addCut(`Gorizontal ${bp}`,line(a,2*hi/3,b,2*hi/3));const {xs}=bals();addCut(`Balyasina ${bp}${cutA}`,hi,xs.length)}
+        else if(inf==="katak"){const n=Math.max(2,Math.round(hi/150));for(let j=1;j<n;j++)addCut(`Gorizontal ${bp}`,line(a,hi*j/n,b,hi*j/n));const c=Math.max(1,Math.round(sec/150)-1);for(let i=1;i<=c;i++){const s=a+sec*i/(c+1);line(s,0,s,hi)}addCut(`Vertikal ${bp}${cutA}`,hi,c)}
+        else if(inf==="x"){addCut(`Diagonal ${bp}`,line(a,0,b,hi));addCut(`Diagonal ${bp}`,line(a,hi,b,0))}
+        else if(inf==="x2"){const m=(a+b)/2;line(m,0,m,hi);addCut(`Vertikal ${bp}`,hi);[[a,m],[m,b]].forEach(([u,v])=>{addCut(`Diagonal ${bp}`,line(u,0,v,hi));addCut(`Diagonal ${bp}`,line(u,hi,v,0))})}
+        else if(inf==="romb"){const st=Math.max(120,bo*1.6);let l=0;for(let s=a-hi;s<b;s+=st){const s1=Math.max(a,s),s2=Math.min(b,s+hi);if(s2>s1)l+=line(s1,s1-s,s2,s2-s);const t1=Math.max(a,s),t2=Math.min(b,s+hi);if(t2>t1)l+=line(t1,hi-(t1-s),t2,hi-(t2-s))}addCut(`Romb to‘r ${bp} (jami)`,l)}
+        else if(inf==="zanjir"){const n=Math.max(1,Math.round(sec/Math.max(140,bo*1.4))),st=sec/n;let l=0;for(let i=0;i<n;i++){const s=a+i*st;l+=line(s,hi/2,s+st/2,hi*.92)+line(s+st/2,hi*.92,s+st,hi/2)+line(s,hi/2,s+st/2,hi*.08)+line(s+st/2,hi*.08,s+st,hi/2)}l+=line(a,hi/2,b,hi/2,12,12);addCut(`Romb zanjir ${bp} (jami)`,l)}
+        else if(inf==="oval"){const st=bo,ow=st*1.6,c=Math.max(1,Math.floor((sec-ow)/st)+1),x0=a+(sec-((c-1)*st+ow))/2+ow/2;for(let i=0;i<c;i++){const xc=x0+i*st;polosa+=shape(xc,hi/2,Array.from({length:28},(_,t)=>[ow/2*Math.cos(2*Math.PI*t/28),(hi/2-4)*Math.sin(2*Math.PI*t/28)]),true)}}
+        else if(inf==="halqa"){const r=hi/4-2,n=Math.max(1,Math.floor(sec/(2*r))),st=sec/n;for(let i=0;i<n;i++){polosa+=shape(a+st*(i+.5),hi/4,circ(r),true)+shape(a+st*(i+.5),3*hi/4,circ(r),true)}}
+        else if(inf==="s_gul"){const n=Math.max(1,Math.round(sec/Math.max(180,bo*1.6))),st=sec/n;for(let i=0;i<n;i++){const sc=a+st*(i+.5),R=Math.min(st*.38,hi*.2),S1=spiralPts([-st*.08,hi*.22],R,Math.PI,1,1.3),S2=S1.map(([x,y])=>[-x,-y]).reverse();polosa+=shape(sc,hi/2,S1.concat(S2),false);if(i)line(a+st*i,0,a+st*i,hi,12,12)}}
+        else if(inf==="yurak"){const n=Math.max(1,Math.round(sec/Math.max(200,bo*1.8))),st=sec/n;for(let i=0;i<n;i++){const sc=a+st*(i+.5),R=Math.min(st*.24,hi*.18),Lh=spiralPts([-R*.95,hi*.12],R,0,1,1.2).reverse(),Rh=Lh.map(([x,y])=>[-x,y]);
+            polosa+=shape(sc,hi/2,[[0,-hi*.42],...Lh.slice(-1)],false)+shape(sc,hi/2,Lh,false)+shape(sc,hi/2,[[0,-hi*.42],...Rh.slice(-1)],false)+shape(sc,hi/2,Rh,false);if(i)line(a+st*i,0,a+st*i,hi,12,12)}}
+        else if(inf==="tolqin"){const n=Math.max(1,Math.round(sec/220)),A=hi*.36;for(const ph0 of [0,Math.PI]){const P=[];for(let i=0;i<=n*16;i++){const t=i/(n*16);P.push([t*sec-sec/2,A*Math.sin(ph0+t*n*2*Math.PI)])}polosa+=shape((a+b)/2,hi/2,P,false)}}
+        else if(inf==="shisha"){const yS=G.ref(a),v=[[0,10],[sec,G.ref(b)-yS+10],[sec,G.ref(b)-yS+hi-10],[0,hi-10]];M.panels.push({o:Wp(a,0),u:[G.d[0],0,G.d[1]],loops:[v],kind:"glass"});
+          [[a+40,40],[b-40,40],[a+40,hi-40],[b-40,hi-40]].forEach(([s,o])=>{const c=Wp(s,o);M.boxes.push([c[0]-15,c[1]-15,c[2]-15,c[0]+15,c[1]+15,c[2]+15,"decor"])});addCut("Shisha (toblangan, 8–10 mm)",sec,1)}
+        else{const yS=G.ref(a),fb=x=>G.ref(a+x)-yS,bot=[[0,0]];if(G.sb>a+1&&G.sb<b-1)bot.push([G.sb-a,fb(G.sb-a)]);bot.push([sec,fb(sec)]);const v=bot.concat(bot.slice().reverse().map(([x,y])=>[x,y+hi])),Hh=Math.max(...v.map(q=>q[1]));
+          const r=inf==="kov"?scrollPanel(v,sec,Hh,{sw:Math.max(5,p.kt),cw:Math.max(80,p.kw),m:12,hi},fb):rcut(sec,Hh,T=>T.pattern(T.poly(v),inf==="perf"?{pat:"perf_doira",s:Math.max(10,p.ps*.6),w:Math.max(5,p.pw),mg:12}:hasPt(p)?{pat:p.pt,s:p.ps,w:p.pw,mg:12}:{pat:"yoq"}),{min:4});
+          const s2=E.poly(v)+r.out;laser.push({s:s2,w:sec,h:Hh});laserN++;M.panels.push({o:Wp(a,0),u:[G.d[0],0,G.d[1]],s:s2,kind:"metal"})}}}
+    /* hisob */
+    info.push(`Zina: ${Nt} pog‘ona${two?` (${N1} + ${N2}, ${zs==="L"?"90°":"180°"} burilish, maydoncha ${Ws}×${Ws} mm)`:""}, burchak ${(Math.atan((two?H1:Hs)/L)*180/Math.PI).toFixed(1)}°.`);
+    info.push(`Poruchen (${PO[1]}): ${fm1(railH)} m${vb?`, ${vb} joyda qiyalikdan tekisga bukiladi`:""}${hbends?`, ${hbends} joyda burchakka buriladi`:""}. Pastki truba 40×20: ${fm1(railB)} m (shu joylarda bukiladi).`);
+    if(polosa>0)info.push(`Bukiladigan polosa 20×4: ~${fm1(polosa*1.05)} m.`);
     info.push("Kesish ro‘yxati: "+Object.entries(cuts).map(([kk,c])=>{const [n,l]=kk.split("|");return `${n} ${l} mm × ${c}`}).join("; ")+".");
-    info.push(`Lazerda: ${posts.length} ta flanets ${fs}×${fs} mm (4 teshik Ø11)${laser.length?`, ${laser.length} ta ${p.inf==="kov"?"kovaniy gul":"naqsh"} panel`:""}.`);
+    const fs=pwP+60,fp=E.poly([[0,0],[fs,0],[fs,fs],[0,fs]])+[[15,15],[fs-15,15],[fs-15,fs-15],[15,fs-15]].map(([x,y])=>E.circle(x,y,5.5)).join("");
+    info.push(`Lazerda: ${nPost} ta flanets ${fs}×${fs} mm (4 teshik Ø11)${laserN?`, ${laserN} ta panel`:""}.`);
+    const items=laser.concat(Array.from({length:nPost},()=>({s:fp,w:fs,h:fs})));
     this.warn=info.join(" ");this._m3=M;return rowDXF(items,25).s},
-  label:p=>`Perila ${p.L}×${p.Hs}${p.Lt>0?" + "+p.Lt:""}`};
+  label:p=>`Perila ${p.zs==="L"?"L ":p.zs==="U"?"U ":""}${p.L}×${p.Hs}`};
 ["gatek","plaque","perila"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 
 
@@ -2875,65 +2980,85 @@ window.lzZoom=lzZoom;
   add("cv",()=>current?{obj:current,t:$("fname").textContent||"Chizma"}:null)})();
 
 
-/* ---------- 3D ko‘rinish (darvoza, panjara, perila) ---------- */
+
+/* ---------- 3D ko‘rinish (darvoza, panjara, perila) — chuqurlik buferi bilan ---------- */
 function lz3D(M,title){
   const loopsOf=s=>{try{return analyse(wrapDXF(s)).paths.filter(p=>p.pts.length>2).map(p=>p.pts)}catch(_){return []}};
-  const D3=[],avg=P=>P.reduce((s,p)=>[s[0]+p[0]/P.length,s[1]+p[1]/P.length,s[2]+p[2]/P.length],[0,0,0]);
-  const face=(P,n,kind)=>D3.push({t:"f",loops:[P],n,kind,c:avg(P)});
-  const boxP=(C,kind)=>{for(const [a,b,c,d] of [[0,1,2,3],[5,4,7,6],[4,0,3,7],[1,5,6,2],[3,2,6,7],[4,5,1,0]]){const P=[C[a],C[b],C[c],C[d]],u=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]],v=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];
-      let n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];const l=Math.hypot(...n)||1;face(P,n.map(x=>x/l),kind)}};
+  const PL=[],BL=[];const nrmOf=P=>{let nx=0,ny=0,nz=0;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length];nx+=(a[1]-b[1])*(a[2]+b[2]);ny+=(a[2]-b[2])*(a[0]+b[0]);nz+=(a[0]-b[0])*(a[1]+b[1])}const l=Math.hypot(nx,ny,nz)||1;return [nx/l,ny/l,nz/l]};
+  const poly=(loops,kind,n)=>{if(loops.length&&loops[0].length>2)PL.push({loops,kind,n:n||nrmOf(loops[0])})};
+  const boxP=(C,kind)=>{for(const f of [[0,1,2,3],[5,4,7,6],[4,0,3,7],[1,5,6,2],[3,2,6,7],[4,5,1,0]])poly([f.map(i=>C[i])],kind)};
   const box=(x0,y0,z0,x1,y1,z1,kind)=>boxP([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],kind);
-  const bar=(a,b,w,d,zc,kind)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l*w/2,ny=dx/l*w/2,z0=zc-d/2,z1=zc+d/2;
-    boxP([[a[0]-nx,a[1]-ny,z0],[b[0]-nx,b[1]-ny,z0],[b[0]+nx,b[1]+ny,z0],[a[0]+nx,a[1]+ny,z0],[a[0]-nx,a[1]-ny,z1],[b[0]-nx,b[1]-ny,z1],[b[0]+nx,b[1]+ny,z1],[a[0]+nx,a[1]+ny,z1]],kind)};
-  (M.boxes||[]).forEach(b=>box(...b));(M.bars||[]).forEach(b=>bar(...b));
-  (M.panels||[]).forEach(p=>{const L=(p.loops||loopsOf(p.s)).map(L=>L.map(([x,y])=>[p.ox+x,p.oy+y,p.z]));if(L.length)D3.push({t:"p",loops:L,n:[0,0,1],kind:p.kind||"metal",c:avg(L[0])})});
-  (M.balls||[]).forEach(([x,y,z,r,kind])=>D3.push({t:"b",c:[x,y,z],r,kind:kind||"metal"}));
+  const cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],nz=v=>{const l=Math.hypot(...v)||1;return v.map(x=>x/l)};
+  const bar3=(a,b,w,d,kind,nr)=>{const u=nz([b[0]-a[0],b[1]-a[1],b[2]-a[2]]);let s=nr?nz(nr):nz(cr(u,[0,1,0]));if(!isFinite(s[0])||Math.hypot(...s)<.5)s=[0,0,1];
+    let v=nz(cr(s,u));if(Math.hypot(...v)<.5)v=[1,0,0];const o=(p,i,j)=>[p[0]+v[0]*i*w/2+s[0]*j*d/2,p[1]+v[1]*i*w/2+s[1]*j*d/2,p[2]+v[2]*i*w/2+s[2]*j*d/2];
+    boxP([o(a,-1,-1),o(b,-1,-1),o(b,1,-1),o(a,1,-1),o(a,-1,1),o(b,-1,1),o(b,1,1),o(a,1,1)],kind)};
+  (M.boxes||[]).forEach(b=>box(...b));
+  (M.bars||[]).forEach(([a,b,w,d,zc,kind])=>bar3([a[0],a[1],zc],[b[0],b[1],zc],w,d,kind,[0,0,1]));
+  (M.bars3||[]).forEach(([a,b,w,d,kind,nr])=>bar3(a,b,w,d,kind,nr));
+  (M.panels||[]).forEach(p=>{const L=p.loops||loopsOf(p.s),o=p.o||[p.ox,p.oy,p.z],u=p.u||[1,0,0];poly(L.map(l=>l.map(([x,y])=>[o[0]+u[0]*x,o[1]+y,o[2]+u[2]*x])),p.kind||"metal",nz([u[2],0,-u[0]]))});
+  (M.balls||[]).forEach(([x,y,z,r,kind])=>BL.push({c:[x,y,z],r,kind:kind||"metal"}));
   let x0=1e9,y0=1e9,z0=1e9,x1=-1e9,y1=-1e9,z1=-1e9;const ext=p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);z0=Math.min(z0,p[2]);z1=Math.max(z1,p[2])};
-  D3.forEach(d=>d.t==="b"?ext(d.c):d.loops.forEach(L=>L.forEach(ext)));
+  PL.forEach(d=>d.loops.forEach(L=>L.forEach(ext)));BL.forEach(b=>ext(b.c));
+  const gpad=Math.max(x1-x0,z1-z0)*.12;poly([[[x0-gpad,y0-1,z0-gpad],[x1+gpad,y0-1,z0-gpad],[x1+gpad,y0-1,z1+gpad],[x0-gpad,y0-1,z1+gpad]]],"ground",[0,1,0]);
   const cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2,R=Math.hypot(x1-x0,y1-y0,z1-z0)/2||1;
   const PAL=[["Qora",[40,40,42]],["Kumush",[178,184,190]],["Grafit",[78,84,92]],["Jigarrang",[105,68,40]],["Yashil",[40,78,58]],["Oq",[226,226,222]]],
     DEC=[["Oltin",[201,160,62]],["Bronza",[150,96,52]],["Kumush",[190,196,202]],["Qora",[34,34,36]],["Asosiy rang",null]];
   const ld=(k,d,n)=>{try{return +(localStorage.getItem(k)||d)%n}catch(_){return d}};let pal=ld("lz3dCol",0,PAL.length),dec=ld("lz3dDec",0,DEC.length);
-  const hasDec=D3.some(d=>d.kind==="decor");
+  const hasDec=PL.some(d=>d.kind==="decor")||BL.some(b=>b.kind==="decor");
   const ov=document.createElement("div");ov.className="zov z3";
   const sw=(L,cur,attr)=>L.map(([n,c],i)=>`<button type="button" ${attr}="${i}" aria-pressed="${i===cur}" style="--c:${c?`rgb(${c})`:"linear-gradient(135deg,#888,#333)"}"><i></i>${n}</button>`).join("");
   ov.innerHTML=`<div class="zbar"><b></b><button type="button" data-z="r" aria-label="Boshlang‘ich ko‘rinish">⟲</button><button type="button" data-z="x" aria-label="Yopish">✕</button></div><canvas></canvas>
   <div class="z3pal"><span>Rang</span>${sw(PAL,pal,"data-c")}</div>${hasDec?`<div class="z3pal"><span>Bezak</span>${sw(DEC,dec,"data-d")}</div>`:""}
   <p class="zhint">Barmoq bilan aylantiring, ikki barmoq bilan yaqinlashtiring.</p>`;
   ov.querySelector("b").textContent=(title||"3D")+" — 3D";document.body.appendChild(ov);document.body.style.overflow="hidden";
-  const cv=ov.querySelector("canvas"),ctx=cv.getContext("2d");const Y0=M.yaw??-.45,P0=M.pitch??.22;let W=1,H=1,dpr=1,yaw=Y0,pitch=P0,zoom=1,raf=0,t0=performance.now(),spin=true;
-  const size=()=>{dpr=Math.min(2.5,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)};
-  const LD=(v=>{const l=Math.hypot(...v);return v.map(x=>x/l)})([.35,.6,.72]);
-  const KC={stone:[168,164,156],wood:[150,98,52],floor:[205,200,190],glass:[150,190,210]};
-  function render(){raf=0;ctx.setTransform(dpr,0,0,dpr,0,0);const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#dfe7ee");g.addColorStop(1,"#f6f3ee");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-    const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),D=R*3.2,S=Math.min(W,H)*.6/R*zoom;
-    const rot=p=>{const x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,X=x*cyw+z*syw,Z1=-x*syw+z*cyw;return [X,y*cp-Z1*sp,y*sp+Z1*cp]};
-    const tr=p=>{const [X,Y,Z]=rot(p),k=S*D/(D-Z);return [W/2+X*k,H*.54-Y*k,Z,k]};
+  const cv=ov.querySelector("canvas"),ctx=cv.getContext("2d");const Y0=M.yaw??-.45,P0=M.pitch??.22;let W=1,H=1,dpr=1,yaw=Y0,pitch=P0,zoom=1,raf=0,t0=performance.now(),spin=true,lowT=0;
+  const size=()=>{dpr=Math.min(2,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)};
+  const LD=nz([.35,.6,.72]),KC={stone:[168,164,156],wood:[150,98,52],floor:[205,200,190],ground:[214,209,200],glass:[170,205,220]};
+  const off=document.createElement("canvas"),octx=off.getContext("2d");let img=null,px=null,zb=null,bw=0,bh=0;
+  function raster(P,col,A,B,C,glass){const E=[];let ymn=1e9,ymx=-1e9;
+    for(const L of P)for(let i=0;i<L.length;i++){const a=L[i],b=L[(i+1)%L.length];if(a[1]===b[1])continue;const e=a[1]<b[1]?[a[0],a[1],b[0],b[1]]:[b[0],b[1],a[0],a[1]];E.push(e);ymn=Math.min(ymn,e[1]);ymx=Math.max(ymx,e[3])}
+    const r0=Math.max(0,Math.ceil(ymn-.5)),r1=Math.min(bh-1,Math.floor(ymx-.5));if(r1<r0)return;
+    const buck=new Array(r1-r0+1);for(const e of E){const s=Math.max(r0,Math.ceil(e[1]-.5));if(s>r1||e[3]-.5<s)continue;(buck[s-r0]||(buck[s-r0]=[])).push(e)}
+    let act=[];const xs=[];
+    for(let y=r0;y<=r1;y++){const yc=y+.5;if(buck[y-r0])act=act.concat(buck[y-r0]);act=act.filter(e=>e[3]>yc);if(!act.length)continue;xs.length=0;
+      for(const e of act)xs.push(e[0]+(yc-e[1])*(e[2]-e[0])/(e[3]-e[1]));xs.sort((a,b)=>a-b);
+      const row=y*bw;for(let k=0;k+1<xs.length;k+=2){let xa=Math.max(0,Math.ceil(xs[k]-.5)),xb=Math.min(bw-1,Math.floor(xs[k+1]-.5));let q=A*(xa+.5)+B*yc+C;
+        for(let x=xa;x<=xb;x++,q+=A){const i=row+x;if(q>zb[i]){if(glass){const c0=px[i];px[i]=0xff000000|(((((c0>>16)&255)*.55+((col>>16)&255)*.45)|0)<<16)|(((((c0>>8)&255)*.55+((col>>8)&255)*.45)|0)<<8)|(((c0&255)*.55+(col&255)*.45)|0)}else{zb[i]=q;px[i]=col}}}}}}
+  function render(scale){raf=0;const w=Math.max(1,Math.round(W*dpr*scale)),h=Math.max(1,Math.round(H*dpr*scale));
+    if(w!==bw||h!==bh){bw=w;bh=h;off.width=w;off.height=h;img=octx.createImageData(w,h);px=new Uint32Array(img.data.buffer);zb=new Float32Array(w*h)}
+    for(let y=0;y<h;y++){const t=y/h,r=Math.round(223+(246-223)*t),g=Math.round(231+(243-231)*t),b=Math.round(238+(238-238)*t),c=0xff000000|(b<<16)|(g<<8)|r;px.fill(c,y*w,(y+1)*w)}zb.fill(-1e9);
+    const sc=dpr*scale,cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),D=R*3.2,S=Math.min(W,H)*.5/R*zoom*sc;
+    const tr=p=>{const x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,X=x*cyw+z*syw,Z1=-x*syw+z*cyw,Y=y*cp-Z1*sp,Z=y*sp+Z1*cp,q=1/(D-Z),k=S*D*q;return [w/2+X*k,h*.54-Y*k,q]};
     const rn=n=>{const X=n[0]*cyw+n[2]*syw,Z1=-n[0]*syw+n[2]*cyw;return [X,n[1]*cp-Z1*sp,n[1]*sp+Z1*cp]};
-    ctx.fillStyle="rgba(60,50,40,.13)";ctx.beginPath();[[x0-R*.2,y0,z0-R*.25],[x1+R*.2,y0,z0-R*.25],[x1+R*.2,y0,z1+R*.25],[x0-R*.2,y0,z1+R*.25]].map(tr).forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fill();
     const mc=PAL[pal][1],dc=DEC[dec][1]||mc,col=k=>k==="decor"?dc:k==="post"?mc.map(v=>v*.85):KC[k]||mc;
-    const shade=(base,n)=>{const d=Math.abs(n[0]*LD[0]+n[1]*LD[1]+n[2]*LD[2]),k=.42+.68*d;return `rgb(${base.map(v=>Math.min(255,Math.round(v*k+12))).join(",")})`};
-    const side=Math.sign(rn([0,0,1])[2])||1;
-    D3.map(d=>({d,z:Math.round(d.c[2]*side),dp:tr(d.c)[2]})).sort((a,b)=>a.z-b.z||a.dp-b.dp).forEach(({d})=>{const base=col(d.kind);
-      if(d.t==="b"){const [X,Y,,k]=tr(d.c),r=d.r*k,gg=ctx.createRadialGradient(X-r*.35,Y-r*.4,r*.1,X,Y,r);gg.addColorStop(0,`rgb(${base.map(v=>Math.min(255,v*1.5+60)).join(",")})`);gg.addColorStop(1,`rgb(${base.map(v=>v*.55).join(",")})`);ctx.fillStyle=gg;ctx.beginPath();ctx.arc(X,Y,r,0,7);ctx.fill();return}
-      ctx.fillStyle=shade(base,rn(d.n));ctx.beginPath();for(const L of d.loops){L.forEach((q,i)=>{const [a,b]=tr(q);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.closePath()}
-      if(d.t==="p"){ctx.fill("evenodd");ctx.strokeStyle="rgba(0,0,0,.3)";ctx.lineWidth=.5;ctx.stroke()}else{ctx.fill();ctx.strokeStyle="rgba(0,0,0,.16)";ctx.lineWidth=.6;ctx.stroke()}});
-    if(spin){yaw=Y0+Math.sin((performance.now()-t0)/2600)*.35;raf=requestAnimationFrame(render)}}
-  const req=()=>{if(!raf)raf=requestAnimationFrame(render)};
+    const pack=(base,n)=>{const d=Math.abs(n[0]*LD[0]+n[1]*LD[1]+n[2]*LD[2]),kk=.42+.68*d,c=base.map(v=>Math.min(255,Math.round(v*kk+12)));return 0xff000000|(c[2]<<16)|(c[1]<<8)|c[0]};
+    const later=[];
+    for(const f of PL){const T=f.loops.map(L=>L.map(tr)),L0=T[0];let A=0,B=0,C=0,ok=false;
+      for(let i=1;i<L0.length-1&&!ok;i++)for(let j=i+1;j<L0.length&&!ok;j++){const [xa,ya,qa]=L0[0],[xb2,yb2,qb]=L0[i],[xc,yc,qc]=L0[j],det=(xb2-xa)*(yc-ya)-(xc-xa)*(yb2-ya);if(Math.abs(det)<1e-3*Math.max(1,bw))continue;
+        A=((qb-qa)*(yc-ya)-(qc-qa)*(yb2-ya))/det;B=((xb2-xa)*(qc-qa)-(xc-xa)*(qb-qa))/det;C=qa-A*xa-B*ya;ok=true}
+      if(!ok)continue;const c=f.kind==="ground"?pack(KC.ground,[0,1,0]):pack(col(f.kind),rn(f.n));if(f.kind==="glass"){later.push([T,c,A,B,C]);continue}raster(T,c,A,B,C,false)}
+    for(const b of BL){const [X,Y,q]=tr(b.c),rp=b.r*S*D*q,base=col(b.kind),x0b=Math.max(0,Math.floor(X-rp)),x1b=Math.min(bw-1,Math.ceil(X+rp)),y0b=Math.max(0,Math.floor(Y-rp)),y1b=Math.min(bh-1,Math.ceil(Y+rp));
+      for(let y=y0b;y<=y1b;y++)for(let x=x0b;x<=x1b;x++){const dx=(x+.5-X)/rp,dy=(y+.5-Y)/rp,d2=dx*dx+dy*dy;if(d2>1)continue;const nzv=Math.sqrt(1-d2),qq=q+q*q*b.r*nzv,i=y*bw+x;
+        if(qq>zb[i]){zb[i]=qq;const l=Math.max(0,dx*-.4+dy*-.55+nzv*.73),hl=Math.pow(l,18)*120,c=base.map(v=>Math.min(255,Math.round(v*(.35+.85*l)+hl)));px[i]=0xff000000|(c[2]<<16)|(c[1]<<8)|c[0]}}}
+    for(const [T,c,A,B,C] of later)raster(T,c,A,B,C,true);
+    octx.putImageData(img,0,0);ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=true;ctx.drawImage(off,0,0,cv.width,cv.height);
+    if(spin){yaw=Y0+Math.sin((performance.now()-t0)/2600)*.35;raf=requestAnimationFrame(()=>render(.5))}}
+  const req=(lo=true)=>{if(raf)return;raf=requestAnimationFrame(()=>render(lo?.5:1));clearTimeout(lowT);if(lo)lowT=setTimeout(()=>{if(!raf)raf=requestAnimationFrame(()=>render(1))},180)};
   const P=new Map();let last=null;const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
   cv.style.touchAction="none";
-  cv.addEventListener("pointerdown",e=>{spin=false;cv.setPointerCapture(e.pointerId);P.set(e.pointerId,pos(e));last=null});
+  cv.addEventListener("pointerdown",e=>{if(spin){spin=false;cancelAnimationFrame(raf);raf=0}cv.setPointerCapture(e.pointerId);P.set(e.pointerId,pos(e));last=null});
   cv.addEventListener("pointermove",e=>{if(!P.has(e.pointerId))return;const q=pos(e),pr=P.get(e.pointerId);P.set(e.pointerId,q);
     if(P.size===1){yaw+=(q[0]-pr[0])*.008;pitch=Math.max(-.2,Math.min(1.35,pitch+(q[1]-pr[1])*.006));req()}
     else{const [a,b]=[...P.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(last)zoom=Math.max(.4,Math.min(8,zoom*d/last));last=d;req()}});
-  const up=e=>{P.delete(e.pointerId);last=null};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
-  cv.addEventListener("wheel",e=>{e.preventDefault();spin=false;zoom=Math.max(.4,Math.min(8,zoom*Math.exp(-e.deltaY*.0015)));req()},{passive:false});
-  const close=()=>{spin=false;cancelAnimationFrame(raf);removeEventListener("resize",rs);ov.remove();document.body.style.overflow=""};ov._close=close;
-  const rs=()=>{size();req()};addEventListener("resize",rs);
-  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.z==="x")close();else if(b.dataset.z==="r"){yaw=Y0;pitch=P0;zoom=1;req()}
-    else if(b.dataset.c!==undefined){pal=+b.dataset.c;try{localStorage.setItem("lz3dCol",pal)}catch(_){}ov.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed",x===b));req()}
-    else if(b.dataset.d!==undefined){dec=+b.dataset.d;try{localStorage.setItem("lz3dDec",dec)}catch(_){}ov.querySelectorAll("[data-d]").forEach(x=>x.setAttribute("aria-pressed",x===b));req()}});
-  requestAnimationFrame(()=>{size();render()})}
+  const up=e=>{P.delete(e.pointerId);last=null;if(!P.size){clearTimeout(lowT);lowT=setTimeout(()=>{if(!raf)raf=requestAnimationFrame(()=>render(1))},60)}};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  cv.addEventListener("wheel",e=>{e.preventDefault();if(spin){spin=false;cancelAnimationFrame(raf);raf=0}zoom=Math.max(.4,Math.min(8,zoom*Math.exp(-e.deltaY*.0015)));req()},{passive:false});
+  const close=()=>{spin=false;cancelAnimationFrame(raf);clearTimeout(lowT);removeEventListener("resize",rs);ov.remove();document.body.style.overflow=""};ov._close=close;
+  const rs=()=>{size();req(false)};addEventListener("resize",rs);
+  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.z==="x")close();else if(b.dataset.z==="r"){spin=false;yaw=Y0;pitch=P0;zoom=1;req(false)}
+    else if(b.dataset.c!==undefined){pal=+b.dataset.c;try{localStorage.setItem("lz3dCol",pal)}catch(_){}ov.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed",x===b));if(!spin)req(false)}
+    else if(b.dataset.d!==undefined){dec=+b.dataset.d;try{localStorage.setItem("lz3dDec",dec)}catch(_){}ov.querySelectorAll("[data-d]").forEach(x=>x.setAttribute("aria-pressed",x===b));if(!spin)req(false)}});
+  setTimeout(()=>{if(spin){spin=false;cancelAnimationFrame(raf);raf=0;req(false)}},7000);
+  requestAnimationFrame(()=>{size();render(1)})}
 window.lz3D=lz3D;
 (()=>{const c=$("gcv");if(!c)return;const z=c.nextElementSibling;
   (z||c).insertAdjacentHTML("afterend",`<button type="button" class="zbtn primary" id="g3d" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg> 3D ko‘rinish (yig‘ilgan holda)</button>`);
