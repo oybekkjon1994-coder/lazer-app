@@ -107,6 +107,16 @@ textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1p
 .fgal button span{font:500 11px var(--body);text-align:center}
 .gal button img{width:100%;aspect-ratio:1;border-radius:4px;display:block}
 .gal button[aria-pressed="true"]{border-color:var(--accent);outline:2px solid var(--accent);color:var(--accent)}
+.igal{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));max-height:260px}
+.igal button span{font:500 10.5px var(--body);text-align:center;line-height:1.15}
+.igal .ino{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;font-size:26px}
+.mvpad{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.mvh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;width:100%}
+.mvh select{width:auto;min-width:80px}
+.mvsel{display:inline-flex;gap:4px}.mvsel button{padding:6px 12px}
+.mvsel button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.mvg{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,48px);gap:6px}
+.mvg button{font-size:20px;padding:0;touch-action:manipulation}
 .chkbox{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
 .chkbox ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .chkbox li.ok{color:var(--muted)}.chkbox li.bad{color:var(--accent);font-weight:600}
@@ -2112,52 +2122,138 @@ const SH={
       return norm(pts,W,H)},c:(W,H)=>[W/2,H*.47],a:1.35}};
 const SHOPTS=[["yoq","Shaklsiz — faqat harflar"]].concat(Object.entries(SH).map(([k,s])=>[k,s.n]));
 const isSh=p=>p.sh&&p.sh!=="yoq";
+/* ---- qo‘shimcha rasmlar (shashlik, mangal, choynak…) — 100 birlik balandlikda chiziladi, qora = kesiladigan joy ---- */
+const rr=(x,X,y,w,h,r)=>{x.moveTo(X+r,y);x.arcTo(X+w,y,X+w,y+h,r);x.arcTo(X+w,y+h,X,y+h,r);x.arcTo(X,y+h,X,y,r);x.arcTo(X,y,X+w,y,r);x.closePath()};
+const steam=(x,xs,y0,y1)=>{x.lineWidth=4;x.lineCap="round";x.beginPath();for(const s of xs){x.moveTo(s,y1);x.bezierCurveTo(s-9,y1-(y1-y0)*.35,s+9,y1-(y1-y0)*.65,s,y0)}x.stroke()};
+const flame=(x,cx,by,w,h)=>{x.beginPath();x.moveTo(cx,by);x.bezierCurveTo(cx-w*.62,by,cx-w*.6,by-h*.45,cx-w*.2,by-h*.62);x.bezierCurveTo(cx-w*.15,by-h*.45,cx,by-h*.45,cx+w*.02,by-h*.55);
+  x.bezierCurveTo(cx-w*.05,by-h*.8,cx+w*.1,by-h*.9,cx+w*.15,by-h);x.bezierCurveTo(cx+w*.2,by-h*.75,cx+w*.6,by-h*.6,cx+w*.55,by-h*.3);x.bezierCurveTo(cx+w*.52,by-h*.08,cx+w*.3,by,cx,by);x.closePath();x.fill()};
+const skewer=(x,L,n,cw,ch,full)=>{/* (0,0) dan o‘ngga, uzunligi L */x.fillRect(14,-2.2,L-24,4.4);x.beginPath();x.moveTo(L-11,-4);x.lineTo(L,0);x.lineTo(L-11,4);x.closePath();x.fill();
+  x.lineWidth=4;x.beginPath();x.arc(8,0,7,0,2*Math.PI);x.stroke();
+  const x0=full?40:L*.32,step=(L-16-x0)/n;for(let i=0;i<n;i++){const cx=x0+step*(i+.5),hh=ch*(i%2?.86:1);x.beginPath();rr(x,cx-cw/2,-hh/2+(i%2?2:-1),cw,hh,cw*.32);x.fill()}};
+const ICO={
+  shashlik:{n:"Shashlik",a:2.5,d:x=>{x.save();x.translate(2,62);skewer(x,246,5,30,36,true);x.restore();steam(x,[95,135,175],6,36)}},
+  shashlik2:{n:"Ikki shampur",a:1.35,d:x=>{for(const s of[1,-1]){x.save();x.translate(s>0?6:129,92);x.rotate(s>0?-.62:-Math.PI+.62);if(s<0){x.scale(1,-1)}skewer(x,150,4,24,30,false);x.restore()}}},
+  mangal:{n:"Mangal",a:1.5,d:x=>{flame(x,52,46,30,36);flame(x,78,46,34,44);flame(x,104,46,30,34);x.beginPath();rr(x,10,48,130,8,3);x.fill();
+    x.beginPath();x.moveTo(20,59);x.lineTo(130,59);x.lineTo(121,80);x.lineTo(29,80);x.closePath();x.fill();x.lineWidth=6;x.lineCap="round";x.beginPath();x.moveTo(36,80);x.lineTo(27,97);x.moveTo(114,80);x.lineTo(123,97);x.stroke()}},
+  olov:{n:"Olov",a:.8,d:x=>{flame(x,42,100,78,100)}},
+  qozon:{n:"Qozon (palov)",a:1.5,d:x=>{x.beginPath();x.moveTo(28,38);x.bezierCurveTo(40,8,110,8,122,38);x.closePath();x.fill();x.beginPath();rr(x,6,42,138,9,4);x.fill();
+    x.beginPath();x.moveTo(16,54);x.lineTo(134,54);x.bezierCurveTo(132,84,108,97,75,97);x.bezierCurveTo(42,97,18,84,16,54);x.closePath();x.fill();x.fillRect(0,44,10,5);x.fillRect(140,44,10,5)}},
+  choynak:{n:"Choynak",a:1.3,d:x=>{x.beginPath();x.ellipse(62,63,38,30,0,0,2*Math.PI);x.fill();x.beginPath();rr(x,42,27,40,9,4);x.fill();x.beginPath();x.arc(62,20,6,0,2*Math.PI);x.fill();
+    x.beginPath();x.moveTo(94,58);x.lineTo(121,30);x.lineTo(129,35);x.lineTo(101,76);x.closePath();x.fill();x.lineWidth=7;x.beginPath();x.arc(25,62,17,Math.PI/2,1.5*Math.PI);x.stroke();
+    x.beginPath();rr(x,40,89,44,9,3);x.fill()}},
+  piyola:{n:"Piyola",a:1.2,d:x=>{steam(x,[44,60,76],4,36);x.beginPath();x.moveTo(12,44);x.lineTo(108,44);x.bezierCurveTo(104,80,84,93,60,93);x.bezierCurveTo(36,93,16,80,12,44);x.closePath();x.fill();x.beginPath();rr(x,42,90,36,8,3);x.fill()}},
+  kofe:{n:"Kofe",a:1.35,d:x=>{steam(x,[42,58,74],2,32);x.beginPath();x.moveTo(18,40);x.lineTo(98,40);x.lineTo(92,84);x.bezierCurveTo(90,92,84,94,76,94);x.lineTo(40,94);x.bezierCurveTo(32,94,26,92,24,84);x.closePath();x.fill();
+    x.lineWidth=7;x.beginPath();x.arc(98,62,15,-Math.PI/2,Math.PI/2);x.stroke();x.beginPath();rr(x,3,92,128,7,3);x.fill()}},
+  baliq:{n:"Baliq",a:1.65,d:x=>{x.beginPath();x.ellipse(70,50,58,30,0,0,2*Math.PI);x.fill();x.beginPath();x.moveTo(118,50);x.lineTo(164,20);x.lineTo(156,50);x.lineTo(164,80);x.closePath();x.fill();
+    x.fillStyle="#fff";x.beginPath();x.moveTo(10,46);x.lineTo(-2,40);x.lineTo(-2,56);x.lineTo(10,52);x.closePath();x.fill();x.lineWidth=4;x.strokeStyle="#fff";x.beginPath();x.moveTo(44,18);x.quadraticCurveTo(56,50,44,82);x.stroke();
+    x.beginPath();x.arc(30,42,5,0,2*Math.PI);x.fill();x.fillStyle=x.strokeStyle="#000"}},
+  tovuq:{n:"Tovuq oyog‘i",a:1.15,d:x=>{x.beginPath();x.ellipse(44,42,40,30,-.7,0,2*Math.PI);x.fill();x.lineWidth=11;x.lineCap="round";x.beginPath();x.moveTo(66,64);x.lineTo(96,88);x.stroke();
+    x.beginPath();x.arc(104,84,8,0,2*Math.PI);x.arc(98,96,8,0,2*Math.PI);x.fill()}},
+  burger:{n:"Burger",a:1.3,d:x=>{x.beginPath();x.moveTo(8,44);x.bezierCurveTo(8,6,122,6,122,44);x.closePath();x.fill();x.beginPath();rr(x,4,50,122,13,6);x.fill();x.beginPath();rr(x,8,69,114,22,9);x.fill()}},
+  pitsa:{n:"Pitsa",a:1,d:x=>{x.beginPath();rr(x,6,3,88,14,7);x.fill();x.beginPath();x.moveTo(12,22);x.lineTo(88,22);x.lineTo(50,98);x.closePath();x.fill()}},
+  vilka:{n:"Vilka va pichoq",a:.95,d:x=>{for(let i=0;i<4;i++)x.fillRect(12+i*7.4,4,4.2,30);x.beginPath();rr(x,12,30,26,12,5);x.fill();x.beginPath();rr(x,20,38,10,58,5);x.fill();
+    x.beginPath();x.moveTo(68,4);x.bezierCurveTo(90,12,90,46,80,56);x.lineTo(68,56);x.closePath();x.fill();x.beginPath();rr(x,66,54,13,42,6);x.fill()}},
+  toj:{n:"Toj",a:1.4,d:x=>{x.beginPath();x.moveTo(12,82);x.lineTo(10,30);x.lineTo(42,56);x.lineTo(70,16);x.lineTo(98,56);x.lineTo(130,30);x.lineTo(128,82);x.closePath();x.fill();
+    for(const [a,b] of[[10,24],[70,10],[130,24]]){x.beginPath();x.arc(a,b,7,0,2*Math.PI);x.fill()}x.beginPath();rr(x,10,87,120,11,4);x.fill()}},
+  yurak:{n:"Yurak",a:1.1,d:x=>{x.beginPath();x.moveTo(55,96);x.bezierCurveTo(10,64,0,40,8,22);x.bezierCurveTo(18,0,48,2,55,24);x.bezierCurveTo(62,2,92,0,102,22);x.bezierCurveTo(110,40,100,64,55,96);x.closePath();x.fill()}},
+  yulduz:{n:"Yulduz",a:1.05,d:x=>{x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?21:52;x.lineTo(52+r*Math.cos(a),55+r*Math.sin(a))}x.closePath();x.fill()}},
+  barg:{n:"Barg",a:.9,d:x=>{x.beginPath();x.moveTo(45,2);x.bezierCurveTo(95,30,90,78,45,92);x.bezierCurveTo(0,78,-5,30,45,2);x.closePath();x.fill();x.lineWidth=4;x.beginPath();x.moveTo(45,88);x.lineTo(45,100);x.stroke();
+    x.strokeStyle="#fff";x.lineWidth=3;x.beginPath();x.moveTo(45,14);x.lineTo(45,96);x.stroke();x.strokeStyle="#000"}},
+  gul:{n:"Gul",a:.85,d:x=>{for(let i=0;i<6;i++){const a=i*Math.PI/3;x.beginPath();x.arc(42+19*Math.cos(a),32+19*Math.sin(a),13,0,2*Math.PI);x.fill()}x.lineWidth=5;x.beginPath();x.moveTo(42,48);x.lineTo(42,100);x.stroke();
+    x.beginPath();x.moveTo(42,78);x.bezierCurveTo(52,60,74,62,80,66);x.bezierCurveTo(70,78,52,80,42,78);x.closePath();x.fill()}},
+  strelka:{n:"Strelka",a:1.6,d:x=>{x.beginPath();x.moveTo(4,38);x.lineTo(104,38);x.lineTo(104,14);x.lineTo(156,50);x.lineTo(104,86);x.lineTo(104,62);x.lineTo(4,62);x.closePath();x.fill()}},
+  telefon:{n:"Telefon",a:1,d:x=>{x.save();x.translate(50,50);x.rotate(Math.PI/4);x.lineWidth=13;x.lineCap="round";x.beginPath();x.arc(0,24,38,-Math.PI*.82,-Math.PI*.18);x.stroke();
+    for(const s of[-1,1]){x.beginPath();rr(x,s*30-11,-10,22,20,7);x.fill()}x.restore()}}};
+const ICOPTS=[["yoq","Yo‘q"]].concat(Object.entries(ICO).map(([k,v])=>[k,v.n]));
+const hasIc=p=>p.ic&&p.ic!=="yoq"&&ICO[p.ic];
+const icCache={};
+function icoLoops(k){if(icCache[k])return icCache[k];const I=ICO[k],S=5,pad=6,cw=Math.ceil(I.a*100*S)+2*pad,ch=100*S+2*pad,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+  const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.setTransform(S,0,0,S,pad,pad);x.fillStyle=x.strokeStyle="#000";I.d(x);
+  const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;cv.width=cv.height=0;
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const L=traceBin(bin,cw,ch,1).filter(l=>{let a=0;for(let i=0;i<l.length;i++){const [p,q]=l[i],[r,s]=l[(i+1)%l.length];a+=p*s-r*q}return Math.abs(a)/2>S*S*2});
+  L.forEach(l=>l.forEach(([a,b])=>{x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}));
+  const h=y1-y0||1;return icCache[k]={a:(x1-x0)/h,L:L.map(l=>l.map(([a,b])=>[(a-x0)/h,(y1-b)/h]))}}
 P.fields=P.fields.filter(f=>!["fr","mh"].includes(f[0]));
-P.fields.push(["sh","Shakl (matn ichida)","yoq","select",SHOPTS],
+P.fields.push(["sh","Shakl / ramka (matn ichida)","yoq","select",SHOPTS],
   ["us","Kesish usuli","oy","select",[["oy","Harflar plastinkadan o‘yiladi"],["traf","Trafaret — harf ichlari tushmaydi"],["ramka","Ramka + harflar (bir bo‘lak)"]],isSh],
   ["bar","Harflar ramkaga ulanadi","past","select",[["past","Pastdan chiziq bilan"],["ikki","Pastdan va tepadan"]],p=>isSh(p)&&p.us==="ramka"],
+  ["sw","Ramka eni (mm, 0=avto)",0,"num",null,isSh],["shh","Ramka bo‘yi (mm, 0=avto)",0,"num",null,isSh],
+  ["fit","Matn ramkaga sig‘masa","qol","select",[["qol","Matn o‘lchami o‘zgarmasin"],["kich","Matnni avtomatik kichraytir"]],isSh],
+  ["dx","Matnni surish: ◀ chap − / o‘ng + (mm)",0,"num",null,isSh],["dy","Matnni surish: ▼ past − / tepa + (mm)",0,"num",null,isSh],
   ["fr","Chet oralig‘i (mm, 0=avto)",0],
-  ["sw","Shakl eni (mm, 0=avto)",0,"num",null,isSh],["shh","Shakl bo‘yi (mm, 0=avto)",0,"num",null,isSh],
   ["rr","Burchak radiusi (mm)",10,"num",null,p=>p.sh==="tort"],
-  ["fw","Ramka eni (mm)",8,"num",null,p=>isSh(p)&&p.us==="ramka"],
+  ["fw","Ramka chizig‘i qalinligi (mm)",8,"num",null,p=>isSh(p)&&p.us==="ramka"],
   ["kw","Ko‘prik qalinligi (mm)",5,"num",null,p=>isSh(p)&&p.us!=="oy"],
+  ["ic","Qo‘shimcha rasm (shashlik, mangal…)","yoq","select",ICOPTS],
+  ["ip","Rasm joyi","chap","select",[["chap","Matndan chapda"],["ong","Matndan o‘ngda"],["ikki","Ikki yonida"],["tepa","Matn tepasida"],["past","Matn pastida"]],hasIc],
+  ["ihh","Rasm balandligi (mm, 0=avto)",0,"num",null,hasIc],["ig","Rasm va matn orasi (mm, 0=avto)",0,"num",null,hasIc],
+  ["ix","Rasmni surish: ◀ chap − / o‘ng + (mm)",0,"num",null,hasIc],["iy","Rasmni surish: ▼ past − / tepa + (mm)",0,"num",null,hasIc],
   ["mh","Mahkamlash teshigi Ø (0=yo‘q)",0]);
-P.rerender=["sh","us"];
-P.note="Pastdagi namunalardan shriftni tanlang. “Faqat lotin” shriftlarda kirill harflari oddiy shriftdan olinadi. Shakl tanlasangiz, matn uning ichiga joylanadi. «O‘yiladi» usulida O, A, B, 0, 8 ning ichki qismi tushib ketadi — tushmasin desangiz «Trafaret»ni tanlang. «Ramka + harflar»da harflar ramkaga chiziq bilan ulanadi (i, j nuqtasi va ‘ belgisi alohida tushadi).";
+P.rerender=["sh","us","ic"];
+P.note="Pastdagi namunalardan shriftni tanlang. “Faqat lotin” shriftlarda kirill harflari oddiy shriftdan olinadi. Shakl tanlasangiz, matn uning ichiga joylanadi; ramka eni/bo‘yini yozsangiz, harf balandligi o‘zgarmaydi — matnni ◀ ▶ ▲ ▼ tugmalari bilan suring. Qo‘shimcha rasm (shashlik, mangal, choynak…) matn yoniga qo‘shiladi va alohida suriladi. «O‘yiladi» usulida O, A, B, 0, 8 va rasmlarning yopiq ichki qismi tushib ketadi — tushmasin desangiz «Trafaret»ni tanlang. «Ramka + harflar»da harflar va rasm ramkaga chiziq bilan ulanadi.";
 const pip=(pts,x,y)=>{let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const [xi,yi]=pts[i],[xj,yj]=pts[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c};
 const fits=(pts,cx,cy,hw,hh)=>{for(let i=0;i<=24;i++){const t=i/24,X=cx-hw+2*hw*t,Y=cy-hh+2*hh*t;if(!pip(pts,X,cy-hh)||!pip(pts,X,cy+hh)||!pip(pts,cx-hw,Y)||!pip(pts,cx+hw,Y))return false}
   for(const [a,b] of pts)if(a>cx-hw&&a<cx+hw&&b>cy-hh&&b<cy+hh)return false;return true};
 const cen=(S,W,H)=>S.c?S.c(W,H):[W/2,H/2];
-P.build=function(p){if(!isSh(p))return orig.call(this,p);const S=SH[p.sh];if(!S)throw"Shakl topilmadi.";
+const bbox=gs=>{let a=1e9,b=-1e9,c=1e9,d=-1e9;for(const gp of gs)for(const q of gp)for(const [u,v] of q){a=Math.min(a,u);b=Math.max(b,u);c=Math.min(c,v);d=Math.max(d,v)}return [a,b,c,d]};
+P.build=function(p){if(!isSh(p)&&!hasIc(p))return orig.call(this,p);const S=isSh(p)?SH[p.sh]:null;if(isSh(p)&&!S)throw"Shakl topilmadi.";
   const F=LZF[p.font];if(!F)throw"Shrift yuklanmadi.";
   const lines=String(p.txt||"").split(/\r?\n/).map(s=>s.replace(/\s+$/,"")).filter((s,i,a)=>s||i<a.length-1);
-  if(!lines.join("").trim())throw"Matn yozing.";if(p.h<=0)throw"Harf balandligi 0 dan katta bo‘lsin.";
-  const k0=p.h/F.cap,step=1000*k0*(p.lh>0?p.lh:1.3),miss=new Set(),glyphs=[],bases=[];let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  if(!lines.join("").trim()&&!hasIc(p))throw"Matn yozing.";if(p.h<=0)throw"Harf balandligi 0 dan katta bo‘lsin.";
+  const k0=p.h/F.cap,step=1000*k0*(p.lh>0?p.lh:1.3),miss=new Set(),tg=[],bases=[];
   const GL=ch=>{const g=F.g[ch];if(g)return [g,k0];const Sx=LZF.sans;if(Sx&&Sx.g[ch])return [Sx.g[ch],p.h/Sx.cap];miss.add(ch);return [F.g["?"]||Sx.g["?"],k0]};
-  const widths=lines.map(l=>[...l].reduce((w,ch,i)=>{const [g,kk]=GL(ch);return w+g[0]*kk+(i?p.ls:0)},0)),wmax=Math.max(...widths);
+  const widths=lines.map(l=>[...l].reduce((w,ch,i)=>{const [g,kk]=GL(ch);return w+g[0]*kk+(i?p.ls:0)},0)),wmax=Math.max(0,...widths);
   lines.forEach((l,li)=>{let x=(wmax-widths[li])/2;const y=-li*step;bases.push(y);
     [...l].forEach((ch,i)=>{if(i)x+=p.ls;const [g,kk]=GL(ch),gp=[];
-      for(const c of g[1]){const pts=c.map(([u,v])=>[x+u*kk,y+v*kk]);pts.forEach(([a,b])=>{minx=Math.min(minx,a);maxx=Math.max(maxx,a);miny=Math.min(miny,b);maxy=Math.max(maxy,b)});gp.push(pts)}
-      if(gp.length)glyphs.push(gp);x+=g[0]*kk})});
-  if(!glyphs.length)throw"Matnda kesiladigan harf yo‘q.";
+      for(const c of g[1])gp.push(c.map(([u,v])=>[x+u*kk,y+v*kk]));
+      if(gp.length)tg.push(gp);x+=g[0]*kk})});
+  if(!tg.length&&!hasIc(p))throw"Matnda kesiladigan harf yo‘q.";
+  /* qo‘shimcha rasm */
+  const ig=[],icC=[];
+  if(hasIc(p)){const I=icoLoops(p.ic);let [tx0,tx1,ty0,ty1]=tg.length?bbox(tg):[0,0,0,p.h];
+    const side=!["tepa","past"].includes(p.ip),ih=+p.ihh>0?+p.ihh:side?Math.max(ty1-ty0,p.h*1.25):p.h*1.4,iw=I.a*ih,gap=tg.length?(+p.ig>0?+p.ig:p.h*.3):0,tcx=(tx0+tx1)/2,tcy=(ty0+ty1)/2;
+    if(ih>3000)throw"Rasm juda katta.";
+    const put=(cx,cy,mir)=>{ig.push(I.L.map(l=>l.map(([u,v])=>[cx+(mir?-1:1)*(u-I.a/2)*ih,cy+(v-.5)*ih])));icC.push(cy)};
+    const pos=p.ip||"chap";
+    if(pos==="chap"||pos==="ikki")put(tx0-gap-iw/2,tcy,false);
+    if(pos==="ong")put(tx1+gap+iw/2,tcy,false);
+    if(pos==="ikki")put(tx1+gap+iw/2,tcy,true);
+    if(pos==="tepa")put(tcx,ty1+gap+ih/2,false);
+    if(pos==="past")put(tcx,ty0-gap-ih/2,false)}
+  const glyphs=tg.concat(ig),isIc=glyphs.map((_,i)=>i>=tg.length),[minx,maxx,miny,maxy]=bbox(glyphs);
+  const DX=isSh(p)?+p.dx||0:0,DY=isSh(p)?+p.dy||0:0,IX=+p.ix||0,IY=+p.iy||0,off=i=>isIc[i]?[IX,IY]:[DX,DY];
   const tw=maxx-minx,th=maxy-miny,m=(p.fr>0?p.fr:Math.max(8,p.h*.3))+(p.us==="ramka"?(+p.fw>0?+p.fw:8):0),warn=[];if(miss.size)warn.push("Shriftda yo‘q belgilar «?» bilan almashtirildi: "+[...miss].join(" "));
+  if(!S){/* shaklsiz: harflar + rasm, kerak bo‘lsa plastinka */
+    const gs=glyphs.map((gp,i)=>{const [a,b]=off(i);return gp.map(c=>c.map(([u,v])=>[u+a,v+b]))}),[x0,x1,y0,y1]=bbox(gs);this.warn=warn.join(" ");
+    let out="";const fr=p.fr>0?+p.fr:0,ox=-x0+fr,oy=-y0+fr;for(const gp of gs)for(const c of gp)out+=E.poly(c.map(([a,b])=>[a+ox,b+oy]));
+    if(fr>0){const W=x1-x0+2*fr,H=y1-y0+2*fr;out=roundRect(W,H,Math.min(fr/2,10))+out;
+      if(p.mh>0){if(p.mh>=fr)throw"Mahkamlash teshigi plastinka chetiga sig‘maydi — chetni kattalashtiring.";[[fr/2,fr/2],[W-fr/2,fr/2],[W-fr/2,H-fr/2],[fr/2,H-fr/2]].forEach(([a,b])=>out+=E.circle(a,b,p.mh/2))}}
+    return out}
+  /* har bo‘lak (matn, rasm) uchun alohida to‘rtburchak — surilganda ham shakl ichida qolishini tekshiramiz */
+  const parts=[];{const tb=tg.length?bbox(tg):null;if(tb)parts.push({b:tb,o:[DX,DY]});ig.forEach(g=>parts.push({b:bbox([g]),o:[IX,IY]}))}
+  const mx=(minx+maxx)/2,my=(miny+maxy)/2;
+  const okP=(W,H,t,useOff)=>{const pts=S.f(W,H,p),[cx,cy]=cen(S,W,H);return parts.every(({b,o})=>{const [a,c]=useOff?o:[0,0];
+      return fits(pts,cx+a+((b[0]+b[1])/2-mx)*t,cy+c+((b[2]+b[3])/2-my)*t,(b[1]-b[0])*t/2+m,(b[3]-b[2])*t/2+m)})};
   const ok=(W,H,t)=>{const [cx,cy]=cen(S,W,H);return fits(S.f(W,H,p),cx,cy,tw*t/2+m,th*t/2+m)};
   let W,H;
   if(S.auto){[W,H]=S.auto(tw,th,m);for(let i=0;i<300&&!ok(W,H,1);i++){W*=1.02;H*=1.02}}
   else{let lo=1,hi=20*(tw+th+2*m);for(let i=0;i<40;i++){const s=(lo+hi)/2;ok(S.a*s,s,1)?hi=s:lo=s}H=hi;W=S.a*hi}
   let t=1;const sw=+p.sw>0?+p.sw:0,sh=+p.shh>0?+p.shh:0;
-  if(sw||sh){if(sw&&sh){W=sw;H=sh}else if(sw){H=H*sw/W;W=sw}else{W=W*sh/H;H=sh}
-    if(!ok(W,H,1)){let lo=0,hi=1;for(let i=0;i<30;i++){const s=(lo+hi)/2;ok(W,H,s)?lo=s:hi=s}t=lo;
-      if(t<.05)throw"Matn bu shaklga sig‘maydi — shaklni kattalashtiring yoki chet oralig‘ini kamaytiring.";warn.push(`Harflar shaklga sig‘ishi uchun ${(p.h*t).toFixed(1)} mm gacha kichraytirildi.`)}}
+  if(sw||sh){if(sw&&sh){W=sw;H=sh}else if(sw){H=H*sw/W;W=sw}else{W=W*sh/H;H=sh}}
   if(W>6000||H>6000)throw"Shakl juda katta chiqdi — matnni qisqartiring yoki o‘lchamni kiriting.";
-  const pts=S.f(W,H,p),[cx,cy]=cen(S,W,H),tx=v=>cx+(v[0]-(minx+maxx)/2)*t,ty=v=>cy+(v[1]-(miny+maxy)/2)*t,G=glyphs.map(gp=>gp.map(c=>c.map(v=>[tx(v),ty(v)])));
+  if(!okP(W,H,1,true)){let lo=0,hi=1;for(let i=0;i<30;i++){const s=(lo+hi)/2;okP(W,H,s,true)?lo=s:hi=s}
+    if(p.fit==="kich"&&(sw||sh)){t=lo;if(t<.05)throw"Matn bu ramkaga sig‘maydi — ramkani kattalashtiring yoki chet oralig‘ini kamaytiring.";warn.push(`Harflar ramkaga sig‘ishi uchun ${(p.h*t).toFixed(1)} mm gacha kichraytirildi.`)}
+    else warn.push(`⚠ Matn yoki rasm ramka chetiga tegib/chiqib ketyapti (chet oralig‘i ${m.toFixed(0)} mm hisobida).`+(lo>.05?` Shu joyda harf balandligi ${(p.h*lo).toFixed(0)} mm gacha bo‘lsa sig‘adi. `:" ")+"Ramkani kattalashtiring, matnni suring yoki harfni kichraytiring.")}
+  const pts=S.f(W,H,p),[cx,cy]=cen(S,W,H),G=glyphs.map((gp,i)=>{const [a,b]=off(i);return gp.map(c=>c.map(v=>[cx+a+(v[0]-mx)*t,cy+b+(v[1]-my)*t]))});
+  const tyT=v=>cy+DY+(v-my)*t,tyI=v=>cy+IY+(v-my)*t;
+  const boxes=G.map(gp=>bbox([gp]));const hitBox=(a,b,r)=>boxes.some(([x0,x1,y0,y1])=>a+r>x0-1&&a-r<x1+1&&b+r>y0-1&&b-r<y1+1);
   // teshiklar
-  const holes=[];if(p.mh>0&&p.us==="ramka")warn.push("«Ramka» usulida mahkamlash teshigi qo‘yilmaydi — ramkaning o‘zidan mahkamlang.");if(p.mh>0&&p.us!=="ramka"){const r=p.mh/2,hw=tw*t/2,hh=th*t/2;
+  const holes=[];if(p.mh>0&&p.us==="ramka")warn.push("«Ramka» usulida mahkamlash teshigi qo‘yilmaydi — ramkaning o‘zidan mahkamlang.");if(p.mh>0&&p.us!=="ramka"){const r=p.mh/2,[gx0,gx1,gy0,gy1]=bbox(G),hw=(gx1-gx0)/2,hh=(gy1-gy0)/2,bx=(gx0+gx1)/2,by=(gy0+gy1)/2;
     if(p.sh==="tort"){const q=Math.max(r+3,(+p.rr||0)*.6,Math.min(m/2,30));[[q,q],[W-q,q],[W-q,H-q],[q,H-q]].forEach(h=>holes.push(h))}
-    else if(["yurak","yulduz","qalqon","uy","arka","bulut"].includes(p.sh)){let yt=cy;while(yt<H*2&&pip(pts,cx,yt))yt+=.5;const y=(yt+cy+hh)/2;holes.push([cx,y])}
-    else{let xl=cx,xr=cx;while(xl>-W&&pip(pts,xl,cy))xl-=.5;while(xr<2*W&&pip(pts,xr,cy))xr+=.5;holes.push([(xl+cx-hw)/2,cy],[(xr+cx+hw)/2,cy])}
+    else if(["yurak","yulduz","qalqon","uy","arka","bulut"].includes(p.sh)){let yt=cy;while(yt<H*2&&pip(pts,cx,yt))yt+=.5;const y=(yt+by+hh)/2;holes.push([cx,y])}
+    else{let xl=cx,xr=cx;while(xl>-W&&pip(pts,xl,cy))xl-=.5;while(xr<2*W&&pip(pts,xr,cy))xr+=.5;holes.push([(xl+bx-hw)/2,cy],[(xr+bx+hw)/2,cy])}
     for(const [a,b] of holes){let good=true;for(let i=0;i<16;i++){const g=i*Math.PI/8;if(!pip(pts,a+(r+2)*Math.cos(g),b+(r+2)*Math.sin(g)))good=false}
-      if(!good||(a+r>cx-hw-1&&a-r<cx+hw+1&&b+r>cy-hh-1&&b-r<cy+hh+1))throw"Mahkamlash teshigi sig‘maydi — chet oralig‘ini kattalashtiring yoki teshikni kichraytiring."}}
+      if(!good||hitBox(a,b,r))throw"Mahkamlash teshigi sig‘maydi — chet oralig‘ini kattalashtiring, matnni suring yoki teshikni kichraytiring."}}
   this.warn=warn.join(" ");
   if(p.us==="oy"){let out=p.sh==="doira"?E.circle(W/2,H/2,W/2):p.sh==="tort"&&+p.rr>0?roundRect(W,H,Math.min(+p.rr,W/2-.01,H/2-.01)):E.poly(pts);
     for(const gp of G)for(const c of gp)out+=E.poly(c);for(const [a,b] of holes)out+=E.circle(a,b,p.mh/2);return out}
@@ -2165,12 +2261,37 @@ P.build=function(p){if(!isSh(p))return orig.call(this,p);const S=SH[p.sh];if(!S)
   return E.poly(pts.map(([a,b])=>[a+O,b+O]))+rcut(W+2*O,H+2*O,T=>{const x=T.x,sp=T.poly(pts.map(([a,b])=>[a+O,b+O]));
     if(p.us==="ramka"){const fw=+p.fw>0?+p.fw:8;x.save();x.clip(sp);x.fillStyle="#000";x.fill(sp);x.strokeStyle="#fff";x.lineJoin="round";x.lineWidth=2*fw*T.sc;x.stroke(sp);
       for(const gp of G)T.metal(T.contours(gp,O,O),"evenodd");
-      const cap=p.h*t;bases.forEach(b=>{const y=ty([0,b])+O;const bar=yy=>{x.fillStyle="#fff";x.fillRect(0,T.Y(yy+kw),x.canvas.width,kw*T.sc)};bar(y-kw*.4);if(p.bar==="ikki")bar(y+cap-kw*.6)});x.restore()}
+      const bar=yy=>{x.fillStyle="#fff";x.fillRect(0,T.Y(yy+kw),x.canvas.width,kw*T.sc)};
+      if(tg.length){const cap=p.h*t;bases.forEach(b=>{const y=tyT(b)+O;bar(y-kw*.4);if(p.bar==="ikki")bar(y+cap-kw*.6)})}
+      icC.forEach(c=>bar(tyI(c)+O-kw/2));x.restore()}
     else{for(const gp of G){T.cut(T.contours(gp,O,O),"evenodd");
         gp.forEach((c,i)=>{const [a,b]=c[0];if(!gp.some((d,j)=>j!==i&&pip(d,a,b)))return;let x0=1e9,x1=-1e9;c.forEach(v=>{x0=Math.min(x0,v[0]);x1=Math.max(x1,v[0])});
           let y0=1e9,y1=-1e9;gp.forEach(d=>d.forEach(v=>{y0=Math.min(y0,v[1]);y1=Math.max(y1,v[1])}));T.line([(x0+x1)/2+O,y0-1+O],[(x0+x1)/2+O,y1+1+O],kw,true,"butt")})}}
     for(const [a,b] of holes)T.cut(T.circ(a+O,b+O,p.mh/2))}).out};
-P.label=p=>(isSh(p)?SH[p.sh]?.n+" ":"")+"Matn "+String(p.txt||"").split(/\r?\n/)[0].slice(0,20);
+/* rasmlar galereyasi va surish tugmalari */
+let icThumbs=null;
+const _rpT=renderParams;renderParams=function(){_rpT();if(part!=="text")return;const host=$("params");if(!host)return;const v=vals.text;
+  const save=()=>{try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){}};
+  if(isSh(v)||hasIc(v)){const pad=document.createElement("div");pad.className="mvpad wide";
+    const tgts=[];if(isSh(v))tgts.push(["t","Matn","dx","dy"]);if(hasIc(v))tgts.push(["i","Rasm","ix","iy"]);
+    pad.innerHTML=`<div class="mvh"><b>Surish</b>${tgts.length>1?`<span class="mvsel">${tgts.map(([k,n],i)=>`<button type="button" data-tg="${k}" aria-pressed="${!i}">${n}</button>`).join("")}</span>`:`<span>${tgts[0][1]}</span>`}
+      <select id="mvStep" aria-label="Qadam"><option value="1">1 mm</option><option value="5" selected>5 mm</option><option value="10">10 mm</option><option value="25">25 mm</option></select></div>
+      <div class="mvg"><span></span><button type="button" data-mv="0,1" aria-label="Tepaga">▲</button><span></span><button type="button" data-mv="-1,0" aria-label="Chapga">◀</button><button type="button" data-mv="c" aria-label="Markazga">⊙</button><button type="button" data-mv="1,0" aria-label="O‘ngga">▶</button><span></span><button type="button" data-mv="0,-1" aria-label="Pastga">▼</button><span></span></div>`;
+    const anc=($("g-text-dy")||$("g-text-iy"));(anc?anc.closest(".field"):host).insertAdjacentElement(anc?"afterend":"beforeend",pad);let cur=tgts[0];
+    pad.addEventListener("click",e=>{const s=e.target.closest("button[data-tg]");if(s){cur=tgts.find(t=>t[0]===s.dataset.tg);pad.querySelectorAll("[data-tg]").forEach(b=>b.setAttribute("aria-pressed",b===s));return}
+      const b=e.target.closest("button[data-mv]");if(!b)return;const [,,kx,ky]=cur,st=+$("mvStep").value||5;
+      if(b.dataset.mv==="c"){v[kx]=0;v[ky]=0}else{const [a,c]=b.dataset.mv.split(",").map(Number);v[kx]=Math.round(((+v[kx]||0)+a*st)*10)/10;v[ky]=Math.round(((+v[ky]||0)+c*st)*10)/10}
+      [kx,ky].forEach(k=>{const el=$(`g-text-${k}`);if(el)el.value=v[k]});save();qBuild()})}
+  if(!icThumbs){icThumbs={};const css=getComputedStyle(document.documentElement),fg=css.getPropertyValue("--fg").trim()||"#222";
+    for(const [k,I] of Object.entries(ICO)){const c=document.createElement("canvas"),Z=96;c.width=Z;c.height=Z;const x=c.getContext("2d"),s=Math.min(.78,.78/I.a)*Z/100;
+      x.fillStyle="#fff";x.fillRect(0,0,Z,Z);x.translate((Z-I.a*100*s)/2,(Z-100*s)/2);x.scale(s,s);x.fillStyle=x.strokeStyle="#000";try{I.d(x)}catch(_){}
+      x.setTransform(1,0,0,1,0,0);const im=x.getImageData(0,0,Z,Z),D=im.data,hx=fg.startsWith("#")&&fg.length>=7?[1,3,5].map(i=>parseInt(fg.substr(i,2),16)):[34,34,34];
+      for(let i=0;i<D.length;i+=4){const a=255-D[i];D[i]=hx[0];D[i+1]=hx[1];D[i+2]=hx[2];D[i+3]=a}x.putImageData(im,0,0);icThumbs[k]=c.toDataURL()}}
+  const div=document.createElement("div");div.className="gal igal wide";
+  div.innerHTML=`<button type="button" data-ic="yoq" aria-pressed="${!hasIc(v)}"><span class="ino">✕</span><span>Rasmsiz</span></button>`+Object.entries(icThumbs).map(([k,u])=>`<button type="button" data-ic="${k}" aria-pressed="${k===v.ic}" title="${ICO[k].n}"><img src="${u}" alt=""><span>${ICO[k].n}</span></button>`).join("");
+  const sel=$("g-text-ic");(sel?sel.closest(".field"):host).insertAdjacentElement(sel?"afterend":"beforeend",div);
+  div.addEventListener("click",e=>{const b=e.target.closest("button[data-ic]");if(!b)return;v.ic=b.dataset.ic;save();renderParams()})};
+P.label=p=>(isSh(p)?SH[p.sh]?.n+" ":"")+"Matn "+String(p.txt||"").split(/\r?\n/)[0].slice(0,20)+(hasIc(p)?" + "+ICO[p.ic].n:"");
 HEAVY.add("text");
 const v=vals.text;P.fields.forEach(([id,,d])=>{if(v[id]===undefined)v[id]=d})})();
 
