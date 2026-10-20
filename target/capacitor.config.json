@@ -1,0 +1,6 @@
+{
+  "appId": "uz.target.yordamchi",
+  "appName": "Target yordamchi",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
