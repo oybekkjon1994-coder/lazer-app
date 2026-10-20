@@ -1528,7 +1528,7 @@ function gateDesign(id,cw,ch,p,bw,api){const m=Math.max(20,Math.min(45,Math.min(
     case"katta_med":P(ring(0,0,uw,uh,bw),uw,uh,m,m);break}}
 PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender:["pt","tur","tp","bz","lb"],
   note:"Rama profil trubadan; profillar oldinga bo‘rtib turadi, oralig‘iga list qo‘yiladi (tekis yoki qirralari bukilgan «tarelka» qilib). Har bir katakka bezak yopishtiriladi. Tepada naqshli fortochka bo‘lishi mumkin. Lazer detallari DXF da, truba kesish ro‘yxati, list o‘lchamlari va narx pastda.",
-  fields:[["tur","Turi","d2k","select",GT],["W","Umumiy eni (mm)",3600],["H","Umumiy bo‘yi (mm)",2600],["kw","Kalitka eni (mm)",950,"num",null,p=>/k/.test(p.tur)&&p.tur!=="d2i"],
+  fields:[["tur","Turi","d2k","select",GT],["W","Umumiy eni (mm)",3600],["H","Umumiy bo‘yi (mm)",2600],["kw","Kalitka eni (mm)",950,"num",null,p=>/k/.test(p.tur)&&p.tur!=="d2i"],["ki","Kalitka qaysi tabaqada","chap","select",[["chap","Chap tabaqada"],["ong","O‘ng tabaqada"]],p=>p.tur==="d2i"],["kiw","Ichki kalitka eni (mm)",900,"num",null,p=>p.tur==="d2i"],["kih","Ichki kalitka bo‘yi (mm)",2000,"num",null,p=>p.tur==="d2i"],
     ["ht","Tepadagi fortochka balandligi (0 = yo‘q, mm)",450,"num",null,p=>!isPanT(p.tur)],
     ["tp","Tepasi","tekis","select",[["tekis","To‘g‘ri"],["arka","Arka (o‘rtasi baland)"],["botiq","Botiq (o‘rtasi past)"]]],["f","Yoy balandligi (mm)",200,"num",null,p=>p.tp!=="tekis"],
     ["bz","Yuz bezagi","filenka","select",GB],["fn","Har tabaqada katak — ustun",2],["nr","Katak — qator",1],["bw","Bezak tasmasi eni (mm)",40],
@@ -1556,9 +1556,9 @@ PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender
       for(let k=0;k<12;k++){const a=x0+pw+(w-2*pw)*k/12,b=x0+pw+(w-2*pw)*(k+1)/12;fbar([a,lowTop(a)-pw/2],[b,lowTop(b)-pw/2])}
       addCut(`Tik ${prof}`,hL);addCut(`Tik ${prof}`,hR);addCut(`Ko‘ndalang ${prof}`,w-2*pw,ht>0||!f?2:1);if(ht===0&&f)addCut(`Yuqori ${prof} (yoy — bukiladi)`,Math.hypot(w,hR-hL)*1.01);
       /* kataklar */
-      const door=tur==="d2i"&&P===parts[0];let cells=[];
-      if(door){const dw=Math.min(900,w-2*pw-160),dh=Math.min(2000,ymin-2*pw-120),dx=x0+(w-dw)/2;fbar([dx-pw/2,pw],[dx-pw/2,pw+dh+pw]);fbar([dx+dw+pw/2,pw],[dx+dw+pw/2,pw+dh+pw]);fbar([dx-pw,pw+dh+pw/2],[dx+dw+pw,pw+dh+pw/2]);
-        addCut(`Kalitka ramasi ${prof}`,dh+pw,2);addCut(`Kalitka ramasi ${prof}`,dw+2*pw,1);cells.push({x:dx,y:pw,w:dw,h:dh});M.boxes.push([dx+dw-70,950,zF,dx+dw-54,1250,zF+30,"decor"]);
+      const door=tur==="d2i"&&P===(p.ki==="ong"?parts[1]:parts[0]);let cells=[];
+      if(door){const dw=Math.max(400,Math.min(p.kiw||900,w-2*pw-160)),dh=Math.max(800,Math.min(p.kih||2000,ymin-3*pw-40)),dx=x0+(w-dw)/2;if((p.kiw||900)>w-2*pw-160)info.push(`Ichki kalitka eni tabaqaga sig‘madi — ${Math.round(dw)} mm qilindi.`);if((p.kih||2000)>ymin-3*pw-40)info.push(`Ichki kalitka bo‘yi ${Math.round(dh)} mm qilindi (tabaqaga sig‘ishi uchun).`);fbar([dx-pw/2,pw],[dx-pw/2,pw+dh+pw]);fbar([dx+dw+pw/2,pw],[dx+dw+pw/2,pw+dh+pw]);fbar([dx-pw,pw+dh+pw/2],[dx+dw+pw,pw+dh+pw/2]);
+        addCut(`Kalitka ramasi ${prof}`,dh+pw,2);addCut(`Kalitka ramasi ${prof}`,dw+2*pw,1);cells.push({x:dx,y:pw,w:dw,h:dh});{const hx=p.ki==="ong"?dx+62:dx+dw-62;M.boxes.push([hx-8,Math.min(950,dh*.45),zF,hx+8,Math.min(1250,dh*.45+300),zF+30,"decor"])}
         cells.push({x:x0+pw,y:pw,w:dx-pw-x0-pw,h:ymin-2*pw,plain:true},{x:dx+dw+pw,y:pw,w:x1-pw-dx-dw-pw,h:ymin-2*pw,plain:true},{x:dx-pw,y:pw+dh+pw,w:dw+2*pw,h:ymin-pw-(pw+dh+pw),plain:true})}
       else if(!pan){const nc=P.k==="K"&&w<800?1:Math.max(1,Math.round(p.fn||2)),nr=Math.max(1,Math.round(p.nr||1)),cw=(w-2*pw-(nc-1)*pw)/nc,chh=(ymin-2*pw-(nr-1)*pw)/nr;
         for(let i=1;i<nc;i++){const x=x0+pw+i*(cw+pw)-pw/2;fbar([x,pw],[x,ymin-pw]);addCut(`Ichki tik ${prof}`,ymin-2*pw)}
@@ -1600,7 +1600,7 @@ PARTS.gatek={group:"tpl",name:"Darvoza / panjara konstruktori",gal:"pt",rerender
     const hm=Math.max(topY(0),topY(W/2),topY(W));M.boxes.push([-300,0,-150,-12,hm+120,150,"stone"],[W+12,0,-150,W+300,hm+120,150,"stone"],[-325,hm+120,-170,13,hm+160,170,"stone"],[W-13,hm+120,-170,W+325,hm+160,170,"stone"]);
     /* hisob */
     const tot=Object.entries(cuts).reduce((s,[k,c])=>s+(+k.split("|")[1])*c,0);
-    info.unshift(`${parts.map(q=>q.k==="K"?"kalitka "+Math.round(q.w):q.k==="S"?"seksiya "+Math.round(q.w):"tabaqa "+Math.round(q.w)).join(" + ")} mm${ht>0?`, fortochka ${ht} mm`:""}.`);
+    info.unshift(`${parts.map(q=>q.k==="K"?"kalitka "+Math.round(q.w):q.k==="S"?"seksiya "+Math.round(q.w):"tabaqa "+Math.round(q.w)).join(" + ")} mm${ht>0?`, fortochka ${ht} mm`:""}${tur==="d2i"?`, ichki kalitka ${p.ki==="ong"?"o‘ng":"chap"} tabaqada`:""}.`);
     info.push(`Profil ${prof}: jami ${fm1(tot)} m (6 metrlik trubadan ~${Math.ceil(tot/5900)} dona). Kesish ro‘yxati: `+Object.entries(cuts).map(([k,c])=>{const [n,l]=k.split("|");return `${n} ${l} mm × ${c}`}).join("; ")+".");
     if(!pan)info.push(p.lb==="buk"&&bz!=="naqsh"?`List ${t} mm: har katakka qirrasi bukilgan tarelka (yoyilmasi DXF da, burchaklari kesilgan, bukish joylari kichik kertik bilan belgilangan).`:`Qoplama list ${t} mm: ${parts.map(q=>Math.round(q.w)+"×"+Math.round(lowTop((q.x0+q.x1)/2))).join(", ")} mm — orqadan payvandlanadi.`);
     Object.entries(lzNotes).forEach(([n,c])=>info.push(`${n}: ${c} dona.`));
