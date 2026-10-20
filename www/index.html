@@ -100,6 +100,11 @@ input,select{font:500 16px var(--mono);padding:10px 12px;border-radius:7px;borde
 .pgroup{flex-basis:100%;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-top:4px}
 .field.wide,.note.wide{grid-column:1/-1}
 textarea{font:500 16px var(--body);padding:10px 12px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;resize:vertical}
+.kbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.kbar button{padding:6px 10px;font-size:13px}
+.kbar button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.ckb{display:grid;gap:4px;margin-top:6px;user-select:none;-webkit-user-select:none}.ckb div{display:flex;gap:3px;justify-content:center}
+.ckb button{flex:1 1 0;min-width:0;padding:9px 0;font:600 16px var(--body);border-radius:6px;touch-action:manipulation}
+.ckb button.w{flex:2 1 0;font-size:13px}.ckb button.uz{color:var(--accent)}
 .gal{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:340px;overflow-y:auto;padding:2px}
 .gal button{padding:2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:1px;font:500 11px var(--mono);color:var(--muted)}
 .fgal{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
@@ -1567,7 +1572,38 @@ renderParams=function(){
       try{localStorage.setItem("lazerParts",JSON.stringify(vals))}catch(_){};clearTimeout(tm);if((P.rerender||[]).includes(id)){renderParams();return}tm=setTimeout(qBuild,part==="image"?250:HEAVY.has(part)?350:60)})});
   qBuild()};
 const _build=build;build=function(){PARTS[part].warn="";_build();const ex=PARTS[part].warn;if(ex){const w=$("gwarn");w.textContent=(w.hidden?"":w.textContent+" ")+ex;w.hidden=false}};
-const _rpG=renderParams;renderParams=function(){_rpG();if(part==="girih")girihGallery();if(part==="text")fontGallery();if(part==="lib")libUI()};
+
+/* kirillcha yozish: lotin → kirill o‘girish va ekrandagi kirill klaviatura */
+const lat2cyr=t=>{t=String(t).replace(/[‘’`ʻʼ]/g,"'");
+  const M={a:"а",b:"б",c:"ц",d:"д",e:"е",f:"ф",g:"г",h:"ҳ",i:"и",j:"ж",k:"к",l:"л",m:"м",n:"н",o:"о",p:"п",q:"қ",r:"р",s:"с",t:"т",u:"у",v:"в",w:"в",x:"х",y:"й",z:"з","'":"ъ",
+    "o'":"ў","g'":"ғ",sh:"ш",ch:"ч",yo:"ё",yu:"ю",ya:"я",ye:"е"};
+  return t.replace(/o'|g'|sh|ch|yo(?!')|yu|ya|ye|[a-z']/gi,(m,i,all)=>{const lo=m.toLowerCase();let r=M[lo];
+    if(lo==="e"&&!/[a-zа-яёўқғҳ']/i.test(all[i-1]||""))r="э";
+    if(lo==="'"&&!/[a-z]/i.test(all[i-1]||""))return m;
+    return m[0]!==m[0].toLowerCase()?r.toUpperCase():r})};
+let ckbOpen=false,ckbUp=true;
+const CKB=[["й","ц","у","к","е","н","г","ш","щ","з","х"],["ф","ы","в","а","п","р","о","л","д","ж","э"],["я","ч","с","м","и","т","ь","б","ю","ъ","ё"],["ў","қ","ғ","ҳ"]];
+function cyrTools(){document.querySelectorAll("#params textarea").forEach(ta=>{if(ta.dataset.ck)return;ta.dataset.ck=1;
+  const bar=document.createElement("div");bar.className="kbar";
+  bar.innerHTML=`<button type="button" data-k="kb" aria-pressed="${ckbOpen}">⌨ Кирилл клавиатура</button><button type="button" data-k="tr">Lotin → Кирилл</button>`;
+  const kb=document.createElement("div");kb.className="ckb";kb.hidden=!ckbOpen;
+  const draw=()=>{kb.innerHTML=`<div>${"1234567890".split("").map(c=>`<button type="button" data-c="${c}">${c}</button>`).join("")}</div>`+CKB.map((r,ri)=>`<div>${r.map(c=>`<button type="button" data-c="${c}"${ri===3?' class="uz"':""}>${ckbUp?c.toUpperCase():c}</button>`).join("")}${ri===3?`<button type="button" class="w" data-c="sh">${ckbUp?"⇧ КАТТА":"⇧ кичик"}</button><button type="button" class="w" data-c="bs">⌫</button>`:""}</div>`).join("")+
+    `<div><button type="button" data-c=",">,</button><button type="button" data-c="-">-</button><button type="button" class="w" style="flex:5 1 0" data-c=" ">bo‘sh joy</button><button type="button" data-c=".">.</button><button type="button" class="w" data-c="nl">↵ qator</button></div>`};
+  draw();ta.insertAdjacentElement("afterend",bar);bar.insertAdjacentElement("afterend",kb);
+  const setMode=()=>{ta.inputMode=ckbOpen?"none":"text";kb.hidden=!ckbOpen;bar.querySelector('[data-k="kb"]').setAttribute("aria-pressed",ckbOpen)};setMode();
+  const put=(txt,del)=>{const foc=document.activeElement===ta,a=foc?ta.selectionStart:ta.value.length,b=foc?ta.selectionEnd:a,v=ta.value;
+    if(del){if(a!==b){ta.value=v.slice(0,a)+v.slice(b);ta.setSelectionRange(a,a)}else if(a>0){const pre=[...v.slice(0,a)];pre.pop();const s2=pre.join("");ta.value=s2+v.slice(a);ta.setSelectionRange(s2.length,s2.length)}}
+    else{ta.value=v.slice(0,a)+txt+v.slice(b);ta.setSelectionRange(a+txt.length,a+txt.length)}
+    ta.dispatchEvent(new Event("input",{bubbles:true}))};
+  kb.addEventListener("pointerdown",e=>e.preventDefault());
+  kb.addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;const c=b.dataset.c;
+    if(c==="sh"){ckbUp=!ckbUp;draw();return}if(c==="bs")return put("",1);if(c==="nl")return put("\n");
+    put(c.length===1&&/[а-яёўқғҳ]/.test(c)&&ckbUp?c.toUpperCase():c)});
+  bar.addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b)return;
+    if(b.dataset.k==="kb"){ckbOpen=!ckbOpen;document.querySelectorAll("#params .ckb").forEach(k=>k.hidden=!ckbOpen);document.querySelectorAll("#params textarea").forEach(t=>t.inputMode=ckbOpen?"none":"text");
+      document.querySelectorAll('#params .kbar [data-k="kb"]').forEach(x=>x.setAttribute("aria-pressed",ckbOpen));if(ckbOpen){ta.blur();ta.focus({preventScroll:true})}return}
+    const nv=lat2cyr(ta.value);if(nv!==ta.value){ta.value=nv;ta.dispatchEvent(new Event("input",{bubbles:true}))}})})}
+const _rpG=renderParams;renderParams=function(){_rpG();cyrTools();if(part==="girih")girihGallery();if(part==="text")fontGallery();if(part==="lib")libUI()};
 let fThumbs=null;
 function fontGallery(){const host=$("params");if(!host)return;
   if(!fThumbs){fThumbs={};const css=getComputedStyle(document.documentElement),fg=css.getPropertyValue("--fg").trim()||"#222",bg=css.getPropertyValue("--bg").trim()||"#fff";
