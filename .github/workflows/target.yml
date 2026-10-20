@@ -1,0 +1,87 @@
+name: Target yordamchi APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['target/**', '.github/workflows/target.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: target
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Kutubxonalarni o'rnatish
+        run: npm install --no-audit --no-fund
+
+      - name: Android loyihasini yaratish
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Ikonka va splash
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#5b3df5' --splashBackgroundColor '#5b3df5' || echo "Ikonka yaratilmadi"
+
+      - name: Versiya raqami
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Sotuv APK (aktivatsiyali)
+        working-directory: target/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Imzolash (sotuv)
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks ../signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out target-yordamchi.apk aligned.apk
+          rm aligned.apk
+
+      - name: Egasi APK (aktivatsiyasiz)
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          grep -q 'async function licInit(){if(!isNative()){' www/index.html
+          sed -i 's/async function licInit(){if(!isNative()){/async function licInit(){if(true){/' www/index.html
+          npx cap sync android
+          sed -i "s/versionCode [0-9]*/versionCode $((1000 + ${{ github.run_number }}))/" android/app/build.gradle
+          (cd android && ./gradlew assembleRelease --no-daemon)
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks ../signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out target-egasi.apk aligned.apk
+
+      - name: Sotuv versiyasi — Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: target-1.0.${{ github.run_number }}
+          name: Target yordamchi ${{ github.run_number }}
+          files: target/target-yordamchi.apk
+
+      - name: Egasi versiyasi — yopiq qoralama
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: target-egasi-${{ github.run_number }}
+          name: "EGASI — Target ${{ github.run_number }} (maxfiy)"
+          draft: true
+          files: target/target-egasi.apk
