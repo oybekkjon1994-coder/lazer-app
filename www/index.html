@@ -217,6 +217,14 @@ body.shop .card{border-radius:16px}
 .sh-tile .tn{position:absolute;left:16px;bottom:18px;right:66px;z-index:3;font:800 clamp(17px,5vw,23px) var(--display);color:#fff;line-height:1.1;text-shadow:0 2px 6px rgba(0,0,0,.4);overflow-wrap:normal;hyphens:none}
 .sh-tile .ta{position:absolute;right:12px;bottom:12px;z-index:3;width:48px;height:48px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .sh-tile .ill{position:absolute;left:13%;top:19%;width:74%;z-index:1;filter:drop-shadow(0 6px 8px rgba(120,50,0,.35))}.sh-tile .ill svg,.sh-row .ri svg{display:block;width:100%;height:auto}.sh-row .ri{padding:8px}
+.zbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.zov{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column}
+.zbar{display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:#111;color:#fff}
+.zbar b{flex:1;min-width:0;font:700 17px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zbar .zk{font:500 12px var(--mono);opacity:.8;white-space:nowrap}
+.zbar button{width:42px;height:42px;flex:none;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px;line-height:1}
+.zov canvas{flex:1;width:100%;min-height:0;aspect-ratio:auto;border-radius:0;touch-action:none;background:var(--bg)}
+.zhint{margin:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--muted);text-align:center}
 .sh-empty{color:var(--sh-mut);text-align:center;padding:20px 0;grid-column:1/-1}
 .sh-list{display:flex;flex-direction:column;gap:10px}
 .sh-row{display:grid;grid-template-columns:72px 1fr 40px;gap:14px;align-items:center;padding:10px;border:1px solid var(--sh-line);border-radius:18px;background:var(--sh-card);text-align:left;color:var(--sh-ink)}
@@ -913,6 +921,70 @@ function hankin(T,deg,dl=0){const th=deg*Math.PI/180,c=Math.cos(th),sn=Math.sin(
       if(t<=0||u<=0||t>R||u>R)continue;
       V.push([m1,[m1[0]+t*r1[0],m1[1]+t*r1[1]],m2])}}
   return V}
+
+Object.assign(GFAM,{"33434":"Kvadrat-uchburchak (aylanma)"});
+for(const a of [30,40,55,70,80]){gNo++;GIRIH["33434_"+a]={t:"33434",a,n:`${gNo}. ${GFAM["33434"]} · ${a}°`}}
+[["4444",60,45],["4444",40,45],["4444",80,45],["488",45,45],["488",67.5,45],["488",30,45],["4612",70,90],["4612",45,90],["31212",72,90],["666",60,90],["666",35,90],["3636",70,90],["3464",65,90],["33344",40,90],["33434",55,45],["33434",70,45]].forEach(([t,a,r])=>{gNo++;GIRIH[`${t}r${r}_${a}`]={t:t+"@"+r,a,n:`${gNo}. ${GFAM[t]} · ${a}° · burilgan ${r}°`}});
+
+/* yangi naqsh to‘rlari: aylanma kvadrat-uchburchak (3.3.4.3.4) va olti-uchburchak (3.3.3.3.6) */
+function triFill(T,s){const P=[],seen=new Map(),k=(x,y)=>Math.round(x/s*1000)+","+Math.round(y/s*1000);
+  for(const v of T)for(const p of v){const q=k(p[0],p[1]);if(!seen.has(q)){seen.set(q,P.length);P.push(p)}}
+  const cs=s*1.01,G=new Map(),gk=(i,j)=>i*1048576+j,put=(M,x,y,v)=>{const g=gk(Math.floor(x/cs),Math.floor(y/cs));(M.get(g)||M.set(g,[]).get(g)).push(v)};
+  P.forEach((p,i)=>put(G,p[0],p[1],i));const C=new Map();T.forEach(v=>put(C,v.reduce((a,p)=>a+p[0],0)/v.length,v.reduce((a,p)=>a+p[1],0)/v.length,[v.reduce((a,p)=>a+p[0],0)/v.length,v.reduce((a,p)=>a+p[1],0)/v.length]));
+  const near=(M,x,y,f)=>{const I=Math.floor(x/cs),J=Math.floor(y/cs);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const v of M.get(gk(I+a,J+b))||[])if(f(v))return true;return false};
+  const ok=(a,b)=>Math.abs(Math.hypot(P[a][0]-P[b][0],P[a][1]-P[b][1])-s)<s*1e-3;
+  const out=[],done=new Set();
+  for(let i=0;i<P.length;i++){const N=[];near(G,P[i][0],P[i][1],j=>{if(j!==i&&ok(i,j))N.push(j);return false});
+    for(const j of N)for(const l of N){if(j>=l||!ok(j,l))continue;const key=[i,j,l].sort((a,b)=>a-b).join(",");if(done.has(key))continue;done.add(key);
+      const cx=(P[i][0]+P[j][0]+P[l][0])/3,cy=(P[i][1]+P[j][1]+P[l][1])/3;if(near(C,cx,cy,c=>Math.hypot(c[0]-cx,c[1]-cy)<s*.5))continue;out.push([P[i],P[j],P[l]])}}
+  return out}
+const _gTiles=girihTiles;girihTiles=function(kind,s,W,H){if(String(kind).includes("@")){const [k,r]=kind.split("@"),D=Math.ceil(Math.hypot(W,H))+2*s,th=(+r)*Math.PI/180,c=Math.cos(th),sn=Math.sin(th);
+    return girihTiles(k,s,D,D).map(v=>v.map(([x,y])=>{const u=x-D/2,w=y-D/2;return [W/2+u*c-w*sn,H/2+u*sn+w*c]}))}if(kind!=="33434"&&kind!=="33336")return _gTiles(kind,s,W,H);
+  const T=[],cx=W/2,cy=H/2,ext=Math.max(W,H)/2+4*s;
+  if(kind==="33434"){const a=s*Math.sqrt(2+Math.sqrt(3)),n=Math.ceil(ext/a)+1;for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){T.push(regPoly(cx+i*a,cy+j*a,4,s,60));T.push(regPoly(cx+(i+.5)*a,cy+(j+.5)*a,4,s,30))}}
+  else{const a=s*Math.sqrt(7),h=a*Math.sqrt(3)/2,phi=Math.atan(Math.sqrt(3)/5)*180/Math.PI,nj=Math.ceil(ext/h)+1,ni=Math.ceil(ext/a)+nj;
+    for(let j=-nj;j<=nj;j++)for(let i=-ni;i<=ni;i++){const x=cx+i*a+j*a/2,y=cy+j*h;if(Math.abs(x-cx)<ext+a&&Math.abs(y-cy)<ext+a)T.push(regPoly(x,y,6,s,phi))}}
+  return T.concat(triFill(T,s))};
+
+/* naqsh chiziqlarini tekislash: rastrdan olingan zinapoya konturni asl to‘g‘ri chiziqlarga yopishtirish */
+var LSEG=null;
+function lsIndex(S,tol){const cs=Math.max(tol*6,1),G=new Map(),key=(i,j)=>i*1048576+j,lines=[],canon=new Map();
+  for(const [ax,ay,bx,by,w] of S){const dx=bx-ax,dy=by-ay,l=Math.hypot(dx,dy);if(!(l>1e-6))continue;let ux=dx/l,uy=dy/l;if(uy<0||(uy===0&&ux<0)){ux=-ux;uy=-uy}const nx=-uy,ny=ux,c0=nx*ax+ny*ay;
+    for(const off of w>0?[-w/2,w/2]:[0]){const c=c0+off,ck=Math.round(Math.atan2(uy,ux)*2e4)+":"+Math.round(c*500);let id=canon.get(ck);
+      if(id===undefined){id=lines.length;canon.set(ck,id);lines.push({nx,ny,c,ux,uy})}
+      const st=cs*.5,m=Math.ceil((l+2*w)/st),ox=ax+nx*off,oy=ay+ny*off,ex=dx/l,ey=dy/l;
+      for(let k=0;k<=m;k++){const t=-w+k*st,px=ox+ex*t,py=oy+ey*t,I=Math.floor(px/cs),J=Math.floor(py/cs);
+        for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const q=key(I+a,J+b);let arr=G.get(q);if(!arr)G.set(q,arr=[]);if(arr[arr.length-1]!==id&&!arr.includes(id))arr.push(id)}}}}
+  return {lines,G,cs,key,tol}}
+function lineSnap(P,X){const {lines,G,cs,key,tol}=X,n=P.length;if(n<3)return P;
+  const len=new Array(n),cand=P.map(p=>{const ids=G.get(key(Math.floor(p[0]/cs),Math.floor(p[1]/cs)))||[];return ids.filter(id=>{const L=lines[id];return Math.abs(L.nx*p[0]+L.ny*p[1]-L.c)<=tol})});
+  for(let i=0;i<n;i++){const p=P[i],q=P[(i+1)%n];len[i]=Math.hypot(q[0]-p[0],q[1]-p[1])}
+  const ec=[];for(let i=0;i<n;i++){const b=cand[(i+1)%n];ec.push(cand[i].filter(id=>b.includes(id)))}
+  const lab=new Array(n).fill(-1);
+  for(let i=0;i<n;i++){let best=-1,bs=0;for(const id of ec[i]){let sp=len[i];for(let j=1;j<n;j++){const e=(i+j)%n;if(!ec[e].includes(id))break;sp+=len[e]}for(let j=1;j<n;j++){const e=(i-j+n)%n;if(!ec[e].includes(id))break;sp+=len[e]}
+      if(sp>bs){bs=sp;best=id}}if(bs>=2.5*tol)lab[i]=best}
+  if(lab.every(v=>v<0))return P;
+  const same=(a,b)=>a===b||(a<0&&b<0);
+  let s0=-1;for(let i=0;i<n;i++)if(!same(lab[i],lab[(i-1+n)%n])){s0=i;break}if(s0<0)return P;
+  let R=[];for(let k=0;k<n;k++){const i=(s0+k)%n,r=R[R.length-1];if(r&&same(lab[i],r.lab)){r.e.push(i);r.len+=len[i]}else R.push({lab:lab[i],e:[i],len:len[i]})}
+  const maxJ=Math.max(10*tol,1.2),isx=(a,b)=>{const A=lines[a],B=lines[b],det=A.nx*B.ny-A.ny*B.nx;if(Math.abs(det)<.03)return null;return [(A.c*B.ny-B.c*A.ny)/det,(A.nx*B.c-B.nx*A.c)/det]};
+  const st=r=>P[r.e[0]],en=r=>P[(r.e[r.e.length-1]+1)%n],prj=(id,p)=>{const L=lines[id],d=L.nx*p[0]+L.ny*p[1]-L.c;return [p[0]-L.nx*d,p[1]-L.ny*d]};
+  /* burchakdagi mayda qiyshiq bo‘laklarni olib tashlash */
+  if(R.length>2){const keep=R.map(()=>true);for(let i=0;i<R.length;i++){const r=R[i];if(r.lab>=0||r.len>6*tol)continue;const a=R[(i-1+R.length)%R.length],b=R[(i+1)%R.length];
+      if(a.lab<0||b.lab<0||!keep[(i-1+R.length)%R.length])continue;const x=isx(a.lab,b.lab),m=[(st(r)[0]+en(r)[0])/2,(st(r)[1]+en(r)[1])/2];if(x&&Math.hypot(x[0]-m[0],x[1]-m[1])<=maxJ)keep[i]=false}
+    R=R.filter((_,i)=>keep[i]);const M=[];for(const r of R){const q=M[M.length-1];if(q&&same(q.lab,r.lab)&&r.lab>=0){q.e=q.e.concat(r.e);q.len+=r.len}else M.push({...r})}
+    if(M.length>1&&M[0].lab>=0&&same(M[0].lab,M[M.length-1].lab)){const z=M.pop();M[0].e=z.e.concat(M[0].e)}R=M}
+  if(R.length<3)return P;
+  const out=[],m=R.length;
+  for(let i=0;i<m;i++){const A=R[(i-1+m)%m],B=R[i],pa=en(A),pb=st(B),ref=[(pa[0]+pb[0])/2,(pa[1]+pb[1])/2];
+    if(A.lab>=0&&B.lab>=0){const x=isx(A.lab,B.lab);if(x&&Math.hypot(x[0]-ref[0],x[1]-ref[1])<=maxJ)out.push(x);else out.push(prj(A.lab,pa),prj(B.lab,pb))}
+    else if(A.lab>=0)out.push(prj(A.lab,pa));else if(B.lab>=0)out.push(prj(B.lab,pb));else out.push(pb);
+    if(B.lab<0)for(let j=1;j<B.e.length;j++)out.push(P[B.e[j]])}
+  const o2=[];for(const p of out){const q=o2[o2.length-1];if(!q||Math.hypot(p[0]-q[0],p[1]-q[1])>1e-4)o2.push(p)}
+  if(o2.length>2&&Math.hypot(o2[0][0]-o2[o2.length-1][0],o2[0][1]-o2[o2.length-1][1])<=1e-4)o2.pop();
+  const ar=Q=>{let a=0;for(let i=0;i<Q.length;i++){const [x1,y1]=Q[i],[x2,y2]=Q[(i+1)%Q.length];a+=x1*y2-x2*y1}return a/2},a0=ar(P),a1=ar(o2);
+  let per=0;for(let i=0;i<n;i++)per+=len[i];if(o2.length<3||Math.sign(a0)!==Math.sign(a1)||Math.abs(a1-a0)>.08*Math.abs(a0)+per*tol)return P;
+  return o2}
 PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Pastdagi rasmchalardan naqshni tanlang. Naqsh chiziqlari (metall) qoladi, oradagi shakllar kesiladi. Burchakni o‘zgartirib, yulduz shaklini moslang. Katta panelda hisoblash bir necha soniya olishi mumkin.",
   fields:[["pat","Naqsh turi","4612_70","select",Object.entries(GIRIH).filter(([k])=>k.includes("_")).map(([k,g])=>[k,g.n])],["W","Eni (mm)",600],["H","Bo‘yi (mm)",400],["s","Naqsh o‘lchami (mm)",40],["t","Chiziq qalinligi (mm)",4],["a","Yulduz burchagi (0=avto)",0],["m","Rama eni (mm)",10],["min","Mayda bo‘laklarni o‘chirish (mm²)",3]],
   build(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH["4612_70"],ang=p.a>0?p.a:G.a;
@@ -922,7 +994,7 @@ PARTS.girih={group:"tpl",name:"Islomiy naqsh (girih)",note:"Pastdagi rasmchalard
     if(m<t/2||2*m>=Math.min(W,H)-s)throw"Rama eni chiziq qalinligining yarmidan kam bo‘lmasin va panelga sig‘sin.";
     if(ang<5||ang>89)throw"Burchak 5–89° oralig‘ida bo‘lsin.";
     if(W*H/(s*s)>40000)throw"Naqsh juda mayda — o‘lchamini kattalashtiring.";
-    const V=hankin(girihTiles(G.t,s,W,H),ang);
+    const V=hankin(girihTiles(G.t,s,W,H),ang,(G.d||0)*s);
     const sc=Math.min(8,LZRES/Math.max(W,H)),cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
     const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";x.fillRect(1+m*sc,1+m*sc,(W-2*m)*sc,(H-2*m)*sc);
     x.strokeStyle="#fff";x.lineWidth=t*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
@@ -939,7 +1011,7 @@ let gThumbs=null;
 function girihGallery(){const host=$("params");if(!host)return;
   if(!gThumbs){gThumbs={};for(const [k,g] of Object.entries(GIRIH)){if(!k.includes("_"))continue;const S=72,c=document.createElement("canvas");c.width=c.height=S;const x=c.getContext("2d");
     const css=getComputedStyle(document.documentElement);x.fillStyle=css.getPropertyValue("--fg").trim()||"#222";x.fillRect(0,0,S,S);x.strokeStyle=css.getPropertyValue("--cut").trim()||"#d9481a";x.lineWidth=1.6;x.lineJoin="miter";x.beginPath();
-    for(const [a,b,cc] of hankin(girihTiles(g.t,12,S,S),g.a)){x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(cc[0],cc[1])}x.stroke();gThumbs[k]=c.toDataURL()}}
+    for(const [a,b,cc] of hankin(girihTiles(g.t,12,S,S),g.a,(g.d||0)*12)){x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(cc[0],cc[1])}x.stroke();gThumbs[k]=c.toDataURL()}}
   const cur=vals.girih.pat in GIRIH&&String(vals.girih.pat).includes("_")?vals.girih.pat:(Object.entries(GIRIH).find(([k,g])=>!k.includes("_")&&k===vals.girih.pat)||[])[1];
   const curKey=typeof cur==="string"?cur:Object.keys(GIRIH).find(k=>k.includes("_")&&GIRIH[k]===cur);
   const div=document.createElement("div");div.className="gal wide";div.innerHTML=Object.entries(gThumbs).map(([k,u])=>`<button type="button" data-g="${k}" aria-pressed="${k===curKey}" title="${GIRIH[k].n}"><img src="${u}" alt="${GIRIH[k].n}"><span>${GIRIH[k].n.split(".")[0]}</span></button>`).join("");
@@ -1001,7 +1073,7 @@ PARTS.girih.build=function(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH["4612_70
     if(zone==="ringopen"){open=shapeGeom(shp,W,H,2*m+p.bw);if(!open)throw"O‘rtadagi ochiq joyga o‘rin qolmayapti.";}}
   const sc=Math.min(8,LZRES/Math.max(W,H)),o=1,cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
   const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";shapeFill(x,inner,sc,H,o);
-  const V=hankin(girihTiles(G.t,s,W,H),ang);x.strokeStyle="#fff";x.lineWidth=t*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
+  const V=hankin(girihTiles(G.t,s,W,H),ang,(G.d||0)*s);const GL=[];for(const [a,b,c] of V)GL.push([a[0],H-a[1],b[0],H-b[1],t],[b[0],H-b[1],c[0],H-c[1],t]);x.strokeStyle="#fff";x.lineWidth=t*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
   for(const [a,b,c] of V){x.moveTo(o+a[0]*sc,o+a[1]*sc);x.lineTo(o+b[0]*sc,o+b[1]*sc);x.lineTo(o+c[0]*sc,o+c[1]*sc)}x.stroke();
   x.fillStyle="#fff";if(solid)shapeFill(x,solid,sc,H,o);
   let textOut="",warn="";const txt=String(p.txt||"").trim();
@@ -1013,9 +1085,9 @@ PARTS.girih.build=function(p){const {W,H,s,t,m}=p,G=GIRIH[p.pat]||GIRIH["4612_70
       for(const pts of T.polys)textOut+=E.poly(pts.map(([a,b])=>[a+ox,b+oy]));
       if(T.miss.size)warn+="Shriftda yo‘q belgilar: "+[...T.miss].join(" ")+". "}}
   const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;
-  const loops=traceBin(bin,cw,ch,0);let out=shapeDXF(outer),n=0;const minA=Math.max(0,p.min);
+  [inner,solid].forEach(g=>{if(g&&g.t==="p")g.P.forEach((q,i)=>{const r=g.P[(i+1)%g.P.length];GL.push([q[0],q[1],r[0],r[1],0])})});const GX=lsIndex(GL,1.6/sc);const loops=traceBin(bin,cw,ch,0);let out=shapeDXF(outer),n=0;const minA=Math.max(0,p.min);
   for(const L of loops){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
-    if(Math.abs(ar/2)/(sc*sc)<minA)continue;out+=E.poly(L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]));n++}
+    if(Math.abs(ar/2)/(sc*sc)<minA)continue;out+=E.poly(lineSnap(L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]),GX));n++}
   if(!n)throw"Naqsh chiqmadi — chiziq qalinligini kamaytiring yoki o‘lchamni oshiring.";
   if(open)out+=shapeDXF(open);
   this.warn=warn;return out+textOut};
@@ -1086,7 +1158,7 @@ function patternHoles(zones,o){let out="",n=0;if(!o.pat||o.pat==="yoq"||!zones.l
   const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);x.fillStyle="#000";
   for(const [a,b,c,d] of zones)x.fillRect(1+(a-X0)*sc,1+(Y1-d)*sc,(c-a)*sc,(d-b)*sc);
   x.strokeStyle="#fff";x.lineWidth=gap*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
-  for(const [a,b,c] of hankin(girihTiles(G.t,s,W,H),G.a)){x.moveTo(1+a[0]*sc,1+a[1]*sc);x.lineTo(1+b[0]*sc,1+b[1]*sc);x.lineTo(1+c[0]*sc,1+c[1]*sc)}x.stroke();
+  for(const [a,b,c] of hankin(girihTiles(G.t,s,W,H),G.a,(G.d||0)*s)){x.moveTo(1+a[0]*sc,1+a[1]*sc);x.lineTo(1+b[0]*sc,1+b[1]*sc);x.lineTo(1+c[0]*sc,1+c[1]*sc)}x.stroke();
   const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;
   for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
     if(Math.abs(ar/2)/(sc*sc)<3)continue;out+=E.poly(L.map(([u,v])=>[X0+(u-.5)/sc,Y1-(v-.5)/sc]));n++}
@@ -1212,7 +1284,7 @@ function snapLoop(L,X){const {segs,grid,cs,key,loops,tol}=X,step=tol/3,S=[];
     else out.push(r.last)}
   const o2=[];for(const p of out){const q=o2[o2.length-1];if(!q||Math.hypot(p[0]-q[0],p[1]-q[1])>1e-4)o2.push(p)}
   return o2.length>=3?rdpClosed(o2,tol*.05):L}
-function rcut(W,H,paint,opt={}){const minA=opt.min??3,sc=Math.min(8,(opt.res||LZRES)/Math.max(W,H)),o=1,cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+function rcut(W,H,paint,opt={}){LSEG=[];const minA=opt.min??3,sc=Math.min(8,(opt.res||LZRES)/Math.max(W,H)),o=1,cw=Math.ceil(W*sc)+2,ch=Math.ceil(H*sc)+2,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
   const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cw,ch);const X=v=>o+v*sc,Y=v=>o+(H-v)*sc;
   const T={x,sc,W,H,X,Y,
     poly(pts){const p=new Path2D();pts.forEach(([a,b],i)=>i?p.lineTo(X(a),Y(b)):p.moveTo(X(a),Y(b)));p.closePath();return p},
@@ -1237,13 +1309,13 @@ function rcut(W,H,paint,opt={}){const minA=opt.min??3,sc=Math.min(8,(opt.res||LZ
       const G=GIRIH[pat.slice(2)];if(!G)return 0;if(w>=s)throw"Chiziq qalinligi naqsh o‘lchamidan kichik bo‘lsin.";
       if(bw*bh/(s*s)>40000)throw"Naqsh juda mayda — o‘lchamini kattalashtiring.";
       x.fillStyle="#000";x.fill(zone);x.strokeStyle="#fff";x.lineWidth=w*sc;x.lineJoin="miter";x.miterLimit=12;x.lineCap="butt";x.beginPath();
-      for(const [a,b,c] of hankin(girihTiles(G.t,s,bw,bh),G.a)){x.moveTo(X(bx0+a[0]),Y(by0+a[1]));x.lineTo(X(bx0+b[0]),Y(by0+b[1]));x.lineTo(X(bx0+c[0]),Y(by0+c[1]))}x.stroke();
+      const HV=hankin(girihTiles(G.t,s,bw,bh),G.a,(G.d||0)*s);if(LSEG)for(const [a,b,c] of HV)LSEG.push([bx0+a[0],by0+a[1],bx0+b[0],by0+b[1],w],[bx0+b[0],by0+b[1],bx0+c[0],by0+c[1],w]);for(const [a,b,c] of HV){x.moveTo(X(bx0+a[0]),Y(by0+a[1]));x.lineTo(X(bx0+b[0]),Y(by0+b[1]));x.lineTo(X(bx0+c[0]),Y(by0+c[1]))}x.stroke();
       if(mg>0){x.lineWidth=2*mg*sc;x.lineJoin="round";x.stroke(zone)}
       x.fillStyle="#fff";excl.forEach(e=>x.fill(e));return 1}};
   paint(T);
   const d=x.getImageData(0,0,cw,ch).data,bin=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)bin[i]=d[4*i]<128?1:0;cv.width=cv.height=0;
-  const SX=opt.snap&&opt.snap.length?snapIndex(opt.snap,1.7/sc):null;let out="",n=0;for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
-    if(Math.abs(ar/2)/(sc*sc)<minA)continue;const M=L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]);out+=E.poly(SX?snapLoop(M,SX):M);n++}
+  const SX=opt.snap&&opt.snap.length?snapIndex(opt.snap,1.7/sc):null;const LX=LSEG&&LSEG.length?lsIndex(LSEG,1.6/sc):null;LSEG=null;let out="",n=0;for(const L of traceBin(bin,cw,ch,0)){let ar=0;for(let i=0;i<L.length;i++){const [x1,y1]=L[i],[x2,y2]=L[(i+1)%L.length];ar+=x1*y2-x2*y1}
+    if(Math.abs(ar/2)/(sc*sc)<minA)continue;const M=L.map(([u,v])=>[(u-o+.5)/sc,H-(v-o+.5)/sc]);{const M2=SX?snapLoop(M,SX):M;out+=E.poly(LX?lineSnap(M2,LX):M2)}n++}
   return {out,n}}
 const hasPt=p=>p.pt&&p.pt!=="yoq";
 const patFields=(def,s,w,show)=>[["pt","Naqsh",def,"select",PAT_OPTS(),show],["ps","Naqsh / teshik o‘lchami (mm)",s,"num",null,p=>(!show||show(p))&&hasPt(p)],["pw","Chiziq / oraliq qalinligi (mm)",w,"num",null,p=>(!show||show(p))&&hasPt(p)]];
@@ -1363,6 +1435,53 @@ PARTS.shelf={group:"tpl",name:"Polka kronshteyni (dekor)",gal:"pt",rerender:["pt
     let s=E.poly(v)+r.out;if(p.d>0){if(p.d>w-8)throw"Shurup teshigi oyoqqa sig‘maydi.";[[w/2,(B-w)*.3],[w/2,(B-w)*.8],[w+(A-w)*.4,B-w/2],[w+(A-w)*.85,B-w/2]].forEach(([a,b])=>s+=E.circle(a,b,p.d/2))}
     return s},
   label:p=>`Kronshteyn ${p.A}×${p.B}`};
+/* kozirok: yon kronshteyn va old panel (yoy / friz) */
+function mirrorDXF(s,W){const L=s.split("\n");for(let i=0;i+1<L.length;i+=2){const c=L[i];
+    if(c==="10"||c==="11")L[i+1]=f4(W-(+L[i+1]));else if(c==="42")L[i+1]=(-(+L[i+1])).toFixed(8);
+    else if(c==="50"&&L[i+2]==="51"){const a0=+L[i+1],a1=+L[i+3];L[i+1]=f4(180-a1);L[i+3]=f4(180-a0);i+=2}}return L.join("\n")}
+const KOZ_ST=[["botiq","Egri botiq yoy"],["uchburchak","Uchburchak (to‘g‘ri)"],["qavariq","Qavariq yoy (bo‘rtma)"],["tolqin","To‘lqinsimon"]];
+PARTS.kozirok={group:"tpl",name:"Kozirok kronshteyni (yon)",gal:"pt",rerender:["pt"],
+  note:"Kozirokning yon tirgovichi. Devor tomoni tik, tom (list) tomoni yuqorida. «Juft» tanlansa chap va o‘ng (ko‘zgu) birga chiqadi — narxda sonini shunga qarab qo‘ying.",
+  fields:[["st","Ko‘rinishi","botiq","select",KOZ_ST],["A","Chiqishi — gorizontal (mm)",700],["B","Devor tomoni — vertikal (mm)",500],["w","Oyoq eni (mm)",50],
+    ...patFields("g:4612_70",40,5),["m","Naqsh atrofi rama (mm)",10],["d","Teshik Ø (0=yo‘q)",10],["nh","Devorga teshiklar soni",3],
+    ["ju","Nechta","2","select",[["1","1 dona"],["2","Juft (chap + o‘ng)"]]]],
+  build(p){const {A,B,w,m}=p;if(!(A>150&&B>150))throw"Tomonlari kamida 150 mm bo‘lsin.";if(!(w>=25&&w<Math.min(A,B)/2.5))throw"Oyoq eni 25 mm dan katta va tomonlardan ancha kichik bo‘lsin.";
+    const a=A-w,b=B-w,cv=[];
+    if(p.st==="uchburchak")cv.push([A,b]);
+    else if(p.st==="qavariq"){for(let i=1;i<=48;i++){const t=-Math.PI/2+i*Math.PI/96;cv.push([w+a*Math.cos(t),b+b*Math.sin(t)])}}
+    else if(p.st==="tolqin"){const P0=[w,0],P1=[w+a*.12,b*.78],P2=[w+a*.62,b*.12],P3=[A,b];for(let i=1;i<=60;i++){const t=i/60,u=1-t;cv.push([u*u*u*P0[0]+3*u*u*t*P1[0]+3*u*t*t*P2[0]+t*t*t*P3[0],u*u*u*P0[1]+3*u*u*t*P1[1]+3*u*t*t*P2[1]+t*t*t*P3[1]])}}
+    else{for(let i=1;i<=48;i++){const th=Math.PI-i*Math.PI/96;cv.push([A+a*Math.cos(th),b*Math.sin(th)])}}
+    const v=[[0,0],[w,0],...cv,[A,B],[0,B]];
+    const r=rcut(A,B,T=>{const z=T.poly(v),lg=[T.poly([[0,0],[w,0],[w,B],[0,B]]),T.poly([[0,B-w],[A,B-w],[A,B],[0,B]])];
+      if(hasPt(p))T.pattern(z,{pat:p.pt,s:p.ps,w:p.pw,mg:m,excl:lg})},{min:4});
+    let s=E.poly(v)+r.out;
+    if(p.d>0){if(p.d>w-10)throw"Teshik oyoqqa sig‘maydi — teshikni kichraytiring yoki oyoqni kengaytiring.";const nh=Math.max(0,Math.min(8,Math.round(p.nh)));
+      for(let i=0;i<nh;i++){const y=nh===1?B*.5:B*.1+(B*.82-B*.1)*i/(nh-1);s+=E.circle(w/2,Math.min(y,B-w*1.4),p.d/2)}
+      [.45,.85].forEach(f=>s+=E.circle(w+a*f,B-w/2,p.d/2))}
+    if(p.ju==="2")s+=shiftDXF(mirrorDXF(s,A),A+40,0);
+    return s},
+  label:p=>`Kozirok kronshteyni ${p.A}×${p.B}${p.ju==="2"?" (juft)":""}`};
+PARTS.kozpanel={group:"tpl",name:"Kozirok old paneli (yoy / friz)",gal:"pt",rerender:["pt"],
+  note:"Kozirokning old tomonidagi naqshli panel. Pastki yoki yuqori qirrasini yoy qilish mumkin. Rama naqshni o‘rab turadi, burchaklarida mahkamlash teshiklari.",
+  fields:[["fm","Shakli","past","select",[["past","Pastki qirrasi yoy (o‘rtasi baland)"],["yuq","Yuqori qirrasi yoy (gumbaz)"],["ikki","Ikkala qirra yoy (egilgan)"],["tekis","To‘g‘ri to‘rtburchak"]]],
+    ["L","Eni (mm)",1500],["h","Balandligi — chekkada (mm)",300],["f","Yoy balandligi (mm)",120],
+    ...patFields("g:488_67.5",45,5),["m","Rama eni (mm)",25],["d","Mahkamlash teshigi Ø (0=yo‘q)",10]],
+  build(p){const {L,h,m}=p,f=p.fm==="tekis"?0:Math.max(0,p.f);if(!(L>200&&h>80))throw"Eni 200 mm dan, balandligi 80 mm dan katta bo‘lsin.";
+    if(!(m>=8&&2*m<h))throw"Rama eni 8 mm dan katta va balandlikning yarmidan kichik bo‘lsin.";
+    if(f>0&&f>=L/2)throw"Yoy balandligi enining yarmidan kichik bo‘lsin.";
+    const arc=(x)=>{if(!f)return 0;const R=(L*L/4+f*f)/(2*f);return f-(R-Math.sqrt(Math.max(0,R*R-(x-L/2)**2)))},N=80;
+    const lo=x=>p.fm==="past"||p.fm==="ikki"?arc(x):0,hi=x=>h+(p.fm==="yuq"||p.fm==="ikki"?arc(x):0);
+    if(p.fm==="past"&&h-f<2*m+20)throw"Yoy juda baland — o‘rtada panel juda ingichka qolyapti. Balandlikni oshiring yoki yoyni kamaytiring.";
+    const v=[];for(let i=0;i<=N;i++){const x=L*i/N;v.push([x,lo(x)])}for(let i=N;i>=0;i--){const x=L*i/N;v.push([x,hi(x)])}
+    const H=Math.max(...v.map(q=>q[1]));
+    const r=rcut(L,H,T=>{const z=T.poly(v);if(hasPt(p))T.pattern(z,{pat:p.pt,s:p.ps,w:p.pw,mg:m})},{min:4});
+    let s=E.poly(v)+r.out;
+    if(p.d>0){if(p.d>m-6)throw"Teshik ramaga sig‘maydi — ramani kengaytiring yoki teshikni kichraytiring.";
+      [[m/2,lo(m/2)+m*1.2],[m/2,hi(m/2)-m*1.2],[L-m/2,lo(L-m/2)+m*1.2],[L-m/2,hi(L-m/2)-m*1.2]].forEach(([x,y])=>s+=E.circle(x,y,p.d/2))}
+    return s},
+  label:p=>`Kozirok paneli ${p.L}×${p.h}`};
+["kozirok","kozpanel"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}});
+
 
 /* 17. devor dekori (siluetlar, hayot daraxti) */
 const isTree=p=>p.sk==="tree",notTree=p=>p.sk!=="tree";
@@ -1512,7 +1631,7 @@ function photoUI(){const host=$("params");if(!host)return;const d=document.creat
 /* naqsh va siluet galereyalari */
 function ensureGThumbs(){if(gThumbs)return;gThumbs={};const css=getComputedStyle(document.documentElement);for(const [k,g] of Object.entries(GIRIH)){if(!k.includes("_"))continue;const S=72,c=document.createElement("canvas");c.width=c.height=S;const x=c.getContext("2d");
   x.fillStyle=css.getPropertyValue("--fg").trim()||"#222";x.fillRect(0,0,S,S);x.strokeStyle=css.getPropertyValue("--cut").trim()||"#d9481a";x.lineWidth=1.6;x.lineJoin="miter";x.beginPath();
-  for(const [a,b,cc] of hankin(girihTiles(g.t,12,S,S),g.a)){x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(cc[0],cc[1])}x.stroke();gThumbs[k]=c.toDataURL()}}
+  for(const [a,b,cc] of hankin(girihTiles(g.t,12,S,S),g.a,(g.d||0)*12)){x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(cc[0],cc[1])}x.stroke();gThumbs[k]=c.toDataURL()}}
 let pThumbs=null,sThumbs=null;
 function patThumbs(){if(pThumbs)return pThumbs;ensureGThumbs();const css=getComputedStyle(document.documentElement),fg=css.getPropertyValue("--fg").trim()||"#222",cut=css.getPropertyValue("--cut").trim()||"#d9481a",mk=f=>{const c=document.createElement("canvas");c.width=c.height=72;const x=c.getContext("2d");x.fillStyle=fg;x.fillRect(0,0,72,72);x.fillStyle=cut;f(x);return c.toDataURL()};
   pThumbs=[["yoq","Naqshsiz",mk(()=>{})],["perf_doira","Doira teshik",mk(x=>{for(let i=0;i<5;i++)for(let j=0;j<5;j++){x.beginPath();x.arc(8+i*14,8+j*14,4.5,0,7);x.fill()}})],
@@ -2515,6 +2634,48 @@ P.label=p=>(isSh(p)?SH[p.sh]?.n+" ":"")+"Matn "+String(p.txt||"").split(/\r?\n/)
 HEAVY.add("text");
 const v=vals.text;P.fields.forEach(([id,,d])=>{if(v[id]===undefined)v[id]=d})})();
 
+
+/* ---------- chizmani kattalashtirib ko‘rish (ikki barmoq bilan) ---------- */
+["kozirok","kozpanel"].forEach(k=>HEAVY.add(k));
+function lzZoom(obj,title){if(!obj||!obj.paths||!obj.paths.length)return;
+  const ov=document.createElement("div");ov.className="zov";ov.setAttribute("role","dialog");
+  ov.innerHTML=`<div class="zbar"><b></b><span class="zk">100%</span><button type="button" data-z="out" aria-label="Kichraytirish">−</button><button type="button" data-z="in" aria-label="Kattalashtirish">+</button><button type="button" data-z="fit" aria-label="Butun chizma">⤢</button><button type="button" data-z="x" aria-label="Yopish">✕</button></div><canvas></canvas><p class="zhint">Ikki barmoq bilan kattalashtiring, bir barmoq bilan suring. Ikki marta bossangiz — 4×.</p>`;
+  ov.querySelector("b").textContent=title||"Chizma";document.body.appendChild(ov);document.body.style.overflow="hidden";
+  const cv=ov.querySelector("canvas"),ctx=cv.getContext("2d"),zk=ov.querySelector(".zk"),[x0,y0,x1,y1]=obj.box;let W=1,H=1,dpr=1,k0=1,k=1,tx=0,ty=0,raf=0;
+  const size=()=>{dpr=Math.min(3,window.devicePixelRatio||1);const r=cv.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)};
+  const fit=()=>{k0=Math.min((W-28)/((x1-x0)||1),(H-28)/((y1-y0)||1));k=k0;tx=(W-(x1-x0)*k)/2-x0*k;ty=(H+(y1-y0)*k)/2+y0*k};
+  function render(){raf=0;const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim();ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle=c("--bg")||"#fff";ctx.fillRect(0,0,W,H);
+    const g=[1,2,5,10,20,50,100,200,500,1000,2000].find(v=>v*k>=22)||5000;ctx.strokeStyle=c("--grid")||"#ddd";ctx.lineWidth=1;ctx.beginPath();
+    const gx0=Math.floor(-tx/k/g)*g,gy0=Math.floor((ty-H)/k/g)*g;for(let x=gx0;x*k+tx<W;x+=g){const X=Math.round(tx+x*k)+.5;ctx.moveTo(X,0);ctx.lineTo(X,H)}
+    for(let y=gy0;ty-y*k>0;y+=g){const Y=Math.round(ty-y*k)+.5;ctx.moveTo(0,Y);ctx.lineTo(W,Y)}ctx.stroke();
+    ctx.lineJoin="round";ctx.lineCap="round";
+    for(const p of obj.paths){const off=p.frame&&obj.excludeFrame;ctx.strokeStyle=c(off?"--muted":"--cut")||"#d9481a";ctx.lineWidth=off?1:Math.min(2.2,Math.max(1,k/k0*.9));ctx.setLineDash(off?[8,6]:[]);
+      ctx.beginPath();p.pts.forEach(([x,y],i)=>{const X=tx+x*k,Y=ty-y*k;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});if(p.closed)ctx.closePath();ctx.stroke()}
+    ctx.setLineDash([]);zk.textContent=Math.round(k/k0*100)+"% · katak "+g+" mm"}
+  const req=()=>{if(!raf)raf=requestAnimationFrame(render)};
+  const zoomAt=(f,cx,cy)=>{const nk=Math.max(k0*.5,Math.min(k0*400,k*f));f=nk/k;tx=cx-(cx-tx)*f;ty=cy-(cy-ty)*f;k=nk;req()};
+  const P=new Map();let last=null,tap=0,tapX=0,tapY=0,moved=0;
+  const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,pos(e));last=null;moved=0});
+  cv.addEventListener("pointermove",e=>{if(!P.has(e.pointerId))return;const q=pos(e),pr=P.get(e.pointerId);P.set(e.pointerId,q);
+    if(P.size===1){tx+=q[0]-pr[0];ty+=q[1]-pr[1];moved+=Math.abs(q[0]-pr[0])+Math.abs(q[1]-pr[1]);req()}
+    else if(P.size>=2){const [a,b]=[...P.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),m=[(a[0]+b[0])/2,(a[1]+b[1])/2];moved+=99;
+      if(last){tx+=m[0]-last.m[0];ty+=m[1]-last.m[1];zoomAt(d/last.d,m[0],m[1])}last={d,m}}});
+  const up=e=>{if(!P.has(e.pointerId))return;const q=P.get(e.pointerId);P.delete(e.pointerId);last=null;
+    if(P.size===0&&moved<10){const t=Date.now();if(t-tap<320&&Math.hypot(q[0]-tapX,q[1]-tapY)<30){if(k/k0>1.5){fit();req()}else zoomAt(4,q[0],q[1]);tap=0}else{tap=t;tapX=q[0];tapY=q[1]}}};
+  cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  cv.addEventListener("wheel",e=>{e.preventDefault();const q=pos(e);zoomAt(Math.exp(-e.deltaY*.0015),q[0],q[1])},{passive:false});
+  const close=()=>{removeEventListener("resize",rs);ov.remove();document.body.style.overflow=""};ov._close=close;
+  const rs=()=>{size();fit();req()};addEventListener("resize",rs);
+  ov.querySelector(".zbar").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const z=b.dataset.z;
+    if(z==="x")close();else if(z==="fit"){fit();req()}else zoomAt(z==="in"?1.6:1/1.6,W/2,H/2)});
+  requestAnimationFrame(()=>{size();fit();render()})}
+window.lzZoom=lzZoom;
+(()=>{const add=(id,get,ttl)=>{const c=$(id);if(!c)return;c.insertAdjacentHTML("afterend",`<button type="button" class="zbtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg> Kattalashtirib ko‘rish</button>`);
+    const go=()=>{const o=get();if(o)lzZoom(o.obj,o.t)};c.nextElementSibling.addEventListener("click",go);c.addEventListener("click",go);c.style.cursor="zoom-in"};
+  add("gcv",()=>{if(typeof lzDraft!=="undefined"&&lzDraft)fullBuild(true);return gen?{obj:gen,t:genName||"DXF"}:null},"DXF");
+  add("cv",()=>current?{obj:current,t:$("fname").textContent||"Chizma"}:null)})();
 /* ---------- yangi menyu: pastki panel, mavzu, detal tanlash ---------- */
 (()=>{const ICO={narx:'<path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="16" r="3"/>',dxf:'<path d="M4 20 20 4M14 4h6v6"/><rect x="3" y="13" width="8" height="8" rx="1"/>',
   nest:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h9V3M12 16h9"/>',buy:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
@@ -2704,7 +2865,7 @@ const ordN=()=>{try{const a=JSON.parse(localStorage.getItem("lazerOrders")||"[]"
 const tierN=(typeof tiers!=="undefined"&&tiers.length)||4;
 const SEC=[
   {k:"narx",s:"Narx",n:"Narx hisoblash",d:"DXF yuklang — kesish narxi so‘mda",kw:"narx hisob kalkulyator dxf metr so'm",tl:()=>`${tierN} qalinlik`},
-  {k:"dxf",s:"DXF yasash",n:"DXF yasash",d:"O‘lchamdan detal, matn, naqsh",kw:"dxf chizish detal shablon matn naqsh girih soat",tl:()=>`${Object.keys(PARTS).length} detal`},
+  {k:"dxf",s:"DXF yasash",n:"DXF yasash",d:"O‘lchamdan detal, matn, naqsh",kw:"dxf chizish detal shablon matn naqsh girih soat kozirok kronshteyn",tl:()=>`${Object.keys(PARTS).length} detal`},
   {k:"nest",s:"Nesting",n:"Nesting",d:"Detallarni listga joylash",kw:"nesting list joylash 1250 2500",tl:()=>"1250×2500"},
   {k:"buy",s:"Buyurtma",n:"Buyurtmalar",d:"Mijozlar, to‘lov, holat",kw:"buyurtma mijoz tolov qarz",tl:()=>`${ordN()} buyurtma`},
   {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`}];
@@ -2765,7 +2926,7 @@ function thShow(){const t=thGet();$("shTh").innerHTML=SV(t==="dark"?I.moon:t==="
 $("shTh").onclick=()=>{const o=["auto","light","dark"];thSet(o[(o.indexOf(thGet())+1)%3])};
 document.querySelectorAll("#shSeg button").forEach(b=>b.onclick=()=>thSet(b.dataset.t));thShow();
 /* tizim "orqaga" tugmasi: bo'limdan bosh sahifaga */
-try{history.replaceState({sh:1},"");history.pushState({sh:2},"");addEventListener("popstate",()=>{if(cur!=="home"){view("home");history.pushState({sh:2},"")}})}catch(_){}
+try{history.replaceState({sh:1},"");history.pushState({sh:2},"");addEventListener("popstate",()=>{const zo=document.querySelector(".zov");if(zo){zo._close&&zo._close();history.pushState({sh:2},"");return}if(cur!=="home"){view("home");history.pushState({sh:2},"")}})}catch(_){}
 window.lzView=view;
 })();
 
