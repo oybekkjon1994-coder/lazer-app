@@ -888,7 +888,25 @@ Object.assign(PARTS,{
       if(mh>0){if(mh>=m)throw"Mahkamlash teshigi chetdagi bo‘sh joyga sig‘maydi.";[[m/2,m/2],[W-m/2,m/2],[W-m/2,H-m/2],[m/2,H-m/2]].forEach(([x,y])=>out+=E.circle(x,y,mh/2))}
       return out},
     label:p=>`Doira naqsh ${p.W}×${p.H}`}
+  ,kub476:{group:"tpl",name:"Kub naqsh (476)",note:"3D kub ko‘rinishidagi chiziqli naqsh (katalog №476). Naqsh o‘lchamga cho‘zilmaydi — kublar bir xil qoladi, chetidan ramka bo‘yicha kesiladi.",fields:[["W","Eni (mm)",540],["H","Bo‘yi (mm)",1250],["m","Ramka (mm)",20],["k","Kub eni (mm)",258],["mh","Mahkamlash teshigi Ø (0=yo‘q)",0]],
+    build(p){const {W,H,m,k,mh}=p,K=KUB476;
+      if(W<=0||H<=0)throw"Eni va bo‘yi 0 dan katta bo‘lsin.";
+      if(m<5||2*m>=Math.min(W,H))throw"Ramka kamida 5 mm va panel o‘lchamidan kichik bo‘lsin.";
+      if(k<60||k>2000)throw"Kub eni 60–2000 mm oralig‘ida bo‘lsin.";
+      const x0=m,y0=m,x1=W-m,y1=H-m,by=K.by*k,ar=v=>{let a=0;for(let i=0;i<v.length;i++){const p=v[i],q=v[(i+1)%v.length];a+=p[0]*q[1]-q[0]*p[1]}return Math.abs(a/2)};
+      const clip=v=>{for(const [ax,val,ge] of [[0,x0,1],[0,x1,0],[1,y0,1],[1,y1,0]]){if(!v.length)return v;const o=[],ins=q=>ge?q[ax]>=val:q[ax]<=val,cut=(P,Q)=>{const t=(val-P[ax])/(Q[ax]-P[ax]);return [P[0]+t*(Q[0]-P[0]),P[1]+t*(Q[1]-P[1])]};
+          for(let i=0;i<v.length;i++){const P=v[(i+v.length-1)%v.length],Q=v[i];if(ins(Q)){if(!ins(P))o.push(cut(P,Q));o.push(Q)}else if(ins(P))o.push(cut(P,Q))}v=o}return v};
+      let out=roundRect(W,H,0),n=0;const nj=Math.ceil((y1-y0)/by)+3;
+      for(let j=-2;j<nj;j++)for(let i=-Math.ceil(nj/2)-3;i<Math.ceil((x1-x0)/k)+3;i++){const dx=x0+i*k+j*k/2,dy=y0+j*by;
+        for(const s of K.s){const v=s.map(([a,b])=>[dx+a*k,dy+b*k]);let ax=1e9,bx=-1e9,ay=1e9,bY=-1e9;for(const [x,y] of v){ax=Math.min(ax,x);bx=Math.max(bx,x);ay=Math.min(ay,y);bY=Math.max(bY,y)}
+          if(bx<x0||ax>x1||bY<y0||ay>y1)continue;const c=clip(v);if(c.length>=3&&ar(c)>15){out+=E.poly(c);n++}}}
+      if(!n)throw"Naqsh panelga sig‘mayapti — kub enini kichraytiring.";
+      if(n>8000)throw`Teshiklar juda ko‘p (${n}). Kub enini kattalashtiring.`;
+      if(mh>0){if(mh>=m)throw"Mahkamlash teshigi ramkaga sig‘maydi.";[[m/2,m/2],[W-m/2,m/2],[W-m/2,H-m/2],[m/2,H-m/2]].forEach(([x,y])=>out+=E.circle(x,y,mh/2))}
+      return out},
+    label:p=>`Kub naqsh 476 ${p.W}×${p.H}`}
 });
+const KUB476={"by":0.948655,"s":[[[0.49689,0.68917],[0.49689,0.13283],[0.54532,0.10252],[0.54534,0.6589]],[[0.40052,0.74989],[0.40052,0.19355],[0.44896,0.16324],[0.44898,0.71961]],[[0.78596,0.50703],[0.78596,-0.04931],[0.83438,-0.07963],[0.83441,0.47675]],[[0.64037,0.04031],[0.64037,0.59666],[0.59194,0.62697],[0.59191,0.0706]],[[0.73673,-0.02041],[0.73673,0.53593],[0.6883,0.56625],[0.68828,0.00988]],[[1.33426,0.50251],[0.90365,0.2328],[0.90368,0.17021],[1.33431,0.43995]],[[0.89934,0.28856],[1.32996,0.55828],[1.32994,0.62086],[0.8993,0.35112]],[[0.89934,0.41133],[1.32996,0.68104],[1.32994,0.74362],[0.8993,0.47389]],[[0.89949,0.04508],[1.3301,0.3148],[1.33008,0.37738],[0.89945,0.10765]],[[0.33426,0.25697],[-0.09635,-0.01275],[-0.09632,-0.07532],[0.33431,0.19441]],[[1.29887,0.81014],[0.86502,1.08604],[0.81692,1.05513],[1.25079,0.77918]],[[1.20334,0.74942],[0.77057,1.02537],[0.72247,0.99445],[1.15526,0.71847]],[[1.10485,0.68772],[0.67611,0.9647],[0.628,0.93378],[1.05676,0.65675]],[[1.00656,0.62616],[0.58166,0.90402],[0.53356,0.87311],[0.95845,0.5952]],[[0.9147,0.56862],[0.48721,0.84336],[0.4391,0.81244],[0.86661,0.53766]]]};
 /* ---------- islomiy naqshlar (girih, Hankin usuli) ---------- */
 const GFAM={"4612":"12–6 rozetka","31212":"12 qirrali rozetka","488":"8 qirrali (Xotam)","666":"6 qirrali yulduz","3636":"Olti-uch (kagome)","3464":"6–4–3 aralash","4444":"Kvadrat to‘r","333333":"Uchburchak to‘r","33344":"Uchburchak-kvadrat qator"};
 const GCAT={"4612":[70,25,30,40,45,50,60,75,80],"31212":[72,25,35,45,55,65,75,80],"488":[45,67.5,20,30,40,55,60,75,80,85],"666":[60,20,35,45,55,65,70,80],"3636":[70,20,40,50,55,65,75,85],"3464":[65,25,30,40,60,75,85],"4444":[60,25,40,70,80],"333333":[45,30,70,85],"33344":[40,25,65,85]};
