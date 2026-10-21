@@ -2134,7 +2134,7 @@ async function offerZip(base,files,toast){
 const safeName=s=>s.replace(/[Ø×,]/g,m=>({"Ø":"D","×":"x",",":""}[m])).replace(/\s+/g,"_").replace(/[^A-Za-z0-9_\-]/g,"");
 $("save").addEventListener("click",()=>{if(!gen)return;const base=safeName(genName)||"detal";offerZip(base,[[base+".dxf",genText]],$("gtoast"))});
 /* ---------- litsenziya: 3 kun sinov, keyin kalit bilan (faqat APK) ---------- */
-const LIC_PUB={"kty":"EC","crv":"P-256","x":"fXQA1BYmhsg9RinPKr1p4wOQwhpyX5yRg9QXP_tRLm4","y":"Xy1WcTzL_fC4N8fAfCc_w3iEKI9BLS6lSfAkeyXTp3k"},LIC_DAYS=0,LIC_BOT="lazer_uz77_bot";
+const LIC_PUB={"kty":"EC","crv":"P-256","x":"wR3lYF4EDQpW2DTSFdvqipGRCKSmebHbJ2LKRCCEB-0","y":"jTwqlPbAP_Ot_6I3wL5Ad_ZshMh70IxucyYhEfns8_o"},LIC_DAYS=0,LIC_BOT="lazer_uz77_bot";
 const LIC={ok:false,code:"",left:0,ready:false};
 const b32=u=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let bits=0,v=0,o="";for(const b of u){v=((v<<8)|b)&0xffff;bits+=8;while(bits>=5){o+=A[(v>>>(bits-5))&31];bits-=5}}return o};
 const b64u=s=>{s=String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
@@ -2149,7 +2149,7 @@ function licOpen(msg){let o=$("licOv");if(!o){o=document.createElement("div");o.
     o.innerHTML=`<div class="wrap"><div class="otop"><h2 class="mh">Ilovani faollashtirish</h2><button type="button" id="licX">Yopish ✕</button></div>
     <div class="card"><p class="note" id="licMsg"></p><span class="label">Telefoningiz kodi</span><div class="lic-code" id="licC"></div>
     <div class="actions"><button type="button" id="licCopy">Kodni nusxalash</button><button type="button" id="licSend" class="primary">Botga o‘tish</button></div>
-    <ol class="note lic-steps"><li>Kodni sotuv botiga yuboring: <b>@${LIC_BOT}</b></li><li>To‘lov qiling va chek rasmini botga yuboring.</li><li>Bot yuborgan kalitni pastga qo‘ying.</li></ol>
+    <ol class="note lic-steps"><li>Kodni sotuv botiga yuboring: <b>@${LIC_BOT}</b></li><li>Bot ko‘rsatgan kartaga aynan aytilgan summani o‘tkazing.</li><li>To‘lov tasdiqlanishi bilan bot kalitni yuboradi — uni pastga qo‘ying.</li></ol>
     <label class="label" for="licK">Faollashtirish kaliti</label><textarea id="licK" rows="3" autocomplete="off" spellcheck="false" style="font-family:var(--mono);width:100%"></textarea>
     <div class="actions"><button type="button" id="licGo" class="primary">Faollashtirish</button></div><div class="toast" id="licT" aria-live="polite"></div></div></div>`;
     document.body.appendChild(o);
