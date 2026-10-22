@@ -687,7 +687,10 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"listen","on":false}                                  // doimiy tinglashni o'chirish/yoqish
 {"type":"web","query":"aniq qidiruv so'rovi"}                // internetdan qidirib javob berish
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
-Yangiliklar, valyuta kursi, ob-havo, narxlar, sport, telefon raqami/manzil, hozirgi voqealar yoki aniq bilmagan har qanday fakt so'ralsa — "web" amalini ishlat va "say"ni BO'SH qoldir (javobni qidiruv natijasi aytadi). O'ylab topma. Mijoz narx so'rasa (Instagram Direct, Telegram): lazer narxlari, metall turi va qalinligini hisobga olib, xushmuomala qisqa javob TAKLIFI tuzib "reply_draft" bilan ber; aniq narx uchun o'lcham yoki chizma so'rashni qo'sh. "say"da: "Shunday javob yozay: ... Yuboraymi?"
+BILIM: Sen juda ko'p narsani bilasan (tarix, fan, texnika, mashinalar, filmlar, seriallar, kitoblar, sport, din, tibbiyot, retseptlar, biznes...). Umumiy bilimga oid savolga O'ZING darhol javob ber — "web" kerak emas.
+"web" amalini FAQAT yangi/o'zgaruvchan ma'lumot uchun ishlat: bugungi yangiliklar, narxlar, kurs, ob-havo, sport natijalari, kimningdir hozirgi lavozimi, aniq manzil/telefon. Bunda "say"ga o'zing bilgan qisqa javobni ham yoz (qidiruv natija bermasa, shu aytiladi).
+TOPIB BERISH: film, serial, multfilm, qo'shiq, video, darslik so'ralsa — "youtube" amalini ishlat (rasmiy/qonuniy manbalar), "say"da u haqida 1–2 gap ayt (nima ekan, nechta qism/yil). Qaroqchi saytlarni taklif qilma. Sayt, do'kon yoki joy so'ralsa — "search" yoki "map".
+"Bilmayman" yoki "topilmadi" deyishdan oldin o'z bilimingdan eng yaxshi javobni ber; aniq bo'lmasang "taxminan" de. Mijoz narx so'rasa (Instagram Direct, Telegram): lazer narxlari, metall turi va qalinligini hisobga olib, xushmuomala qisqa javob TAKLIFI tuzib "reply_draft" bilan ber; aniq narx uchun o'lcham yoki chizma so'rashni qo'sh. "say"da: "Shunday javob yozay: ... Yuboraymi?"
 Instagram post, Reels ssenariy, trend moslash yoki OLX e'lon so'ralsa: to'liq matnni "show" va "copy" bilan ber (o'zbekcha va ruscha, heshteglar bilan), "say"da faqat 1 gap: "Matn tayyor, nusxalab qo'ydim". Trendlar so'ralsa avval "web" bilan hozirgi Instagram Reels trendlarini qidir.
 Instagram'ga qachon joylash so'ralsa: ${BEST_TIME} Kerak bo'lsa 20:45 ga "remind" qo'y.
 Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi Jarvis Instagram statistikasiga ulana olmasligini ayt; bu tahlilni Claude ilovasida Metricool orqali qilish mumkin.
@@ -803,7 +806,7 @@ async function webAnswer(q){
   const ctx=sn.slice(0,8).map((x,i)=>`[${i+1}] ${x.t} — ${x.s} (${x.u})`).join("\n");
   const t=await askRaw(`Quyidagi qidiruv natijalariga tayanib, savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Natijalarda javob bo'lmasa, "aniq ma'lumot topilmadi" de. Bugun: ${nowStr()}.\nSavol: ${q}\nNatijalar:\n${ctx}`);
   if(!t) return {text:"Internetdan topib bo'lmadi.",src:[],err:"AI javob bermadi"};
-  return {text:t.replace(/\s*\[\d+(,\s*\d+)*\]/g,""),src:[...new Set(sn.slice(0,3).map(x=>(x.u||"").split(/[\/ ›]/)[0]).filter(Boolean))]};
+  return {text:t.replace(/\s*\[\d+(,\s*\d+)*\]/g,""),src:[...new Set(sn.slice(0,3).map(x=>String(x.u||"").replace(/^https?:\/\//,"").replace(/^www\./,"").split(/[\/ ›]/)[0]).filter(h=>h&&h.includes(".")))]};
 }
 
 /* ================= Trendlar: Google Trends + Instagram + YouTube + Telegram ================= */
@@ -928,7 +931,7 @@ async function findNumber(a){
   if(fromOrder) return {number:fromOrder.phone,name:fromOrder.client};
   return {none:true};
 }
-async function run(a){
+async function run(a,ctx){
   const t=a.type;
   switch(t){
     case "call":{const f=await findNumber(a);if(!f)return"";if(f.perm)return"Kontaktlarni o'qishga ruxsat bering va qayta ayting.";
@@ -982,9 +985,13 @@ async function run(a){
     case "media": N.media(a.cmd||"toggle"); return "";
     case "place_save":{ const k=/uy/i.test(a.name||"")?"uy":"ustaxona"; S.places[k]=a.address||""; saveAll(); loadSet(); return ""; }
     case "web":{ setState("think","qidiryapman"); const w=await webAnswer(a.query||"");
-      if(w.src&&w.src.length) setTimeout(()=>sys("Manba: "+w.src.join(", ")),50);
-      if(w.err) setTimeout(()=>sys("Sabab: "+w.err),60);
-      return w.text; }
+      const failed=/(topib bo'lmadi|aniq ma'lumot topilmadi|topilmadi)/i.test(w.text||"");
+      if(!failed){ if(w.src&&w.src.length) setTimeout(()=>sys("Manba: "+w.src.join(", ")),50); return w.text; }
+      if(w.err) setTimeout(()=>sys("Qidiruv: "+w.err),60);
+      if(ctx&&ctx.say) return "";  // AI o'z bilimidan javob bergan — u aytiladi
+      const own=await askRaw(`O'z bilimingga tayanib, O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Aniq bo'lmasang "taxminan" de. Savol: ${a.query||""}`);
+      if(own) return own+" (internetdan tasdiqlay olmadim)";
+      N.openUrl("https://www.google.com/search?q="+encodeURIComponent(a.query||"")); return "Google'da qidiruvni ochdim."; }
     case "laser_price":{const p=laserPrice(a.meters,a.thickness,a.qty);if(!p.rate)return"Sozlamalarda bu qalinlik narxini kiriting.";
       return `${p.name}, ${a.meters} metr${(+a.qty||1)>1?", "+a.qty+" dona":""}: jami ${fmt(p.total)} so'm.`}
   }
@@ -1010,7 +1017,7 @@ async function handle(text,byVoice){
     const res=await askAI(clean||text);
     if(res.err) console.log(res.err);
     let extra=[];
-    for(const a of res.actions||[]){ try{ const m=await run(a); if(m) extra.push(m) }catch(e){ console.log(e) } }
+    for(const a of res.actions||[]){ try{ const m=await run(a,res); if(m) extra.push(m) }catch(e){ console.log(e) } }
     const out=[res.say,...extra].filter(Boolean).join(" ");
     hist.push({r:"u",t:clean||text},{r:"j",t:out});hist=hist.slice(-24);sv("hist",hist);
     setState("idle");
