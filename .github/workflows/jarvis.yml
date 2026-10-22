@@ -33,6 +33,22 @@ jobs:
           $BT/zipalign -f -p 4 jarvis/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
           $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out jarvis.apk aligned.apk
           $BT/apksigner verify --print-certs jarvis.apk
+      - name: Yengil versiya (xabar o'qish xizmatisiz)
+        env:
+          RUN: ${{ github.run_number }}
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          python3 - <<'PY'
+          import re
+          p="jarvis/app/src/main/AndroidManifest.xml"; s=open(p).read()
+          s=re.sub(r'\s*<service android:name="\.MsgService".*?</service>','',s,flags=re.S)
+          open(p,"w").write(s)
+          PY
+          grep -c MsgService jarvis/app/src/main/AndroidManifest.xml || true
+          gradle -p jarvis assembleRelease --no-daemon
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 jarvis/app/build/outputs/apk/release/app-release-unsigned.apk aligned2.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out jarvis-lite.apk aligned2.apk
       - uses: actions/upload-artifact@v4
         with:
           name: jarvis-apk
@@ -42,4 +58,6 @@ jobs:
         with:
           tag_name: jarvis-1.0.${{ github.run_number }}
           name: Jarvis ${{ github.run_number }}
-          files: jarvis.apk
+          files: |
+            jarvis.apk
+            jarvis-lite.apk
