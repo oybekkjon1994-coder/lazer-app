@@ -451,18 +451,24 @@ async function askAI(userText){
       if(!(r.code===404||(r.code===400&&/model/i.test(r.body)))){ if(r.code===200){S.groqModel=m;saveAll();loadSet()} break; }
     }
   }
-  if(S.prov!=="groq" && r.code===404){
-    for(const m of ["gemini-flash-latest","gemini-3.8-flash","gemini-3.6-flash","gemini-3.5-flash-lite"]){
-      if(m===S.model)continue;
+  if(S.prov!=="groq" && r.code!==200 && r.code!==0 && r.code!==401 && r.code!==403 && !(r.code===400&&/API.?key/i.test(r.body))){
+    // band (5xx), limit (429) yoki model yo'q (404) — qayta urinib, boshqa bepul modellarga o'tamiz
+    const tried=new Set([S.model]);
+    if(r.code>=500){ await new Promise(z=>setTimeout(z,1500)); r=await http(url,"POST",headers,body); }
+    for(const m of ["gemini-3.8-flash","gemini-3.6-flash","gemini-3.5-flash-lite","gemini-flash-latest","gemini-flash-lite-latest","gemini-2.5-flash"]){
+      if(r.code===200)break;
+      if(tried.has(m))continue; tried.add(m);
       r=await http("https://generativelanguage.googleapis.com/v1beta/models/"+m+":generateContent","POST",headers,body);
-      if(r.code!==404){ if(r.code===200){S.model=m;saveAll();loadSet()} break; }
+      if(r.code===200){S.model=m;saveAll();loadSet();break}
+      if(r.code===401||r.code===403)break;
     }
   }
-  if(r.code===0) return {say:"Internetga ulanib bo'lmadi. Aloqani tekshiring.",actions:[]};
-  if(r.code===429) return {say:"Bepul limit vaqtincha tugadi. Bir daqiqadan keyin qayta urinib ko'ring.",actions:[]};
+  if(r.code===0) return {say:"Internetga ulanib bo'lmadi. Aloqani tekshiring.",actions:[],err:r.body};
+  if(r.code===429) return {say:"Bepul limit vaqtincha tugadi. Bir daqiqadan keyin qayta urinib ko'ring.",actions:[],err:r.body};
   if(r.code===400||r.code===401||r.code===403) return {say:"API kalit yoki model xato. Sozlamalarda tekshiring.",actions:[],err:r.body};
   if(r.code===404) return {say:"Model topilmadi. Sozlamalarda model nomini tekshiring.",actions:[],err:r.body};
-  if(r.code>=500) return {say:"AI serveri hozir band. Birozdan keyin urinib ko'ring.",actions:[]};
+  if(r.code>=500) return {say:"AI serveri hozir band. Birozdan keyin urinib ko'ring.",actions:[],err:r.body};
+  if(r.code!==200) return {say:"AI javob bermadi (kod "+r.code+").",actions:[],err:r.body};
   try{
     const raw=pick(JSON.parse(r.body)).trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
     let o; try{o=JSON.parse(raw)}catch(e){const m=raw.match(/\{[\s\S]*\}/);o=m?JSON.parse(m[0]):{say:raw,actions:[]}}
@@ -600,8 +606,11 @@ function orderForm(o){
     price:num($("fPr").value),paid:num($("fPa").value),due:$("fD").value,status:$("fS").value,note:$("fN").value.trim()};
     if(o)Object.assign(o,d);else orders.push(Object.assign({id:nid(),created:Date.now()},d));saveAll();closeModal();renderOrders()};
   if($("fX"))$("fX").onclick=closeModal;
-  if($("fDel"))$("fDel").onclick=()=>{if(confirm("Buyurtma o'chirilsinmi?")){orders=orders.filter(x=>x!==o);saveAll();closeModal();renderOrders()}};
+  if($("fDel"))$("fDel").onclick=()=>box("O'chirish","Buyurtma o'chirilsinmi?",()=>{orders=orders.filter(x=>x!==o);saveAll();renderOrders()});
 }
+function box(title,text,ok){ $("sheet").innerHTML=`<h2>${esc(title)}</h2><div style="white-space:pre-wrap;line-height:1.45">${esc(text)}</div>
+  <div class="row" style="margin-top:16px">${ok?'<button class="btn g" id="bxNo">Bekor</button>':''}<button class="btn" id="bxOk">OK</button></div>`;
+  openModal(); $("bxOk").onclick=()=>{closeModal();ok&&ok()}; if($("bxNo"))$("bxNo").onclick=closeModal; }
 function openModal(){$("modal").classList.add("on")}
 function closeModal(){$("modal").classList.remove("on")}
 $("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
@@ -645,13 +654,18 @@ sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.ke
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
 $("sTest").onclick=async()=>{S.key=$("sKey").value.trim();saveAll();$("sTest").textContent="…";
   const r=await askAI("Salom! Bitta qisqa gap bilan o'zingni tanishtir.");$("sTest").textContent="Tekshirish";
-  alert(r.err?("Xato: "+r.say+"\n\n"+String(r.err).slice(0,250)):("Ishlayapti ✓\n\n"+r.say))};
+  if(r.err){let why="";try{why=JSON.parse(r.err).error.message}catch(e){why=String(r.err).slice(0,200)}
+    box("Ishlamadi ✗",r.say+(why?"\n\nSabab: "+why:""))}
+  else box("Ishlayapti ✓",r.say+"\n\nModel: "+(S.prov==="groq"?S.groqModel:S.model))};
 $("sTestVoice").onclick=()=>{applyVoice();N.speak(forTTS(`Salom, ${S.name}. Men Jarvisman, xizmatingizga tayyorman.`),S.rate,S.pitch)};
 $("bExp").onclick=()=>N.share(JSON.stringify({jarvis:1,orders,notes,rates:S.rates}));
-$("bImp").onclick=()=>{const t=prompt("Zaxira matnini shu yerga qo'ying:");if(!t)return;
-  try{const d=JSON.parse(t);if(!d.jarvis)throw 0;orders=d.orders||[];notes=d.notes||[];if(d.rates)S.rates=d.rates;
-    notes.forEach(n=>{if(!n.done&&n.at>Date.now())N.remind(n.at,n.text,n.id)});saveAll();loadSet();renderOrders();renderNotes();alert("Tiklandi ✓")}
-  catch(e){alert("Matn noto'g'ri.")}};
+$("bImp").onclick=()=>{ $("sheet").innerHTML=`<h2>Zaxiradan tiklash</h2><textarea id="impTx" rows="6" placeholder="Zaxira matnini shu yerga qo'ying"></textarea>
+  <div class="row" style="margin-top:12px"><button class="btn g" id="impX">Bekor</button><button class="btn" id="impOk">Tiklash</button></div>`; openModal();
+  $("impX").onclick=closeModal;
+  $("impOk").onclick=()=>{try{const d=JSON.parse($("impTx").value);if(!d.jarvis)throw 0;orders=d.orders||[];notes=d.notes||[];if(d.rates)S.rates=d.rates;
+    notes.forEach(n=>{if(!n.done&&n.at>Date.now())N.remind(n.at,n.text,n.id)});saveAll();loadSet();renderOrders();renderNotes();box("Tayyor","Ma'lumotlar tiklandi ✓")}
+    catch(e){box("Xato","Matn noto'g'ri.")}};
+};
 $("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhbat tozalandi.")};
 
 /* ================= Ishga tushirish ================= */
