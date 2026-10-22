@@ -17,6 +17,16 @@ import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
+import android.provider.MediaStore;
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.provider.AlarmClock;
@@ -62,6 +72,8 @@ public class MainActivity extends Activity {
     static MainActivity inst;
     boolean pageReady = false;
     String pendingCmd = null;
+    Uri camUri = null;
+    static final int REQ_IMG = 41;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -175,6 +187,44 @@ public class MainActivity extends Activity {
     }
 
     static String q(String s) { return JSONObject.quote(s == null ? "" : s); }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != REQ_IMG) return;
+        if (res != RESULT_OK) { js("J.onImage('')"); return; }
+        Uri u = (data != null && data.getData() != null) ? data.getData() : camUri;
+        if (u == null) { js("J.onImage('')"); return; }
+        final Uri fu = u;
+        new Thread(() -> {
+            String out = "";
+            try {
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inJustDecodeBounds = true;
+                try (InputStream is = getContentResolver().openInputStream(fu)) { BitmapFactory.decodeStream(is, null, o); }
+                int max = Math.max(o.outWidth, o.outHeight), sample = 1;
+                while (max / (sample * 2) >= 1280) sample *= 2;
+                BitmapFactory.Options o2 = new BitmapFactory.Options();
+                o2.inSampleSize = sample;
+                Bitmap bm;
+                try (InputStream is = getContentResolver().openInputStream(fu)) { bm = BitmapFactory.decodeStream(is, null, o2); }
+                int rot = 0;
+                try (InputStream is = getContentResolver().openInputStream(fu)) {
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        int ori = new ExifInterface(is).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                        rot = ori == ExifInterface.ORIENTATION_ROTATE_90 ? 90 : ori == ExifInterface.ORIENTATION_ROTATE_180 ? 180 : ori == ExifInterface.ORIENTATION_ROTATE_270 ? 270 : 0;
+                    }
+                } catch (Exception ignored) {}
+                float sc = Math.min(1f, 1280f / Math.max(bm.getWidth(), bm.getHeight()));
+                Matrix mx = new Matrix(); mx.postScale(sc, sc); if (rot != 0) mx.postRotate(rot);
+                Bitmap b2 = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), mx, true);
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                b2.compress(Bitmap.CompressFormat.JPEG, 82, bo);
+                out = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+            } catch (Exception e) { out = ""; }
+            js("J.onImage(" + q(out) + ")");
+        }).start();
+    }
 
     @Override
     public void onBackPressed() {
@@ -460,6 +510,60 @@ public class MainActivity extends Activity {
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
+        }
+
+        @JavascriptInterface public void pickImage(boolean camera) {
+            runOnUiThread(() -> {
+                try {
+                    if (camera) {
+                        ContentValues cv = new ContentValues();
+                        cv.put(MediaStore.Images.Media.DISPLAY_NAME, "jarvis_" + System.currentTimeMillis() + ".jpg");
+                        cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                        camUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                        Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        i.putExtra(MediaStore.EXTRA_OUTPUT, camUri);
+                        startActivityForResult(i, REQ_IMG);
+                    } else {
+                        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                        i.setType("image/*");
+                        startActivityForResult(Intent.createChooser(i, "Rasm tanlang"), REQ_IMG);
+                    }
+                } catch (Exception e) {
+                    js("J.onImage('')");
+                }
+            });
+        }
+
+        @JavascriptInterface public String saveFile(String name, String mime, String content) {
+            try {
+                byte[] data = content.getBytes(StandardCharsets.UTF_8);
+                if (Build.VERSION.SDK_INT >= 29) {
+                    ContentValues cv = new ContentValues();
+                    cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
+                    cv.put(MediaStore.Downloads.MIME_TYPE, mime);
+                    cv.put(MediaStore.Downloads.RELATIVE_PATH, "Download/Jarvis");
+                    Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                    try (OutputStream os = getContentResolver().openOutputStream(u)) { os.write(data); }
+                    return u.toString();
+                } else {
+                    File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);
+                    File f = new File(dir, name);
+                    try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(data); }
+                    return "file://" + f.getAbsolutePath();
+                }
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface public void shareFile(String uri, String mime) {
+            try {
+                Intent i = new Intent(Intent.ACTION_SEND);
+                i.setType(mime);
+                i.putExtra(Intent.EXTRA_STREAM, Uri.parse(uri));
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent c = Intent.createChooser(i, "Faylni yuborish");
+                c.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(c);
+            } catch (Exception ignored) {}
         }
 
         @JavascriptInterface public String recentMsgs(int n) { return MsgService.recent(n); }

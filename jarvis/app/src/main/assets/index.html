@@ -114,6 +114,7 @@ body.car #mic{width:76px;height:76px}
   <div class="chips">
     <button class="chip" id="chipCar">🚗 Mashina</button>
     <button class="chip" id="chipRep">Hisobot</button>
+    <button class="chip" id="chipImg">📷 Rasm</button>
     <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
     <button class="chip" data-q="Fonarni yoq">Fonar</button>
     <button class="chip" data-q="Soat necha?">Soat</button>
@@ -166,6 +167,7 @@ body.car #mic{width:76px;height:76px}
     <select id="sProv"><option value="gemini">Google Gemini (bepul)</option><option value="groq">Groq (bepul)</option></select>
     <label>API kalit</label>
     <input id="sKey" type="password" placeholder="Kalitni shu yerga qo'ying">
+    <p class="mut" style="margin:6px 0 0">Ikkala kalitni ham saqlab qo'yish mumkin: xizmatni almashtirsangiz, o'sha kalit chiqadi. Rasmlarni tahlil qilishda zaxira sifatida Gemini kaliti ham ishlatiladi.</p>
     <label>Model</label>
     <input id="sModel">
     <div class="row" style="margin-top:10px">
@@ -207,6 +209,7 @@ body.car #mic{width:76px;height:76px}
     <div id="msgPerm" class="tog"></div>
     <label>Kelgan xabarlarni ovoz chiqarib o'qish</label>
     <select id="sRead"><option value="always">Har doim</option><option value="car">Faqat mashina rejimida</option><option value="off">O'qimasin</option></select>
+    <label>Lazer bot nomi (Telegram'dagi ko'rinishi)</label><input id="sBot" placeholder="lazer">
     <div class="tog"><span>Ertalabki hisobot</span><div class="sw" id="swRep"></div></div>
     <label>Hisobot vaqti</label><input id="sRepT" type="time">
     <div class="tog" style="border:0"><span>Dollar kursi keskin o'zgarsa xabar berish</span><div class="sw" id="swRate"></div></div>
@@ -258,7 +261,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -267,12 +270,13 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},readMsg:"always",report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},readMsg:"always",botName:"lazer",botSeen:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
 S.places = Object.assign({},DEF.places,S.places||{});
 S.people = S.people||{};
+S.keys = S.keys||{gemini:"",groq:""}; if(S.key&&!S.keys[S.prov])S.keys[S.prov]=S.key; S.key=S.keys[S.prov]||S.key||"";
 if(!S.v2){S.v2=1;if(S.model==="gemini-flash-latest"||S.model==="gemini-2.5-flash")S.model=DEF.model;}
 let orders = ld("orders",[]);
 let notes = ld("notes",[]);
@@ -367,14 +371,22 @@ const J = window.J = {
     if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgLine(m)); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
   onMessage(js){ let m; try{m=JSON.parse(js)}catch(e){return}
     lastMsg=m; sys(`📩 ${m.app} · ${m.from}: ${m.text}`);
+    { const bo=botOrderFrom(m); if(bo){ orders.push(bo); S.botSeen=Math.max(S.botSeen||0,m.time||Date.now()); saveAll(); renderOrders();
+        say(`Lazer botdan yangi buyurtma${bo.price?`, ${fmt(bo.price)} so'm`:""}. Buyurtmalarga qo'shdim.`); return; } }
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
     if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":"")) } else msgQueue.push(m); },
   morning(){ go("pJarvis"); morningReport(); },
+  async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
+    addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
+    setState("think","rasmni ko'ryapman"); busy=true;
+    try{ const a=await visionAsk(b64,imgQ); setState("idle");
+      say(a||"Rasmni tahlil qilib bo'lmadi. Sozlamalarda Groq yoki Gemini kaliti borligini tekshiring."); }
+    finally{ busy=false; } },
   external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
     N.stopListen(); if(state==="listen")setState("idle");
     if(!String(cmd||"").trim()){ labbay=true; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
-  onShown(){ refreshBg(); if(S.bg && !loop) startLoop(true); },
+  onShown(){ refreshBg(); try{syncBot()}catch(e){} if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
@@ -490,6 +502,8 @@ function quick(t){
     if(!N.hasNotifAccess()) return "Xabarlarni o'qish uchun Sozlamalarda ruxsat bering.";
     let l=[];try{l=JSON.parse(N.recentMsgs(5))}catch(e){} if(!l.length) return "Yangi xabar yo'q.";
     return l.map(m=>`${m.from}: ${m.text}`).join(". "); }
+  if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
+  if(/(rasm(ga)? (qara|ko'r|tahlil)|rasmni (ko'r|tahlil)|surat(ga)? qara|rasm(ga)? ol)/.test(s)){ setTimeout(()=>askImage(""),50); return "Rasmni tanlang yoki suratga oling."; }
   if(/(ertalabki hisobot|kunlik hisobot|bugungi hisobot|hisobotni ber|hisobot ber)/.test(s)){ setTimeout(morningReport,30); return ""; }
   if(/(tinglash|eshitish|mikrofon|quloq)/.test(s) && /(o'chir|to'xtat|bas qil|kerak emas|yop|uchir|ochir)/.test(s)){
     setBg(false,true); stopLoop(); N.stopListen(); return "Tinglash o'chirildi. Kerak bo'lsa, mikrofon tugmasini bosing.";}
@@ -521,6 +535,9 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Tugmasiz/doimiy tinglash: Jarvis ekranidagi "Doimiy tinglash" tugmasi yoki Sozlamalar → "Fonda ham tinglash". Yoqilgach ilovadan chiqsa ham "Jarvis" so'zini eshitadi. Buning uchun "Boshqa ilovalar ustida ko'rsatish" va "Batareya cheklovisiz" ruxsatlari kerak (Sozlamalar → Tugmasiz boshqarish → "Ruxsat" tugmalari). Xiaomi/Redmi'da Sozlamalar → Ilovalar → Jarvis → "Avtozapusk" va "Fonda oyna ochish"ni yoqish kerak. Bildirishnomada "Jarvis tinglayapti" turishi kerak.
 - Hozir fon rejimi: ${S.bg?"YOQILGAN":"O'CHIQ"}${S.bg?"":" (shuning uchun ilovadan chiqqanda eshitmaydi — yoqishni taklif qil)"}.
 - Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
+- Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
+- DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
+- Lazer bot (${S.botName}) Telegram'da yozgan xabarlar avtomatik buyurtma bo'ladi.
 - Xabarlar: kelgan Telegram/WhatsApp/Instagram/SMS xabarlarini o'qiysan va ovoz bilan javob yuborasan ("Jarvis, javob ber: ..."). Buning uchun Sozlamalar → Xabarlar va hisobot → "Ruxsat". Ertalabki hisobot vaqti ham shu yerda.
 - Qila olasan: qo'ng'iroq, SMS oynasini ochish, ilovalarni ochish, budilnik, taymer, eslatma, fonar, ovoz balandligi, musiqa, navigator, buyurtmalar, lazer narxi, valyuta kursi, ob-havo, internetdan qidirish.
 - Qila olmaysan: boshqa ilovalar ICHIDA ishlash (masalan Telegram'da xabar o'qish/yozish — faqat Telegram'ni ochasan yoki "share" orqali matn yuborish oynasini ochasan), mashinaning o'zini boshqarish.
@@ -549,6 +566,8 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"contact_delete","name":"..."}
 {"type":"reply_draft","to":"kimga (bo'sh = oxirgi xabar)","text":"javob matni"}  // mijozga javob TAKLIFI — yuborishdan oldin egang tasdiqlaydi
 {"type":"reply","to":"...","text":"..."}                      // faqat egang aniq matnni aytib "yubor" desa
+{"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1}  // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm
+{"type":"photo","question":"..."}                               // rasmni ko'rib berish (kamera/galereya ochiladi)
 {"type":"show","text":"uzun matn"}                              // post, OLX e'lon, ssenariy — ekranga chiqarish (ovoz chiqarib o'qilmaydi)
 {"type":"copy","text":"..."}                                    // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
 {"type":"listen","on":false}                                  // doimiy tinglashni o'chirish/yoqish
@@ -556,6 +575,8 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
 Yangiliklar, valyuta kursi, ob-havo, narxlar, sport, telefon raqami/manzil, hozirgi voqealar yoki aniq bilmagan har qanday fakt so'ralsa — "web" amalini ishlat va "say"ni BO'SH qoldir (javobni qidiruv natijasi aytadi). O'ylab topma. Mijoz narx so'rasa (Instagram Direct, Telegram): lazer narxlari, metall turi va qalinligini hisobga olib, xushmuomala qisqa javob TAKLIFI tuzib "reply_draft" bilan ber; aniq narx uchun o'lcham yoki chizma so'rashni qo'sh. "say"da: "Shunday javob yozay: ... Yuboraymi?"
 Instagram post, Reels ssenariy, trend moslash yoki OLX e'lon so'ralsa: to'liq matnni "show" va "copy" bilan ber (o'zbekcha va ruscha, heshteglar bilan), "say"da faqat 1 gap: "Matn tayyor, nusxalab qo'ydim". Trendlar so'ralsa avval "web" bilan hozirgi Instagram Reels trendlarini qidir.
+Instagram'ga qachon joylash so'ralsa: ${BEST_TIME} Kerak bo'lsa 20:45 ga "remind" qo'y.
+Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi Jarvis Instagram statistikasiga ulana olmasligini ayt; bu tahlilni Claude ilovasida Metricool orqali qilish mumkin.
 Hech qachon bajarmagan amalni "qildim" dema — faqat actions ro'yxatidagi amallar haqiqatan bajariladi. Xavfli yoki noqonuniy ishga yordam berma.`;
 }
 
@@ -751,6 +772,15 @@ async function run(a){
     case "navigate":{ let q=String(a.query||"").trim(); const k=norm(q).replace(/(ga|imga|mga)$/,"");
       if(k==="uy"||k==="uyim"||k==="ustaxona"){ q=S.places[k.startsWith("uy")?"uy":"ustaxona"]; if(!q)return"Bu manzil kiritilmagan. Sozlamalarda kiriting."; }
       const r=N.navigate(q,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":""; }
+    case "photo": setTimeout(()=>askImage(a.question||""),50); return "";
+    case "dxf":{ const sp=a; if(!(+sp.w&&+sp.h)&&!+sp.d) return "O'lchamlar to'liq emas.";
+      const r=dxfFrom(sp); const nm=(String(sp.name||"detal").replace(/[^\w\-]+/g,"_")||"detal")+"_"+Date.now().toString().slice(-5)+".dxf";
+      const uri=N.saveFile(nm,"application/dxf",r.dxf);
+      const lp=sp.thickness?laserPrice(r.len,sp.thickness,sp.qty||1):null;
+      setTimeout(()=>{ const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${r.svg}</div><div class="mut">${r.W}×${r.H} mm · kesish ${r.len.toFixed(2)} m${lp&&lp.rate?` · ${lp.name}: ${fmt(lp.total)} so'm`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
+        const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf"); },60);
+      if(!uri) return "DXF tayyor, lekin faylni saqlab bo'lmadi.";
+      return `DXF tayyor, Yuklamalar, Jarvis papkasiga saqlandi. Kesish uzunligi ${r.len.toFixed(1)} metr${lp&&lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}.`; }
     case "reply_draft": pendingReply={to:a.to||"",text:a.text||""}; return "";
     case "reply":{ const r=N.reply(a.to||"",a.text||""); return r==="none"?"Javob berib bo'ladigan xabar topilmadi.":r==="expired"?"Xabar eskirgan.":r==="err"?"Yuborib bo'lmadi.":""; }
     case "show": setTimeout(()=>addMsg("j",a.text||""),60); return "";
@@ -811,6 +841,7 @@ $("send").onclick=()=>{const v=$("txt").value;$("txt").value="";handle(v,false)}
 $("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("send").click()}});
 document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
 $("chipRep").onclick=()=>morningReport();
+$("chipImg").onclick=()=>askImage("");
 $("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>setBg(!S.bg);
 
@@ -889,15 +920,15 @@ function loadSet(){
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
-  $("sRead").value=S.readMsg||"always";$("sRepT").value=S.reportTime||"07:30";
+  $("sRead").value=S.readMsg||"always";$("sBot").value=S.botName||"";$("sRepT").value=S.reportTime||"07:30";
   $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);
   $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";$("sCity").value=S.city||"";
   $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
   ["r1","r2","r3","r4"].forEach(k=>$(k).value=S.rates[k]);
 }
 function bind(id,fn,ev){$(id).addEventListener(ev||"change",()=>{fn($(id).value);saveAll()})}
-bind("sProv",v=>{S.prov=v;$("sModel").value=v==="groq"?S.groqModel:S.model});
-bind("sKey",v=>S.key=v.trim());
+bind("sProv",v=>{S.prov=v;S.key=S.keys[v]||"";$("sKey").value=S.key;$("sModel").value=v==="groq"?S.groqModel:S.model});
+bind("sKey",v=>{S.key=v.trim();S.keys[S.prov]=S.key});
 bind("sModel",v=>{if(S.prov==="groq")S.groqModel=v.trim()||DEF.groqModel;else S.model=v.trim()||DEF.model});
 bind("sName",v=>S.name=v.trim()||DEF.name);
 bind("sStt",v=>S.stt=v);
@@ -907,13 +938,13 @@ bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 ["r1","r2","r3","r4"].forEach(k=>bind(k,v=>S.rates[k]=+String(v).replace(/[^\d]/g,"")||0));
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
 $("swBg").onclick=()=>setBg(!S.bg,true);
-bind("sRead",v=>S.readMsg=v);
+bind("sRead",v=>S.readMsg=v);bind("sBot",v=>S.botName=v.trim());
 bind("sRepT",v=>{S.reportTime=v||"07:30";schedReport()});
 sw("swRep","report",()=>schedReport());sw("swRate","rateWatch");
 bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
 sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
-$("sTest").onclick=async()=>{S.key=$("sKey").value.trim();saveAll();$("sTest").textContent="…";
+$("sTest").onclick=async()=>{S.key=$("sKey").value.trim();S.keys[S.prov]=S.key;saveAll();$("sTest").textContent="…";
   const r=await askAI("Salom! Bitta qisqa gap bilan o'zingni tanishtir.");$("sTest").textContent="Tekshirish";
   if(r.err){let why="";try{why=JSON.parse(r.err).error.message}catch(e){why=String(r.err).slice(0,200)}
     box("Ishlamadi ✗",r.say+(why?"\n\nSabab: "+why:""))}
@@ -941,6 +972,75 @@ function refreshBg(){ refreshMsgPerm();
   if($("pOv"))$("pOv").onclick=()=>N.askOverlay(); if($("pBt"))$("pBt").onclick=()=>N.askBattery(); $("pApp").onclick=()=>N.appSettings();
 }
 $("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhbat tozalandi.")};
+
+/* ================= Rasm tahlili (9) ================= */
+let imgQ=null;
+function askImage(q){ imgQ=q||"";
+  $("sheet").innerHTML=`<h2>Rasm</h2><p class="mut">Chizma, detal, hujjat yoki mahsulot rasmini yuboring — nima ekanini, qanday yasash va taxminiy narxini aytaman.</p>
+  <label>Savol (ixtiyoriy)</label><input id="imgQ" value="${esc(imgQ)}" placeholder="Masalan: buni lazerda kesish qancha bo'ladi?">
+  <div class="row" style="margin-top:14px"><button class="btn" id="imgCam">📷 Kamera</button><button class="btn g" id="imgGal">🖼 Galereya</button></div>`;
+  openModal(); const go=c=>{imgQ=$("imgQ").value.trim();closeModal();setState("think","rasm kutilmoqda");N.pickImage(c)};
+  $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); }
+async function visionAsk(b64,q){
+  const prompt=`Sen lazer kesish va metall ishlari ustasi yordamchisisan. Rasmni ko'rib, O'ZBEK tilida (lotin) 2–5 qisqa gap bilan javob ber: bu nima, qanday material va qalinlik mos, qanday yasaladi (lazer, egish, payvand), mumkin bo'lsa taxminiy kesish uzunligi. Lazer narxi so'm/metr: 1–2mm ${S.rates.r1}, 3–4mm ${S.rates.r2}, 5–6mm ${S.rates.r3}, 8–10mm ${S.rates.r4}. Hujjat yoki matn bo'lsa — mazmunini qisqa ayt. ${q?"Savol: "+q:""}`;
+  const tryGroq=async()=>{ if(!S.keys.groq)return null;
+    for(const m of ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"]){
+      const r=await http("https://api.groq.com/openai/v1/chat/completions","POST",{"Content-Type":"application/json","Authorization":"Bearer "+S.keys.groq},
+        {model:m,temperature:0.3,max_tokens:700,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64}}]}]},40000);
+      if(r.code===200){try{return JSON.parse(r.body).choices[0].message.content.trim()}catch(e){}}
+      if(r.code===401||r.code===403)return null; }
+    return null; };
+  const tryGem=async()=>{ if(!S.keys.gemini)return null;
+    const r=await gemini({"Content-Type":"application/json","x-goog-api-key":S.keys.gemini},
+      {contents:[{role:"user",parts:[{inline_data:{mime_type:"image/jpeg",data:b64}},{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:900}},{keep:true,timeout:40000,limit:60000});
+    if(r.code===200){try{return JSON.parse(r.body).candidates[0].content.parts.filter(p=>!p.thought).map(p=>p.text||"").join("").trim()}catch(e){}}
+    return null; };
+  return (S.prov==="groq"?(await tryGroq())||(await tryGem()):(await tryGem())||(await tryGroq()));
+}
+
+/* ================= Ovozdan DXF (38) ================= */
+function dxfFrom(spec){
+  const W=+spec.w||0,H=+spec.h||0,D=+spec.d||0,R=Math.max(0,Math.min(+spec.r||0,Math.min(W,H)/2));
+  const L=[];const f=n=>(+n).toFixed(3);
+  const line=(x1,y1,x2,y2)=>L.push("0","LINE","8","0","10",f(x1),"20",f(y1),"30","0","11",f(x2),"21",f(y2),"31","0");
+  const arc=(cx,cy,r,a1,a2)=>L.push("0","ARC","8","0","10",f(cx),"20",f(cy),"30","0","40",f(r),"50",f(a1),"51",f(a2));
+  const circ=(cx,cy,r)=>L.push("0","CIRCLE","8","0","10",f(cx),"20",f(cy),"30","0","40",f(r));
+  let len=0, svg=[];
+  if(D>0){ circ(D/2,D/2,D/2); len+=Math.PI*D; svg.push(`<circle cx="${D/2}" cy="${D/2}" r="${D/2}"/>`); }
+  else { if(R>0){ line(R,0,W-R,0);line(W,R,W,H-R);line(W-R,H,R,H);line(0,H-R,0,R);
+      arc(W-R,R,R,270,360);arc(W-R,H-R,R,0,90);arc(R,H-R,R,90,180);arc(R,R,R,180,270);
+      len+=2*(W-2*R)+2*(H-2*R)+2*Math.PI*R; }
+    else { line(0,0,W,0);line(W,0,W,H);line(W,H,0,H);line(0,H,0,0); len+=2*(W+H); }
+    svg.push(`<rect x="0" y="0" width="${W}" height="${H}" rx="${R}"/>`); }
+  for(const h of (spec.holes||[])){ const r=(+h.d||0)/2; if(!r)continue; circ(+h.x,+h.y,r); len+=Math.PI*2*r; svg.push(`<circle cx="${h.x}" cy="${h.y}" r="${r}"/>`); }
+  const VW=D||W, VH=D||H;
+  const dxf=["0","SECTION","2","HEADER","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n");
+  const mg=Math.max(VW,VH)*0.05;
+  const pv=`<svg viewBox="${-mg} ${-(VH+mg)} ${VW+2*mg} ${VH+2*mg}" style="width:100%;max-height:220px;background:#06131d;border-radius:8px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(VW,VH)/150}">${svg.join("")}</g></svg>`;
+  return {dxf,len:len/1000,svg:pv,W:VW,H:VH};
+}
+function addHtml(html){ const d=document.createElement("div");d.className="m j";d.style.whiteSpace="normal";d.innerHTML=html;$("chat").appendChild(d);$("chat").scrollTop=1e9;return d }
+
+/* ================= Lazer bot buyurtmalari (3) ================= */
+function botOrderFrom(m){
+  if(!m||m.app!=="Telegram"||!S.botName||!norm(m.from).includes(norm(S.botName))) return null;
+  const t=m.text; const pm=t.match(/(\d[\d\s.,]{2,})\s*(so'm|сум|sum|so‘m)/i);
+  const price=pm?+pm[1].replace(/[^\d]/g,""):0;
+  const cm=t.match(/(?:mijoz|kimdan|ism|клиент|от)\s*[:\-]\s*([^\n,;]+)/i);
+  const ph=t.match(/\+?998[\d\s\-]{9,}/);
+  return {id:nid(),client:cm?cm[1].trim():"Botdan mijoz",phone:ph?ph[0].replace(/[^\d+]/g,""):"",item:t.slice(0,120),price,paid:0,due:"",note:"Lazer botdan",status:"yangi",created:Date.now()};
+}
+function syncBot(){
+  let l=[];try{l=JSON.parse(N.recentMsgs(30))}catch(e){} let added=0;
+  for(const m of l){ if((m.time||0)<=(S.botSeen||0))continue; const o=botOrderFrom(m); if(o){orders.push(o);added++} }
+  if(l.length) S.botSeen=Math.max(S.botSeen||0,...l.map(m=>m.time||0));
+  if(added){saveAll();renderOrders();sys(`Lazer botdan ${added} ta yangi buyurtma qo'shildi.`)}
+  else saveAll();
+  return added;
+}
+
+/* ================= Instagram uchun eng yaxshi vaqt (31) ================= */
+const BEST_TIME="Obunachilaringiz eng faol vaqti: har kuni kechqurun 21:00 atrofida (20:00–22:00), kunduzi esa 13:00. Eng yaxshisi — Reels'ni 20:45–21:00 da joylash.";
 
 /* ================= Ertalabki hisobot va dollar kuzatuvi ================= */
 async function rateCheck(force){

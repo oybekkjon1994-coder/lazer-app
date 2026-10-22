@@ -122,6 +122,7 @@ public class MsgService extends NotificationListenerService {
 
     // ---------- Ilovadan chaqiriladi ----------
     static String recent(int n) {
+        if (n <= 0) n = 30;
         JSONArray a = new JSONArray();
         synchronized (list) {
             for (int i = Math.max(0, list.size() - n); i < list.size(); i++) {
@@ -130,6 +131,7 @@ public class MsgService extends NotificationListenerService {
                     JSONObject o = new JSONObject();
                     o.put("app", m.app); o.put("from", m.from); o.put("text", m.text);
                     o.put("ago", (System.currentTimeMillis() - m.time) / 60000);
+                    o.put("time", m.time);
                     o.put("canReply", m.reply != null);
                     a.put(o);
                 } catch (Exception ignored) {}
