@@ -207,6 +207,7 @@ body.car #mic{width:76px;height:76px}
     <p class="mut" style="margin:6px 0 0">"Jarvis, uyga yo'l" yoki "ustaxonaga olib bor" deganda shu manzillarga yo'l ochiladi.</p>
     <label>Uy manzili</label><input id="plUy" placeholder="Masalan: Samarqand, Mirzo Ulug'bek ko'chasi 12">
     <label>Ustaxona manzili</label><input id="plUs" placeholder="Masalan: Samarqand, Sanoat zonasi">
+    <label>Shahar (ob-havo uchun)</label><input id="sCity" placeholder="Toshkent">
     <label>Navigator</label>
     <select id="sNav"><option value="auto">Avtomatik (Yandex → Google)</option><option value="yandex">Yandex Navigator</option><option value="google">Google Maps</option></select>
   </div>
@@ -257,7 +258,7 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,nav:"auto",places:{uy:"",ustaxona:""},
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
@@ -343,9 +344,9 @@ const J = window.J = {
     if(code===9){sys("Mikrofon ruxsatini bering (Sozlamalar → Ilovalar → Jarvis → Ruxsatlar).");stopLoop();setState("idle");return}
     if(code===100){sys("Bu telefonda ovozni tanish xizmati yo'q. Play Market'dan \"Google\" ilovasini o'rnating.");stopLoop();setState("idle");return}
     if(loop && (code===6||code===7)){setState("idle");setTimeout(()=>{if(loop&&state==="idle")listen()},250);return}
-    if(loop && (code===5||code===8||code===11) && ++errStreak<5){setState("idle");setTimeout(()=>{if(loop&&state==="idle")listen()},900);return}
+    if(loop && (code===5||code===8||code===11||code===12||code===13) && ++errStreak<6){setState("idle");setTimeout(()=>{if(loop&&state==="idle")listen()},900);return}
     if(code===2||code===1)sys("Internet aloqasi yo'q — ovozni tanib bo'lmadi.");
-    else if(code===6||code===7){} else if(code===12||code===13)sys("Tanlangan til ovoz xizmatida yo'q. Google ilovasida o'zbek tilini yuklab oling.");
+    else if(code===6||code===7){} else if((code===12||code===13)&&!loop)sys("Tanlangan til ovoz xizmatida yo'q. Google ilovasida o'zbek tilini yuklab oling.");
     if(loop&&errStreak>=5)stopLoop();
     setState("idle")},
   onSpeakStart(){setState("speak")},
@@ -506,8 +507,52 @@ async function gemini(headers,body,opts){
   return r||{code:-1,body:"timeout"};
 }
 
+/* ================= Tezkor manbalar (AI'siz) ================= */
+const CUR={dollar:"USD",usd:"USD",евро:"EUR",evro:"EUR",yevro:"EUR",euro:"EUR",rubl:"RUB",рубл:"RUB",tenge:"KZT",yuan:"CNY",yen:"JPY",funt:"GBP",lira:"TRY",dirham:"AED",won:"KRW",vona:"KRW"};
+const CURNM={USD:"dollar",EUR:"yevro",RUB:"rubl",KZT:"tenge",CNY:"yuan",JPY:"yen",GBP:"funt",TRY:"lira",AED:"dirham",KRW:"von"};
+async function rateAnswer(s){
+  if(!/(kurs|курс|valyuta|necha pul|qancha turibdi|nechpul|nech pul)/.test(s) && !/(dollar|evro|yevro|rubl|usd).*(qancha|necha)/.test(s)) return null;
+  let codes=[];for(const k in CUR) if(s.includes(k)&&!codes.includes(CUR[k]))codes.push(CUR[k]);
+  if(!codes.length)codes=["USD"];
+  const r=await http("https://cbu.uz/uz/arkhiv-kursov-valyut/json/","GET",{},null,15000);
+  if(r.code!==200) return null;
+  try{const all=JSON.parse(r.body);const parts=[];let date="";
+    for(const c of codes){const x=all.find(a=>a.Ccy===c);if(!x)continue;date=x.Date;
+      const nom=+x.Nominal>1?`${x.Nominal} `:"1 ";parts.push(`${nom}${CURNM[c]||c} ${fmt(Math.round(+x.Rate))} so'm`)}
+    if(!parts.length)return null;
+    setTimeout(()=>sys("Manba: O'zbekiston Markaziy banki"+(date?", "+date:"")),50);
+    return `Markaziy bank kursi: ${parts.join(", ")}.`;
+  }catch(e){return null}
+}
+const WMO=c=>c===0?"ochiq osmon":c<=2?"qisman bulutli":c===3?"bulutli":c<=48?"tuman":c<=57?"mayda yomg'ir":c<=67?"yomg'ir":c<=77?"qor":c<=82?"jala":c<=86?"qor":"momaqaldiroq";
+async function weatherAnswer(s){
+  if(!/(ob-havo|obhavo|ob havo|havo qanaqa|havo qanday|harorat|necha gradus|yomg'ir|qor yog|sovuq|issiq bo'ladi|погод)/.test(s)) return null;
+  let city=S.city||"Toshkent";
+  const m=s.match(/([a-z'ʻ]+)(da|dagi) (ob-havo|obhavo|ob havo|havo|harorat)/); if(m&&!/(bugun|ertaga|hozir|uy|shahar)/.test(m[1]))city=m[1];
+  const g=await http("https://geocoding-api.open-meteo.com/v1/search?count=1&language=ru&name="+encodeURIComponent(city),"GET",{},null,12000);
+  let lat,lon,nm=city;
+  try{const x=JSON.parse(g.body).results[0];lat=x.latitude;lon=x.longitude;nm=city.charAt(0).toUpperCase()+city.slice(1)}catch(e){return null}
+  const w=await http(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&timezone=auto&forecast_days=3`,"GET",{},null,12000);
+  try{const d=JSON.parse(w.body);
+    setTimeout(()=>sys("Manba: open-meteo.com"),50);
+    if(/ertaga/.test(s)){const i=1;return `${nm}da ertaga ${WMO(d.daily.weather_code[i])}, kunduzi ${Math.round(d.daily.temperature_2m_max[i])}, kechasi ${Math.round(d.daily.temperature_2m_min[i])} daraja, yog'ingarchilik ehtimoli ${d.daily.precipitation_probability_max[i]} foiz.`}
+    return `${nm}da hozir ${Math.round(d.current.temperature_2m)} daraja, ${WMO(d.current.weather_code)}. Bugun ${Math.round(d.daily.temperature_2m_min[0])} dan ${Math.round(d.daily.temperature_2m_max[0])} darajagacha.`;
+  }catch(e){return null}
+}
+async function fastWeb(s){ try{ return (await rateAnswer(s))||(await weatherAnswer(s)); }catch(e){ return null } }
+async function ddgSnippets(q){
+  const r=await http("https://html.duckduckgo.com/html/?kl=ru-ru&q="+encodeURIComponent(q),"GET",{"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"uz,ru;q=0.8"},null,15000);
+  if(r.code!==200) return [];
+  try{const doc=new DOMParser().parseFromString(r.body,"text/html");
+    return [...doc.querySelectorAll(".result")].slice(0,6).map(e=>({t:(e.querySelector(".result__a")||{}).textContent||"",s:(e.querySelector(".result__snippet")||{}).textContent||"",u:(e.querySelector(".result__url")||{}).textContent||""}))
+      .filter(x=>x.s).map(x=>({t:x.t.trim(),s:x.s.trim(),u:x.u.trim()}));
+  }catch(e){return []}
+}
+let lastWebErr="";
+
 /* ================= Internetdan qidirish ================= */
 async function webAnswer(q){
+  const fast=await fastWeb(norm(q)); if(fast) return {text:fast,src:[]};
   const prompt=`Internetdan qidirib, quyidagi savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan, aniq raqam va sanalar bilan javob ber. Ro'yxat, belgi va havola yozma. Bugun: ${nowStr()}. Savol: ${q}`;
   if(S.prov==="groq"){
     const url="https://api.groq.com/openai/v1/chat/completions",headers={"Content-Type":"application/json","Authorization":"Bearer "+S.key};
@@ -519,15 +564,29 @@ async function webAnswer(q){
     return {text:"Internetdan topib bo'lmadi.",src:[]};
   }
   const headers={"Content-Type":"application/json","x-goog-api-key":S.key};
-  const r=await gemini(headers,{contents:[{role:"user",parts:[{text:prompt}]}],tools:[{google_search:{}}],
-    generationConfig:{temperature:0.3,maxOutputTokens:1200}},{keep:true,timeout:25000,limit:45000});
-  if(r.code!==200){ return {text:r.code===429?"Qidiruv limiti vaqtincha tugadi.":"Internetdan topib bo'lmadi, keyinroq urinib ko'ring.",src:[]} }
-  try{
-    const c=JSON.parse(r.body).candidates[0];
+  if(!S.noGround){
+    const r=await gemini(headers,{contents:[{role:"user",parts:[{text:prompt}]}],tools:[{google_search:{}}],
+      generationConfig:{temperature:0.3,maxOutputTokens:1200}},{keep:true,timeout:20000,limit:30000});
+    if(r.code===200){ try{
+      const c=JSON.parse(r.body).candidates[0];
+      const text=(c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/\s*\[\d+(,\s*\d+)*\]/g,"").trim();
+      const src=((c.groundingMetadata||{}).groundingChunks||[]).map(g=>g.web&&g.web.title).filter(Boolean).slice(0,3);
+      if(text) return {text,src};
+    }catch(e){} }
+    try{lastWebErr="Google qidiruv: "+(r.code)+" "+(JSON.parse(r.body).error||{}).message}catch(e){lastWebErr="Google qidiruv: "+r.code}
+    if(r.code===400||r.code===403){ S.noGround=true; saveAll(); } // bepul tarifda yo'q — keyingi safar to'g'ridan-to'g'ri zaxira yo'l
+  }
+  // Zaxira: DuckDuckGo natijalarini o'qib, AI javob tuzadi
+  const sn=await ddgSnippets(q);
+  if(!sn.length){ lastWebErr=(lastWebErr?lastWebErr+"; ":"")+"DuckDuckGo: natija yo'q"; return {text:"Internetdan topib bo'lmadi.",src:[],err:lastWebErr} }
+  const ctx=sn.map((x,i)=>`[${i+1}] ${x.t} — ${x.s} (${x.u})`).join("\n");
+  const r2=await gemini(headers,{contents:[{role:"user",parts:[{text:`Quyidagi qidiruv natijalariga tayanib, savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Natijalarda javob bo'lmasa, "aniq ma'lumot topilmadi" de. Bugun: ${nowStr()}.\nSavol: ${q}\nNatijalar:\n${ctx}`}]}],
+    generationConfig:{temperature:0.2,maxOutputTokens:800}},{keep:true,timeout:20000,limit:35000});
+  if(r2.code!==200) return {text:"Internetdan topib bo'lmadi.",src:[],err:"AI: "+r2.code};
+  try{ const c=JSON.parse(r2.body).candidates[0];
     const text=(c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/\s*\[\d+(,\s*\d+)*\]/g,"").trim();
-    const src=((c.groundingMetadata||{}).groundingChunks||[]).map(g=>g.web&&g.web.title).filter(Boolean).slice(0,3);
-    return {text:text||"Aniq javob topilmadi.",src};
-  }catch(e){ return {text:"Qidiruv natijasini o'qib bo'lmadi.",src:[]} }
+    return {text:text||"Aniq ma'lumot topilmadi.",src:[...new Set(sn.slice(0,3).map(x=>x.u.split("/")[0]))]};
+  }catch(e){ return {text:"Internetdan topib bo'lmadi.",src:[]} }
 }
 
 async function askAI(userText){
@@ -623,6 +682,7 @@ async function run(a){
     case "place_save":{ const k=/uy/i.test(a.name||"")?"uy":"ustaxona"; S.places[k]=a.address||""; saveAll(); loadSet(); return ""; }
     case "web":{ setState("think","qidiryapman"); const w=await webAnswer(a.query||"");
       if(w.src&&w.src.length) setTimeout(()=>sys("Manba: "+w.src.join(", ")),50);
+      if(w.err) setTimeout(()=>sys("Sabab: "+w.err),60);
       return w.text; }
     case "laser_price":{const p=laserPrice(a.meters,a.thickness,a.qty);if(!p.rate)return"Sozlamalarda bu qalinlik narxini kiriting.";
       return `${p.name}, ${a.meters} metr${(+a.qty||1)>1?", "+a.qty+" dona":""}: jami ${fmt(p.total)} so'm.`}
@@ -643,6 +703,7 @@ async function handle(text,byVoice){
     if(!clean){ followUntil=Date.now()+12000; say(`Labbay, ${S.name}?`); return; }
     const q=quick(clean);
     if(q!==null){ say(q); return; }
+    { const fw=await fastWeb(norm(clean)); if(fw){ hist.push({r:"u",t:clean},{r:"j",t:fw}); say(fw); return; } }
     setState("think");
     const res=await askAI(clean||text);
     if(res.err) console.log(res.err);
@@ -745,7 +806,7 @@ function loadSet(){
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
-  $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";
+  $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";$("sCity").value=S.city||"";
   $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
   ["r1","r2","r3","r4"].forEach(k=>$(k).value=S.rates[k]);
 }
@@ -762,7 +823,7 @@ bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
 sw("swBg","bg",()=>{const r=N.bgListen(!!S.bg);if(r==="noperm"){S.bg=false;saveAll();loadSet();box("Ruxsat kerak","Avval mikrofon ruxsatini bering, keyin qayta yoqing.")}
   if(S.bg){if(!S.wake){S.wake=true;saveAll();loadSet()} startLoop(true)} refreshBg()});
-bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);
+bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
 sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
 $("sTest").onclick=async()=>{S.key=$("sKey").value.trim();saveAll();$("sTest").textContent="…";
