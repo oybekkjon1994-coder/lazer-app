@@ -603,6 +603,8 @@ function quick(t){
   if(/(buyurtma (qidir|top|ovla)|e'lon(lar)?ni (qidir|tekshir)|olx(da|ni) (qidir|tekshir))/.test(g)){ setTimeout(()=>huntOrders(true),30); return "OLX'dan qidiryapman."; }
   if(/(hazil(kash)? rejim|hazillash)/.test(g)&&!/(o'chir|bas)/.test(g)){ S.persona="hazil"; saveAll(); loadSet(); return "Hazil rejimi yoqildi, xo'jayin. Endi ishlar qiziqroq bo'ladi."; }
   if(/(jiddiy rejim|hazil(ni)? (o'chir|bas))/.test(g)){ S.persona="jiddiy"; saveAll(); loadSet(); return "Jiddiy rejimga qaytdim."; }
+  if(isTrendQ(g) && !/(eslat|post yoz|ssenariy)/.test(g)){ setTimeout(async()=>{ if(busy)return; busy=true; try{ const w=await trendReport(g); setState("idle");
+      if(w.src&&w.src.length) sys("Manbalar: "+w.src.join(", ")); if(w.err) sys("Sabab: "+w.err); say(w.text); } finally{busy=false} },30); return "Trendlarni qidiryapman, bir oz kuting."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
   if(/(naqsh(lar)? katalog|katalog(ni)? och|naqshlarni ko'rsat|tayyor dxf)/.test(g)){ setTimeout(()=>openLib(""),50); return "Katalogni ochdim, naqshni tanlang."; }
   if(/(chizma(dan)?|rasm(dan)?|surat(dan)?).*dxf|dxf.*(chizma|rasm|surat)/.test(g)){ setTimeout(()=>askImage("","dxf"),50); return "Chizmani suratga oling."; }
@@ -754,45 +756,89 @@ async function ddgSnippets(q){
 let lastWebErr="";
 
 /* ================= Internetdan qidirish ================= */
+const UA_M={"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"uz,ru;q=0.9,en;q=0.7"};
+async function bingSnippets(q){
+  const rb=await http("https://www.bing.com/search?setlang=ru&cc=UZ&q="+encodeURIComponent(q),"GET",UA_M,null,15000);
+  if(rb.code!==200) return [];
+  try{ const doc=new DOMParser().parseFromString(rb.body,"text/html");
+    return [...doc.querySelectorAll("li.b_algo")].slice(0,6).map(e=>({t:((e.querySelector("h2")||{}).textContent||"").trim(),s:((e.querySelector(".b_caption p,.b_lineclamp2,.b_lineclamp3,.b_algoSlug,p")||{}).textContent||"").trim(),u:((e.querySelector("cite")||{}).textContent||"").trim()})).filter(x=>x.s||x.t); }catch(e){ return []; }
+}
+async function snippets(q){ let a=await ddgSnippets(q); if(a.length<2) a=a.concat(await bingSnippets(q)); return a; }
+async function groqWeb(prompt){
+  if(S.prov!=="groq"||!S.key) return null;
+  const url="https://api.groq.com/openai/v1/chat/completions",H={"Content-Type":"application/json","Authorization":"Bearer "+S.key};
+  let models=["groq/compound-mini","groq/compound"];
+  try{ const ml=await http("https://api.groq.com/openai/v1/models","GET",{"Authorization":"Bearer "+S.key},null,12000);
+    if(ml.code===200){ const ids=JSON.parse(ml.body).data.map(m=>m.id); const c=ids.filter(i=>/compound|search|browse/i.test(i)); if(c.length) models=[...new Set([...c,...models])]; } }catch(e){}
+  for(const m of models.slice(0,3)){
+    const r=await http(url,"POST",H,{model:m,messages:[{role:"user",content:prompt}]},40000);
+    if(r.code===200){ try{ const t=JSON.parse(r.body).choices[0].message.content.trim(); if(t) return t; }catch(e){} }
+    if(r.code===401||r.code===403) return null;
+    try{lastWebErr="Groq qidiruv: "+m+" "+(JSON.parse(r.body).error||{}).message}catch(e){}
+  }
+  return null;
+}
 async function webAnswer(q){
   const fast=await fastWeb(norm(q)); if(fast) return {text:fast,src:[]};
+  if(isTrendQ(q)) return await trendReport(q);
   const prompt=`Internetdan qidirib, quyidagi savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan, aniq raqam va sanalar bilan javob ber. Ro'yxat, belgi va havola yozma. Bugun: ${nowStr()}. Savol: ${q}`;
-  if(S.prov==="groq"){
-    const url="https://api.groq.com/openai/v1/chat/completions",headers={"Content-Type":"application/json","Authorization":"Bearer "+S.key};
-    for(const m of ["groq/compound-mini","groq/compound"]){
-      const r=await http(url,"POST",headers,{model:m,messages:[{role:"user",content:prompt}]},30000);
-      if(r.code===200){try{return {text:JSON.parse(r.body).choices[0].message.content.trim(),src:[]}}catch(e){}}
-      if(r.code===401||r.code===403)break;
-    }
-    return {text:"Internetdan topib bo'lmadi.",src:[]};
-  }
-  const headers={"Content-Type":"application/json","x-goog-api-key":S.key};
-  if(!S.noGround){
-    const r=await gemini(headers,{contents:[{role:"user",parts:[{text:prompt}]}],tools:[{google_search:{}}],
+  lastWebErr="";
+  // 1) AI xizmatining o'z qidiruvi
+  const g=await groqWeb(prompt); if(g) return {text:g,src:[]};
+  if(S.prov!=="groq"&&!S.noGround){
+    const r=await gemini({"Content-Type":"application/json","x-goog-api-key":S.key},{contents:[{role:"user",parts:[{text:prompt}]}],tools:[{google_search:{}}],
       generationConfig:{temperature:0.3,maxOutputTokens:1200}},{keep:true,timeout:20000,limit:30000});
-    if(r.code===200){ try{
-      const c=JSON.parse(r.body).candidates[0];
+    if(r.code===200){ try{ const c=JSON.parse(r.body).candidates[0];
       const text=(c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/\s*\[\d+(,\s*\d+)*\]/g,"").trim();
       const src=((c.groundingMetadata||{}).groundingChunks||[]).map(g=>g.web&&g.web.title).filter(Boolean).slice(0,3);
-      if(text) return {text,src};
-    }catch(e){} }
+      if(text) return {text,src}; }catch(e){} }
     try{lastWebErr="Google qidiruv: "+(r.code)+" "+(JSON.parse(r.body).error||{}).message}catch(e){lastWebErr="Google qidiruv: "+r.code}
-    if(r.code===400||r.code===403){ S.noGround=true; saveAll(); } // bepul tarifda yo'q — keyingi safar to'g'ridan-to'g'ri zaxira yo'l
+    if(r.code===400||r.code===403){ S.noGround=true; saveAll(); }
   }
-  // Zaxira: DuckDuckGo natijalarini o'qib, AI javob tuzadi
-  let sn=await ddgSnippets(q);
-  if(!sn.length){ const rb=await http("https://www.bing.com/search?setlang=ru&q="+encodeURIComponent(q),"GET",{"User-Agent":"Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile","Accept-Language":"ru,uz;q=0.8"},null,15000);
-    if(rb.code===200){ try{ const doc=new DOMParser().parseFromString(rb.body,"text/html");
-      sn=[...doc.querySelectorAll("li.b_algo")].slice(0,6).map(e=>({t:((e.querySelector("h2")||{}).textContent||"").trim(),s:((e.querySelector(".b_caption p,.b_lineclamp2,.b_algoSlug")||{}).textContent||"").trim(),u:((e.querySelector("cite")||{}).textContent||"").trim()})).filter(x=>x.s); }catch(e){} } }
-  if(!sn.length){ lastWebErr=(lastWebErr?lastWebErr+"; ":"")+"DuckDuckGo: natija yo'q"; return {text:"Internetdan topib bo'lmadi.",src:[],err:lastWebErr} }
-  const ctx=sn.map((x,i)=>`[${i+1}] ${x.t} — ${x.s} (${x.u})`).join("\n");
-  const r2=await gemini(headers,{contents:[{role:"user",parts:[{text:`Quyidagi qidiruv natijalariga tayanib, savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Natijalarda javob bo'lmasa, "aniq ma'lumot topilmadi" de. Bugun: ${nowStr()}.\nSavol: ${q}\nNatijalar:\n${ctx}`}]}],
-    generationConfig:{temperature:0.2,maxOutputTokens:800}},{keep:true,timeout:20000,limit:35000});
-  if(r2.code!==200) return {text:"Internetdan topib bo'lmadi.",src:[],err:"AI: "+r2.code};
-  try{ const c=JSON.parse(r2.body).candidates[0];
-    const text=(c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/\s*\[\d+(,\s*\d+)*\]/g,"").trim();
-    return {text:text||"Aniq ma'lumot topilmadi.",src:[...new Set(sn.slice(0,3).map(x=>x.u.split("/")[0]))]};
-  }catch(e){ return {text:"Internetdan topib bo'lmadi.",src:[]} }
+  // 2) Qidiruv tizimlari natijalarini o'qib, AI javob tuzadi (ikkala xizmatda ishlaydi)
+  const sn=await snippets(q);
+  if(!sn.length) return {text:"Internetdan topib bo'lmadi.",src:[],err:(lastWebErr?lastWebErr+"; ":"")+"qidiruv tizimlari javob bermadi"};
+  const ctx=sn.slice(0,8).map((x,i)=>`[${i+1}] ${x.t} — ${x.s} (${x.u})`).join("\n");
+  const t=await askRaw(`Quyidagi qidiruv natijalariga tayanib, savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Natijalarda javob bo'lmasa, "aniq ma'lumot topilmadi" de. Bugun: ${nowStr()}.\nSavol: ${q}\nNatijalar:\n${ctx}`);
+  if(!t) return {text:"Internetdan topib bo'lmadi.",src:[],err:"AI javob bermadi"};
+  return {text:t.replace(/\s*\[\d+(,\s*\d+)*\]/g,""),src:[...new Set(sn.slice(0,3).map(x=>(x.u||"").split(/[\/ ›]/)[0]).filter(Boolean))]};
+}
+
+/* ================= Trendlar: Google Trends + Instagram + YouTube + Telegram ================= */
+function isTrendQ(q){ return /(trend|тренд|ommabop|mashhur|viral|nima ko'p ko'ril|eng ko'p ko'ril)/i.test(norm(q)); }
+async function googleTrendsUZ(){
+  const r=await http("https://trends.google.com/trending/rss?geo=UZ","GET",UA_M,null,15000);
+  if(r.code!==200) return [];
+  try{ const doc=new DOMParser().parseFromString(r.body,"text/xml");
+    return [...doc.querySelectorAll("item")].slice(0,12).map(it=>{ const t=(it.querySelector("title")||{}).textContent||""; const tr=(it.getElementsByTagName("ht:approx_traffic")[0]||{}).textContent||""; return t+(tr?` (${tr})`:""); }).filter(Boolean); }catch(e){ return []; }
+}
+async function trendReport(q){
+  const now=new Date(), mon=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"][now.getMonth()], ru=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][now.getMonth()], y=now.getFullYear();
+  setState("think","trendlarni qidiryapman");
+  const [gt,ig,yt,tg,niche]=await Promise.all([
+    googleTrendsUZ(),
+    snippets(`тренды reels instagram ${ru} ${y}`),
+    snippets(`тренды youtube shorts ${ru} ${y}`),
+    snippets(`telegram тренды ${ru} ${y} Узбекистан`),
+    snippets(`идеи reels для мастерской металл лазерная резка ${y}`)
+  ]);
+  const fmtS=a=>a.slice(0,5).map(x=>`- ${x.t}: ${x.s}`).join("\n")||"(topilmadi)";
+  const got=gt.length+ig.length+yt.length+tg.length;
+  const ctxt=`GOOGLE TRENDS (O'zbekiston, bugun): ${gt.join("; ")||"(olinmadi)"}\n\nINSTAGRAM REELS:\n${fmtS(ig)}\n\nYOUTUBE SHORTS:\n${fmtS(yt)}\n\nTELEGRAM:\n${fmtS(tg)}\n\nMETALL/LAZER USTAXONASI UCHUN G'OYALAR:\n${fmtS(niche)}`;
+  if(!got){ const g=await groqWeb(`Hozir (${mon} ${y}) Instagram Reels, YouTube Shorts, Telegram va Google'da qanday trendlar bor? O'zbekiston va MDH uchun. Lazer kesish va metall ustaxonasi uchun moslab, O'ZBEK tilida qisqa ayt.`);
+    if(g) return {text:g,src:["Groq qidiruv"]};
+    return {text:"Trendlarni topib bo'lmadi — internet yoki qidiruv tizimlari javob bermadi.",src:[],err:lastWebErr||"manbalar ochilmadi"}; }
+  const full=await askRaw(`Sen Instagram'da metall va lazer kesish ustaxonasini (@metart_shop) rivojlantiradigan marketologsan. Quyidagi manbalardan ENG MUHIM trendlarni tanla va O'ZBEK tilida (lotin) yoz:
+1) Har platforma bo'yicha 2–3 ta asosiy trend (Instagram, YouTube, Telegram, Google O'zbekiston) — har biri bitta qator.
+2) Ulardan 3 ta eng mosini metall/lazer ustaxonasi uchun aniq Reels g'oyasiga aylantir: nima suratga olinadi, birinchi 2 soniya, matn.
+Faqat manbalarda bor narsani trend deb ayt; o'ylab topma. Bugun: ${nowStr()}.
+${q?"Savol: "+q:""}
+MANBALAR:
+${ctxt}`);
+  if(!full) return {text:"Trendlar topildi, lekin AI xulosa qila olmadi.",src:[]};
+  setTimeout(()=>{ addMsg("j",full); N.copy(full); },60);
+  const short=await askRaw(`Quyidagi matnni ovoz chiqarib o'qish uchun 2–3 gapga qisqartir, O'ZBEK tilida, eng muhim 2 trend va 1 g'oya:\n${full}`);
+  return {text:(short||"Trendlar tayyor, to'liq ro'yxatni ekranga chiqardim.")+" To'liq ro'yxatni ekranga chiqardim va nusxaladim.",src:[gt.length?"Google Trends":"",ig.length?"Instagram":"",yt.length?"YouTube":"",tg.length?"Telegram":""].filter(Boolean)};
 }
 
 async function askAI(userText){
@@ -1423,11 +1469,14 @@ async function huntOrders(speakNow,showAll){
   }
   if(!reached){ if(speakNow) say(lastCode===-3?"OLX sahifasi ochildi, lekin e'lonlarni o'qib bo'lmadi.":"OLX'ga ulanib bo'lmadi (kod "+lastCode+")."); return []; }
   S.huntSeen=[...(S.huntSeen||[]),...found.map(f=>f.id)].slice(-400); saveAll();
+  const REL=/(lazer|лазер|metall|металл|kesish|резк|darvoza|ворот|panjara|забор|огражд|решет|naqsh|узор|list|лист|cnc|чпу|dxf|payvand|свар|konstruk|конструк|stanok|станок)/i;
+  for(let i=found.length-1;i>=0;i--){ if(!REL.test(found[i].title+" "+(found[i].desc||""))) found.splice(i,1); }
   if(!found.length){ if(speakNow) say(`OLX'da ${total} ta e'lon bor, lekin yangisi yo'q. Hammasini ko'rish uchun: Jarvis, OLX e'lonlarini ko'rsat.`); return []; }
   // AI bilan: qaysilari xizmat SO'RAYOTGAN mijoz (taklif emas)
   let pick=found;
   const cls=await askRaw(`Quyidagi OLX e'lonlaridan qaysilari lazer kesish, metall buyum, darvoza, panjara, metall konstruksiya kabi xizmatni SO'RAYOTGAN (xaridor/buyurtmachi) e'lon? Xizmat TAKLIF qilayotgan raqobatchilarni chiqarib tashla. Faqat raqamlarni vergul bilan qaytar, bo'lmasa "yo'q".\n${found.map((f,i)=>`${i+1}. ${f.title} | ${f.price} | ${f.loc}${f.desc?" | "+f.desc:""}`).join("\n")}`);
   if(cls){ const nums=(cls.match(/\d+/g)||[]).map(Number).filter(n=>n>=1&&n<=found.length); pick=nums.map(n=>found[n-1]); }
+  else pick=found.filter(f=>/(kerak|нужн|ищу|требует|куплю|закаж|qidiryap|izlayap)/i.test(f.title+" "+(f.desc||"")));
   if(!pick.length){ if(speakNow) say(`${found.length} ta yangi e'lon bor, lekin ularning hammasi raqobatchilar taklifi.`); return []; }
   setTimeout(()=>{ const el=addHtml(`<b>🎯 Buyurtma ovchisi — ${pick.length} ta mos e'lon</b>`+pick.slice(0,8).map(f=>`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">${esc(f.title)}<div class="mut">${esc(f.price)} · ${esc(f.loc)}</div><button class="btn sm g" data-u="${esc(f.href)}" style="margin-top:6px">Ochish</button></div>`).join(""));
     el.querySelectorAll("button[data-u]").forEach(b=>b.onclick=()=>N.openUrl(b.dataset.u)); },60);
