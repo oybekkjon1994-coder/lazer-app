@@ -1024,11 +1024,11 @@ function addHtml(html){ const d=document.createElement("div");d.className="m j";
 /* ================= Lazer bot buyurtmalari (3) ================= */
 function botOrderFrom(m){
   if(!m||m.app!=="Telegram"||!S.botName||!norm(m.from).includes(norm(S.botName))) return null;
-  const t=m.text; const pm=t.match(/(\d[\d\s.,]{2,})\s*(so'm|сум|sum|so‘m)/i);
+  const t=m.text; if(!/yangi buyurtma/i.test(t)) return null; const pm=t.match(/jami[:\s]*(\d[\d\s.,]{2,})\s*(so'm|сум|sum|so‘m)/i)||t.match(/(\d[\d\s.,]{2,})\s*(so'm|сум|sum|so‘m)/i);
   const price=pm?+pm[1].replace(/[^\d]/g,""):0;
   const cm=t.match(/(?:mijoz|kimdan|ism|клиент|от)\s*[:\-]\s*([^\n,;]+)/i);
   const ph=t.match(/\+?998[\d\s\-]{9,}/);
-  return {id:nid(),client:cm?cm[1].trim():"Botdan mijoz",phone:ph?ph[0].replace(/[^\d+]/g,""):"",item:t.slice(0,120),price,paid:0,due:"",note:"Lazer botdan",status:"yangi",created:Date.now()};
+  return {id:nid(),client:cm?cm[1].trim():"Botdan mijoz",phone:ph?ph[0].replace(/[^\d+]/g,""):"",item:((t.match(/Detal:\s*([^\n]+)/i)||[])[1]||t.slice(0,120)).trim(),price,paid:0,due:"",note:"Lazer botdan",status:"yangi",created:Date.now()};
 }
 function syncBot(){
   let l=[];try{l=JSON.parse(N.recentMsgs(30))}catch(e){} let added=0;
