@@ -596,6 +596,7 @@ function quick(t){
   if(/^(davom et|davom ettir|o'qishda davom)/.test(g) && pausedRead){ reading=pausedRead; pausedRead=null; setTimeout(readNext,50); return ""; }
   if(/(maqola|kitob|matn).*(o'qi|o'qib ber)|o'qib ber$/.test(g)){ setTimeout(openReader,50); return "Havola yoki matnni qo'ying."; }
   if(/(bugungi bilim|kunlik bilim|bilim ber|qiziq narsa ayt|yangi narsa o'rgat)/.test(g)){ setTimeout(()=>dailyTip(true),30); return ""; }
+  if(/olx/.test(g) && /(e'lon|elon|ko'rsat|hammasi|bor|qidir|top)/.test(g)){ const all=/(ko'rsat|hammasi|barcha)/.test(g); setTimeout(()=>huntOrders(true,all),30); return "OLX'dan qidiryapman."; }
   if(/(buyurtma (qidir|top|ovla)|e'lon(lar)?ni (qidir|tekshir)|olx(da|ni) (qidir|tekshir))/.test(g)){ setTimeout(()=>huntOrders(true),30); return "OLX'dan qidiryapman."; }
   if(/(hazil(kash)? rejim|hazillash)/.test(g)&&!/(o'chir|bas)/.test(g)){ S.persona="hazil"; saveAll(); loadSet(); return "Hazil rejimi yoqildi, xo'jayin. Endi ishlar qiziqroq bo'ladi."; }
   if(/(jiddiy rejim|hazil(ni)? (o'chir|bas))/.test(g)){ S.persona="jiddiy"; saveAll(); loadSet(); return "Jiddiy rejimga qaytdim."; }
@@ -634,7 +635,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Hozir fon rejimi: ${S.bg?"YOQILGAN":"O'CHIQ"}${S.bg?"":" (shuning uchun ilovadan chiqqanda eshitmaydi — yoqishni taklif qil)"}.
 - Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
 - O'qib berish: "📖 O'qish" — maqola havolasi yoki matnni ovoz chiqarib o'qiydi, kerak bo'lsa o'zbekchaga tarjima qilib. "to'xta"/"davom et".
-- Buyurtma ovchisi: "🎯 Buyurtma qidir" yoki "Jarvis, buyurtma qidir" — OLX'dan xizmat so'ragan e'lonlarni topadi.
+- Buyurtma ovchisi: "🎯 Buyurtma qidir" yoki "Jarvis, buyurtma qidir" — OLX.uz'dan (faqat OLX) Sozlamalardagi so'zlar bo'yicha lazer/metall xizmatini SO'RAGAN e'lonlarni topadi. Ustaxona e'lonlarni qayerdan olishi haqida o'ylab topib gapirma.
 - Kunlik bilim: "Jarvis, bugungi bilim". Hazil rejimi: "Jarvis, hazil rejim" / "jiddiy rejim".
 - Tabiiy o'zbekcha ovoz: Sozlamalar → Azure (bepul kalit kerak).
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
@@ -773,7 +774,10 @@ async function webAnswer(q){
     if(r.code===400||r.code===403){ S.noGround=true; saveAll(); } // bepul tarifda yo'q — keyingi safar to'g'ridan-to'g'ri zaxira yo'l
   }
   // Zaxira: DuckDuckGo natijalarini o'qib, AI javob tuzadi
-  const sn=await ddgSnippets(q);
+  let sn=await ddgSnippets(q);
+  if(!sn.length){ const rb=await http("https://www.bing.com/search?setlang=ru&q="+encodeURIComponent(q),"GET",{"User-Agent":"Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile","Accept-Language":"ru,uz;q=0.8"},null,15000);
+    if(rb.code===200){ try{ const doc=new DOMParser().parseFromString(rb.body,"text/html");
+      sn=[...doc.querySelectorAll("li.b_algo")].slice(0,6).map(e=>({t:((e.querySelector("h2")||{}).textContent||"").trim(),s:((e.querySelector(".b_caption p,.b_lineclamp2,.b_algoSlug")||{}).textContent||"").trim(),u:((e.querySelector("cite")||{}).textContent||"").trim()})).filter(x=>x.s); }catch(e){} } }
   if(!sn.length){ lastWebErr=(lastWebErr?lastWebErr+"; ":"")+"DuckDuckGo: natija yo'q"; return {text:"Internetdan topib bo'lmadi.",src:[],err:lastWebErr} }
   const ctx=sn.map((x,i)=>`[${i+1}] ${x.t} — ${x.s} (${x.u})`).join("\n");
   const r2=await gemini(headers,{contents:[{role:"user",parts:[{text:`Quyidagi qidiruv natijalariga tayanib, savolga O'ZBEK tilida (lotin) 1–3 qisqa gap bilan javob ber. Natijalarda javob bo'lmasa, "aniq ma'lumot topilmadi" de. Bugun: ${nowStr()}.\nSavol: ${q}\nNatijalar:\n${ctx}`}]}],
@@ -1282,32 +1286,43 @@ async function dailyTip(speakNow){
 }
 
 /* ================= Buyurtma ovchisi — OLX (54) ================= */
-async function huntOrders(speakNow){
+async function olxSearch(q){
+  const UA={"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"ru,uz;q=0.8","Accept":"application/json, text/html"};
+  // 1) OLX'ning ichki API'si (JSON)
+  const api=await http(`https://www.olx.uz/api/v1/offers/?offset=0&limit=40&query=${encodeURIComponent(q)}&sort_by=created_at%3Adesc`,"GET",UA,null,20000);
+  if(api.code===200){ try{ const d=JSON.parse(api.body).data||[];
+      return {ok:true,items:d.map(o=>{ const pr=(o.params||[]).find(x=>x.key==="price"); return {id:String(o.id),title:o.title||"",href:o.url||"",
+        price:pr&&pr.value?(pr.value.label||""):"",loc:[(o.location&&o.location.city&&o.location.city.name)||"",(o.created_time||"").slice(0,10)].filter(Boolean).join(" · "),
+        desc:String(o.description||"").replace(/<[^>]+>/g," ").slice(0,160)} })}; }catch(e){} }
+  // 2) Oddiy sahifa (HTML)
+  const r=await http(`https://www.olx.uz/list/q-${encodeURIComponent(q.replace(/\s+/g,"-"))}/?search%5Border%5D=created_at:desc`,"GET",UA,null,20000);
+  if(r.code!==200) return {ok:false,code:api.code||r.code};
+  const items=[]; const doc=new DOMParser().parseFromString(r.body,"text/html");
+  for(const c of doc.querySelectorAll('[data-cy="l-card"],[data-testid="l-card"]')){
+    const a=c.querySelector("a[href]"); if(!a)continue; let href=a.getAttribute("href")||""; if(href.startsWith("/"))href="https://www.olx.uz"+href;
+    items.push({id:(href.match(/ID([A-Za-z0-9]+)\.html/)||[])[1]||href.split("?")[0],title:((c.querySelector("h4,h6,[data-cy='ad-card-title']")||{}).textContent||"").trim(),
+      loc:((c.querySelector('[data-testid="location-date"]')||{}).textContent||"").trim(),price:((c.querySelector('[data-testid="ad-price"]')||{}).textContent||"").trim(),href,desc:""}); }
+  if(!items.length){ // __PRERENDERED_STATE__ ichidan
+    const m=r.body.match(/"title":"([^"]{5,140})"[^{}]{0,400}?"url":"(https:[^"]+olx\.uz[^"]+)"/g)||[];
+    for(const x of m){ const t=(x.match(/"title":"([^"]+)"/)||[])[1], u=(x.match(/"url":"([^"]+)"/)||[])[1]; if(t&&u) items.push({id:u,title:t.replace(/\\u0022/g,'"'),href:u.replace(/\\\//g,"/"),price:"",loc:"",desc:""}); } }
+  return {ok:items.length>0,items,code:items.length?200:-3};
+}
+let lastHunt=[];
+async function huntOrders(speakNow,showAll){
   const qs=String(S.huntQ||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,6);
   if(!qs.length){ if(speakNow)say("Qidiruv so'zlari kiritilmagan."); return []; }
-  const found=[]; let reached=false;
+  const found=[]; let reached=false, total=0, lastCode=0;
   for(const q of qs){
-    const r=await http(`https://www.olx.uz/list/q-${encodeURIComponent(q.replace(/\s+/g,"-"))}/?search%5Border%5D=created_at:desc`,"GET",
-      {"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"ru,uz;q=0.8"},null,20000);
-    if(r.code!==200) continue; reached=true;
-    const doc=new DOMParser().parseFromString(r.body,"text/html");
-    for(const c of doc.querySelectorAll('[data-cy="l-card"],[data-testid="l-card"]')){
-      const a=c.querySelector("a[href]"); if(!a)continue;
-      let href=a.getAttribute("href")||""; if(href.startsWith("/"))href="https://www.olx.uz"+href;
-      const id=(href.match(/ID([A-Za-z0-9]+)\.html/)||[])[1]||href.split("?")[0];
-      const title=((c.querySelector("h4,h6,[data-cy='ad-card-title']")||{}).textContent||"").trim();
-      const loc=((c.querySelector('[data-testid="location-date"]')||{}).textContent||"").trim();
-      const price=((c.querySelector('[data-testid="ad-price"]')||{}).textContent||"").trim();
-      if(!title||(S.huntSeen||[]).includes(id)||found.some(f=>f.id===id))continue;
-      found.push({id,title,loc,price,href});
-    }
+    const res=await olxSearch(q); lastCode=res.code||lastCode; if(!res.ok) continue; reached=true;
+    for(const it of res.items){ if(!it.title)continue; total++;
+      if((!showAll&&(S.huntSeen||[]).includes(it.id))||found.some(f=>f.id===it.id))continue; found.push(it); }
   }
-  if(!reached){ if(speakNow) say("OLX sahifasini ochib bo'lmadi. Keyinroq urinib ko'ring."); return []; }
+  if(!reached){ if(speakNow) say(lastCode===-3?"OLX sahifasi ochildi, lekin e'lonlarni o'qib bo'lmadi.":"OLX'ga ulanib bo'lmadi (kod "+lastCode+")."); return []; }
   S.huntSeen=[...(S.huntSeen||[]),...found.map(f=>f.id)].slice(-400); saveAll();
-  if(!found.length){ if(speakNow) say("Yangi e'lon topilmadi."); return []; }
+  if(!found.length){ if(speakNow) say(`OLX'da ${total} ta e'lon bor, lekin yangisi yo'q. Hammasini ko'rish uchun: Jarvis, OLX e'lonlarini ko'rsat.`); return []; }
   // AI bilan: qaysilari xizmat SO'RAYOTGAN mijoz (taklif emas)
   let pick=found;
-  const cls=await askRaw(`Quyidagi OLX e'lonlaridan qaysilari lazer kesish, metall buyum, darvoza, panjara, metall konstruksiya kabi xizmatni SO'RAYOTGAN (xaridor/buyurtmachi) e'lon? Xizmat TAKLIF qilayotgan raqobatchilarni chiqarib tashla. Faqat raqamlarni vergul bilan qaytar, bo'lmasa "yo'q".\n${found.map((f,i)=>`${i+1}. ${f.title} | ${f.price} | ${f.loc}`).join("\n")}`);
+  const cls=await askRaw(`Quyidagi OLX e'lonlaridan qaysilari lazer kesish, metall buyum, darvoza, panjara, metall konstruksiya kabi xizmatni SO'RAYOTGAN (xaridor/buyurtmachi) e'lon? Xizmat TAKLIF qilayotgan raqobatchilarni chiqarib tashla. Faqat raqamlarni vergul bilan qaytar, bo'lmasa "yo'q".\n${found.map((f,i)=>`${i+1}. ${f.title} | ${f.price} | ${f.loc}${f.desc?" | "+f.desc:""}`).join("\n")}`);
   if(cls){ const nums=(cls.match(/\d+/g)||[]).map(Number).filter(n=>n>=1&&n<=found.length); pick=nums.map(n=>found[n-1]); }
   if(!pick.length){ if(speakNow) say(`${found.length} ta yangi e'lon bor, lekin ularning hammasi raqobatchilar taklifi.`); return []; }
   setTimeout(()=>{ const el=addHtml(`<b>🎯 Buyurtma ovchisi — ${pick.length} ta mos e'lon</b>`+pick.slice(0,8).map(f=>`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">${esc(f.title)}<div class="mut">${esc(f.price)} · ${esc(f.loc)}</div><button class="btn sm g" data-u="${esc(f.href)}" style="margin-top:6px">Ochish</button></div>`).join(""));
