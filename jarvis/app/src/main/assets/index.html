@@ -605,6 +605,8 @@ function quick(t){
   if(/(buyurtma (qidir|top|ovla)|e'lon(lar)?ni (qidir|tekshir)|olx(da|ni) (qidir|tekshir))/.test(g)){ setTimeout(()=>huntOrders(true),30); return "OLX'dan qidiryapman."; }
   if(/(hazil(kash)? rejim|hazillash)/.test(g)&&!/(o'chir|bas)/.test(g)){ S.persona="hazil"; saveAll(); loadSet(); return "Hazil rejimi yoqildi, xo'jayin. Endi ishlar qiziqroq bo'ladi."; }
   if(/(jiddiy rejim|hazil(ni)? (o'chir|bas))/.test(g)){ S.persona="jiddiy"; saveAll(); loadSet(); return "Jiddiy rejimga qaytdim."; }
+  if(/(video|vidio|ролик)/.test(g) && /(ko'rsat|korsat|och|top)/.test(g) && lastTrends.length && !/(youtube'?da .{3,} (top|qidir))/.test(g)){
+    trendCard(lastTrends); openTrend(lastTrends[0],/(insta)/.test(g)?"ig":/(tiktok)/.test(g)?"tt":"yt"); return `Birinchi trend videolarini ochdim: ${lastTrends[0].name}. Qolganlari uchun tugmalarni ekranga chiqardim.`; }
   if(isTrendQ(g) && !/(eslat|post yoz|ssenariy)/.test(g)){ setTimeout(async()=>{ if(busy)return; busy=true; try{ const w=await trendReport(g); setState("idle");
       if(w.src&&w.src.length) sys("Manbalar: "+w.src.join(", ")); if(w.err) sys("Sabab: "+w.err); say(w.text); } finally{busy=false} },30); return "Trendlarni qidiryapman, bir oz kuting."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
@@ -646,6 +648,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Buyurtma ovchisi: "🎯 Buyurtma qidir" yoki "Jarvis, buyurtma qidir" — OLX.uz'dan (faqat OLX) Sozlamalardagi so'zlar bo'yicha lazer/metall xizmatini SO'RAGAN e'lonlarni topadi. Ustaxona e'lonlarni qayerdan olishi haqida o'ylab topib gapirma.
 - Kunlik bilim: "Jarvis, bugungi bilim". Hazil rejimi: "Jarvis, hazil rejim" / "jiddiy rejim".
 - Tabiiy o'zbekcha ovoz: Sozlamalar → Azure (bepul kalit kerak).
+- Trendlardan keyin "videolarini ko'rsat" desa — trend videolarini YouTube/Instagram/TikTok'da ochasan (tugmalar ekranda).
 - Naqshlar katalogi: Lazer ustaxonasidagi ${LIB().length} ta tayyor DXF naqsh (darvoza, panjara, dekor, naqsh/medalyon, soat, kamin, ko'zgu, polka, belgi) ichingda BOR. Egang naqsh, darvoza, panjara DXF so'rasa yoki "tayyor DXF bormi" desa — "pattern" amalini ishlat (o'lcham, ramka mm). Hech qachon "menda tayyor DXF yo'q" dema. "🧩 Naqshlar" tugmasi ham bor.
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
 - DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
@@ -834,6 +837,18 @@ async function rssTitles(url,n){
   const r=await http(url,"GET",UA_M,null,15000); if(r.code!==200) return [];
   try{ const doc=new DOMParser().parseFromString(r.body,"text/xml"); return [...doc.querySelectorAll("item")].slice(0,n||8).map(it=>((it.querySelector("title")||{}).textContent||"").trim()).filter(Boolean); }catch(e){ return []; }
 }
+let lastTrends=[];
+function trendCard(list){
+  if(!list.length) return;
+  const el=addHtml(`<b>🎬 Trend videolari</b>`+list.slice(0,10).map((t,i)=>`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="mut">${esc(t.src)}</span> · ${esc(t.name)}<div class="row" style="margin-top:6px;justify-content:flex-start"><button class="btn sm g" data-yt="${i}" style="flex:0 0 auto">▶ YouTube</button><button class="btn sm g" data-ig="${i}" style="flex:0 0 auto">📷 Instagram</button><button class="btn sm g" data-tt="${i}" style="flex:0 0 auto">TikTok</button></div></div>`).join(""));
+  el.querySelectorAll("[data-yt]").forEach(b=>b.onclick=()=>openTrend(list[+b.dataset.yt],"yt"));
+  el.querySelectorAll("[data-ig]").forEach(b=>b.onclick=()=>openTrend(list[+b.dataset.ig],"ig"));
+  el.querySelectorAll("[data-tt]").forEach(b=>b.onclick=()=>openTrend(list[+b.dataset.tt],"tt"));
+}
+function openTrend(t,where){ const q=t.q||t.name;
+  if(where==="ig") N.openUrl("https://www.instagram.com/explore/search/keyword/?q="+encodeURIComponent(q));
+  else if(where==="tt") N.openUrl("https://www.tiktok.com/search/video?q="+encodeURIComponent(q));
+  else N.openUrl("https://www.youtube.com/results?search_query="+encodeURIComponent(q+(t.src==="Google O'zbekiston"?"":" trend"))+"&sp=EgIIBA%253D%253D"); }
 async function trendReport(q){
   const now=new Date(), mon=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"][now.getMonth()], ru=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][now.getMonth()], y=now.getFullYear();
   setState("think","trendlarni qidiryapman");
@@ -866,7 +881,9 @@ ${q?"Savol: "+q:""}
 MANBALAR:
 ${ctxt}`);
   if(!full) return {text:"Trendlar topildi, lekin AI xulosa qila olmadi.",src:[]};
-  setTimeout(()=>{ addMsg("j",full); N.copy(full); },60);
+  lastTrends=[...ig.slice(0,5).map(x=>({name:x.t,src:"Instagram",q:x.t+" reels"})),...yt.slice(0,3).map(x=>({name:x.t,src:"TikTok/Shorts",q:x.t+" trend"})),
+    ...gt.slice(0,4).map(x=>({name:x.split(" (")[0].split(" — ")[0],src:"Google O'zbekiston"}))];
+  setTimeout(()=>{ addMsg("j",full); N.copy(full); trendCard(lastTrends); },60);
   const short=await askRaw(`Quyidagi matnni ovoz chiqarib o'qish uchun 2–3 gapga qisqartir, O'ZBEK tilida: O'zbekistondagi 1 trend, dunyodagi 1 trend va 1 g'oya. Belgilarsiz:\n${full}`);
   return {text:(short||"Trendlar tayyor, to'liq ro'yxatni ekranga chiqardim.")+" To'liq ro'yxatni ekranga chiqardim va nusxaladim.",src:[gt.length?"Google Trends O'zbekiston":"",kun.length?"Kun.uz":"",(uzS1.length+uzS2.length)?"o'zbekcha qidiruv":"",ig.length?"Instagram (Later.com)":"",yt.length?"TikTok/Shorts (Later.com)":"",tg.length?"Telegram":""].filter(Boolean)};
 }
