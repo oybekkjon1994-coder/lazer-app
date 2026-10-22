@@ -235,11 +235,12 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 /* ================= Saqlash ================= */
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
-const DEF = {prov:"gemini",key:"",model:"gemini-flash-latest",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
+const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
   stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:false,awake:true,
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
+if(!S.v2){S.v2=1;if(S.model==="gemini-flash-latest"||S.model==="gemini-2.5-flash")S.model=DEF.model;}
 let orders = ld("orders",[]);
 let notes = ld("notes",[]);
 let hist = ld("hist",[]);
@@ -331,8 +332,10 @@ const J = window.J = {
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
     if(!$("pJarvis").classList.contains("on")){go("pJarvis");return true} return false }
 };
-function http(url,method,headers,body){
-  return new Promise(res=>{const id="h"+Date.now()+Math.random();J._cb[id]=(c,b)=>res({code:c,body:b});
+function http(url,method,headers,body,ms){
+  return new Promise(res=>{const id="h"+Date.now()+Math.random();let done=false;
+    J._cb[id]=(c,b)=>{if(done)return;done=true;res({code:c,body:b})};
+    if(ms)setTimeout(()=>{if(done)return;done=true;delete J._cb[id];res({code:-1,body:"timeout"})},ms);
     N.http(id,url,method,JSON.stringify(headers||{}),body?JSON.stringify(body):"")});
 }
 function listen(){ if(state==="listen")return; N.stopSpeak(); N.listen(S.stt); setState("listen","ulanmoqda…") }
@@ -387,6 +390,11 @@ function quick(t){
   if(/(bugun|sana).*(nechanchi|qaysi kun|necha)|bugun qanaqa kun/.test(s)){const d=new Date();
     return `Bugun ${d.getDate()}-${OY[d.getMonth()]}, ${HAFTA[d.getDay()]}.`}
   if(/(zaryad|batareya|batarey|akkumulyator)/.test(s)){const b=N.battery();return b>=0?`Zaryad ${b} foiz.`:"Zaryadni bilib bo'lmadi."}
+  const g=s.replace(/^(hey |ey )?jarvis[,!.\s]*/,"").replace(/[!.?,]/g,"").trim();
+  if(/^(salom|assalomu alaykum|assalom|salom jarvis|hayrli tong|xayrli tong|xayrli kech|qalaysan|yaxshimisan|ishlar qalay)( jarvis)?$/.test(g)||g===""&&/jarvis/.test(s)){
+    const h=new Date().getHours(), o=openOrders().length;
+    return `${h<12?"Xayrli tong":h<18?"Salom":"Xayrli kech"}, ${S.name}. Xizmatingizga tayyorman.${o?` Ochiq buyurtmalar ${o} ta.`:""}`}
+  if(/^(rahmat|raxmat|katta rahmat|ofarin|zo'r)( jarvis)?$/.test(g)) return `Arzimaydi, ${S.name}.`;
   if(/^(stop|to'xta|jim|bas|yetarli|tamom)\b/.test(s.replace(/^jarvis,?\s*/,""))){N.stopSpeak();if(loop)stopLoop();return "Xo'p."}
   return null;
 }
@@ -436,33 +444,41 @@ async function askAI(userText){
       messages:[{role:"system",content:sysPrompt()},...h.map(m=>({role:m.r==="u"?"user":"assistant",content:m.t})),{role:"user",content:userText}]};
     pick=d=>d.choices[0].message.content;
   }else{
-    url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(S.model||DEF.model)+":generateContent";
     headers={"Content-Type":"application/json","x-goog-api-key":S.key};
     body={systemInstruction:{parts:[{text:sysPrompt()}]},
       contents:[...h.map(m=>({role:m.r==="u"?"user":"model",parts:[{text:m.t}]})),{role:"user",parts:[{text:userText}]}],
-      generationConfig:{temperature:0.5,responseMimeType:"application/json"}};
+      generationConfig:{temperature:0.5,responseMimeType:"application/json",maxOutputTokens:1500}};
     pick=d=>(d.candidates[0].content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("");
   }
-  let r=await http(url,"POST",headers,body);
-  if(S.prov==="groq" && (r.code===404||(r.code===400&&/model/i.test(r.body)))){
-    for(const m of ["openai/gpt-oss-120b","llama-3.3-70b-versatile","openai/gpt-oss-20b","llama-3.1-8b-instant"]){
-      if(m===body.model)continue; body.model=m;
-      r=await http(url,"POST",headers,body);
-      if(!(r.code===404||(r.code===400&&/model/i.test(r.body)))){ if(r.code===200){S.groqModel=m;saveAll();loadSet()} break; }
+  let r;
+  if(S.prov==="groq"){
+    r=await http(url,"POST",headers,body,25000);
+    if(r.code===404||(r.code===400&&/model/i.test(r.body))){
+      for(const m of ["openai/gpt-oss-120b","llama-3.3-70b-versatile","openai/gpt-oss-20b","llama-3.1-8b-instant"]){
+        if(m===body.model)continue; body.model=m;
+        r=await http(url,"POST",headers,body,25000);
+        if(!(r.code===404||(r.code===400&&/model/i.test(r.body)))){ if(r.code===200){S.groqModel=m;saveAll();loadSet()} break; }
+      }
+    }
+  }else{
+    const order=[S.model,"gemini-3.5-flash-lite","gemini-flash-lite-latest","gemini-3.6-flash","gemini-3.8-flash","gemini-flash-latest","gemini-2.5-flash"];
+    const seen=new Set(), t0=Date.now();
+    for(const m of order){
+      if(Date.now()-t0>40000){ if(!r)r={code:-1,body:"timeout"}; break; }
+      if(!m||seen.has(m))continue; seen.add(m);
+      const gm="https://generativelanguage.googleapis.com/v1beta/models/"+m+":generateContent";
+      const b=JSON.parse(JSON.stringify(body));
+      S.noThink=S.noThink&&typeof S.noThink==="object"?S.noThink:{};
+      if(!S.noThink[m]) b.generationConfig.thinkingConfig=/2\.5/.test(m)?{thinkingBudget:0}:{thinkingLevel:"low"};
+      r=await http(gm,"POST",headers,b,20000);
+      if(r.code===400&&/think/i.test(r.body)&&!S.noThink[m]){ S.noThink[m]=1; saveAll();
+        delete b.generationConfig.thinkingConfig; r=await http(gm,"POST",headers,b,20000); }
+      if(r.code===200){ if(S.model!==m){S.model=m;saveAll();loadSet()} break; }
+      if(r.code===401||r.code===403||(r.code===400&&/API.?key/i.test(r.body)))break;
+      // 404 / 429 / 5xx / timeout -> keyingi model
     }
   }
-  if(S.prov!=="groq" && r.code!==200 && r.code!==0 && r.code!==401 && r.code!==403 && !(r.code===400&&/API.?key/i.test(r.body))){
-    // band (5xx), limit (429) yoki model yo'q (404) — qayta urinib, boshqa bepul modellarga o'tamiz
-    const tried=new Set([S.model]);
-    if(r.code>=500){ await new Promise(z=>setTimeout(z,1500)); r=await http(url,"POST",headers,body); }
-    for(const m of ["gemini-3.8-flash","gemini-3.6-flash","gemini-3.5-flash-lite","gemini-flash-latest","gemini-flash-lite-latest","gemini-2.5-flash"]){
-      if(r.code===200)break;
-      if(tried.has(m))continue; tried.add(m);
-      r=await http("https://generativelanguage.googleapis.com/v1beta/models/"+m+":generateContent","POST",headers,body);
-      if(r.code===200){S.model=m;saveAll();loadSet();break}
-      if(r.code===401||r.code===403)break;
-    }
-  }
+  if(r.code===-1) return {say:"AI juda sekin javob beryapti. Birozdan keyin qayta so'rang.",actions:[],err:"timeout"};
   if(r.code===0) return {say:"Internetga ulanib bo'lmadi. Aloqani tekshiring.",actions:[],err:r.body};
   if(r.code===429) return {say:"Bepul limit vaqtincha tugadi. Bir daqiqadan keyin qayta urinib ko'ring.",actions:[],err:r.body};
   if(r.code===400||r.code===401||r.code===403) return {say:"API kalit yoki model xato. Sozlamalarda tekshiring.",actions:[],err:r.body};
