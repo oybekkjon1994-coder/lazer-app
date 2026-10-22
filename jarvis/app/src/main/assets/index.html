@@ -293,7 +293,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -420,7 +420,9 @@ const J = window.J = {
     openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)};
     $("shA").onclick=()=>{ closeModal(); imgMode="ask"; imgQ="Bu naqsh/buyumni lazerda qanday yasash mumkin va taxminiy narxi?"; J.onImage(b64); }; },
   onSharedText(t){ go("pJarvis"); t=String(t||"").trim(); if(!t)return;
-    if(/pinterest|pin\.it/i.test(t)){ box("Pinterest havolasi","Havola emas, rasmning o'zini yuboring: Pinterest'da pinni oching → ⋯ → \"Rasmni yuklab olish\" yoki Ulashish → Jarvis."); return; }
+    const link=(t.match(/https?:\/\/\S+/)||[])[0];
+    if(link&&/pinterest|pin\.it|pinimg/i.test(link)){ sys("📌 Pinterest rasmi olinmoqda…"); pinImage(link).then(b=>{ if(b) J.onShared(b); else box("Pinterest","Pin rasmini olib bo'lmadi. Pinterest'da pinni oching → ⋯ → \"Rasmni yuklab olish\", keyin Galereyadan Jarvis'ga yuboring."); }); return; }
+    if(link&&/\.(jpe?g|png|webp)(\?|$)/i.test(link)){ fetchImg(link).then(b=>{ if(b) J.onShared(b); else sys("Rasmni olib bo'lmadi."); }); return; }
     voiceIn=false; handle(t,false); },
   onReplyResult(r){ if(r==="expired")say("Xabar eskirgan, ilovaning o'zidan javob bering."); else if(r==="err")say("Javobni yuborib bo'lmadi."); else if(r==="none")say("Javob berib bo'ladigan xabar topilmadi."); else if(r==="noaccess")say("Jarvis Xabar ilovasida ruxsat berilmagan."); else sys("✓ Yuborildi"); },
   async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
@@ -1540,6 +1542,18 @@ function ideaActions(n,b64){
 }
 
 /* ================= Pinterest ================= */
+function fetchImg(url){ return new Promise(res=>{ const id="i"+Date.now()+Math.random(); J._cb[id]=(c,b)=>res(b||""); N.fetchImage(id,url); setTimeout(()=>{ if(J._cb[id]){ delete J._cb[id]; res(""); } },45000); }); }
+async function pinImage(link){
+  if(/pinimg\.com/i.test(link)) return await fetchImg(link);
+  const r=await http(link,"GET",{"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"en,ru;q=0.8"},null,20000);
+  if(r.code!==200) return "";
+  const html=String(r.body);
+  let img=(html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)||[])[1];
+  if(!img) img=(html.match(/https:\/\/i\.pinimg\.com\/(?:originals|736x|564x)\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/i)||[])[0];
+  if(!img) return "";
+  img=img.replace(/&amp;/g,"&");
+  return await fetchImg(img.replace(/\/(236x|474x|564x)\//,"/736x/"));
+}
 async function pinterestSearch(q){
   let qq=String(q||"").trim(); if(!qq){ N.openUrl("https://www.pinterest.com/"); return "Pinterest'ni ochdim."; }
   const en=await askRaw(`Pinterest qidiruvi uchun quyidagini 2–5 so'zli INGLIZCHA qidiruv so'roviga aylantir (lazer kesish/metall kontekstida bo'lsa "laser cut", "metal" so'zlarini qo'sh). Faqat so'rovni qaytar: ${qq}`);

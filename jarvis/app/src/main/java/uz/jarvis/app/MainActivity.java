@@ -666,6 +666,31 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface public boolean ideaDelete(String name) { return new File(ideasDir(), new File(name).getName()).delete(); }
 
+        /** Internetdagi rasmni yuklab, kichraytirib base64 qaytaradi (Pinterest pin rasmi uchun). */
+        @JavascriptInterface public void fetchImage(String id, String url) {
+            new Thread(() -> {
+                String out = "";
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setInstanceFollowRedirects(true);
+                    c.setConnectTimeout(15000); c.setReadTimeout(30000);
+                    c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36");
+                    if (c.getResponseCode() == 200) {
+                        Bitmap bm;
+                        try (InputStream is = c.getInputStream()) { bm = BitmapFactory.decodeStream(is); }
+                        if (bm != null) {
+                            float sc = Math.min(1f, 1280f / Math.max(bm.getWidth(), bm.getHeight()));
+                            Bitmap b2 = sc < 1f ? Bitmap.createScaledBitmap(bm, Math.round(bm.getWidth() * sc), Math.round(bm.getHeight() * sc), true) : bm;
+                            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                            b2.compress(Bitmap.CompressFormat.JPEG, 85, bo);
+                            out = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+                        }
+                    }
+                } catch (Exception ignored) {}
+                js("J._http(" + q(id) + ",200," + q(out) + ")");
+            }).start();
+        }
+
         @JavascriptInterface public String readAsset(String path) {
             try (InputStream is = getAssets().open(path)) {
                 ByteArrayOutputStream bo = new ByteArrayOutputStream();
