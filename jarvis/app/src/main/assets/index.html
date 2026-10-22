@@ -351,12 +351,12 @@ const J = window.J = {
     setState("idle")},
   onSpeakStart(){setState("speak")},
   onSpeakDone(){followUntil=Date.now()+10000;if(state==="speak"||state==="think")setState("idle");afterTurn()},
-  external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;$("chipLoop").textContent="Doimiy tinglash: yoqiq";if(S.awake)N.keepAwake(true)}
+  external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
     N.stopListen(); if(state==="listen")setState("idle");
     if(!String(cmd||"").trim()){ followUntil=Date.now()+12000; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
   onShown(){ refreshBg(); if(S.bg && !loop) startLoop(true); },
-  onHidden(){ if(loop){loop=false;$("chipLoop").textContent="Doimiy tinglash: o'chiq";N.keepAwake(false)} if(state==="listen")setState("idle"); },
+  onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
     if(!$("pJarvis").classList.contains("on")){go("pJarvis");return true} return false }
@@ -369,10 +369,23 @@ function http(url,method,headers,body,ms){
 }
 function listen(){ if(state==="listen")return; N.stopSpeak(); N.listen(S.stt); setState("listen","ulanmoqda…") }
 function afterTurn(){ if(loop && state==="idle") setTimeout(()=>{ if(loop&&state==="idle") listen() },350) }
-function startLoop(quiet){if(loop)return;loop=true;errStreak=0;$("chipLoop").textContent="Doimiy tinglash: yoqiq";if(S.awake)N.keepAwake(true);
+function chipText(){ $("chipLoop").textContent="Doimiy tinglash: "+(S.bg||loop?"yoqiq":"o'chiq"); $("chipLoop").classList.toggle("on",!!S.bg); }
+function setBg(on,quiet){
+  S.bg=!!on; if(S.bg)S.wake=true; saveAll(); loadSet();
+  const r=N.bgListen(S.bg);
+  if(r==="noperm"){ S.bg=false; saveAll(); loadSet(); chipText(); box("Mikrofon ruxsati kerak","Jarvis'ga mikrofon ruxsatini bering, keyin qayta yoqing."); return; }
+  if(S.bg){ startLoop(true);
+    const ov=N.canOverlay?N.canOverlay():true, bt=N.batteryOk?N.batteryOk():true;
+    if(!ov) box("Bitta ruxsat kerak",'Ilova yopiq paytda "Jarvis" desangiz ochilishi uchun "Boshqa ilovalar ustida ko\'rsatish" ruxsatini bering. OK ni bosing → Jarvis → yoqing.',()=>N.askOverlay());
+    else if(!bt) box("Yana bitta ruxsat",'Ekran o\'chganda ham tinglashi uchun batareya cheklovini olib tashlang. OK → "Разрешить".',()=>N.askBattery());
+    else if(!quiet) say(`Doimiy tinglash yoqildi. Ilovadan chiqsangiz ham "Jarvis" deb chaqiring.`);
+  } else { stopLoop(); if(!quiet) sys("Doimiy tinglash o'chirildi."); }
+  chipText(); refreshBg();
+}
+function startLoop(quiet){if(loop)return;loop=true;errStreak=0;if(S.awake)N.keepAwake(true);
   if(!quiet)sys(S.wake?"Doimiy tinglash yoqildi. \"Jarvis\" deb murojaat qiling.":"Doimiy tinglash yoqildi.");
   if(state==="idle"&&!busy)listen()}
-function stopLoop(){loop=false;$("chipLoop").textContent="Doimiy tinglash: o'chiq";N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
+function stopLoop(){loop=false;setTimeout(chipText,0);N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
 
 let followUntil=0;
 function setCar(on,quiet){
@@ -461,6 +474,13 @@ Saqlangan manzillar: uy — ${S.places.uy||"kiritilmagan"}; ustaxona — ${S.pla
 Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.
 Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}
 Qaydlar/eslatmalar (JSON): ${JSON.stringify(notes.slice(-30).map(n=>({id:n.id,matn:n.text,vaqt:n.at?new Date(n.at).toLocaleString("ru-RU"):null,bajarildi:!!n.done})))}
+
+O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
+- Tugmasiz/doimiy tinglash: Jarvis ekranidagi "Doimiy tinglash" tugmasi yoki Sozlamalar → "Fonda ham tinglash". Yoqilgach ilovadan chiqsa ham "Jarvis" so'zini eshitadi. Buning uchun "Boshqa ilovalar ustida ko'rsatish" va "Batareya cheklovisiz" ruxsatlari kerak (Sozlamalar → Tugmasiz boshqarish → "Ruxsat" tugmalari). Xiaomi/Redmi'da Sozlamalar → Ilovalar → Jarvis → "Avtozapusk" va "Fonda oyna ochish"ni yoqish kerak. Bildirishnomada "Jarvis tinglayapti" turishi kerak.
+- Hozir fon rejimi: ${S.bg?"YOQILGAN":"O'CHIQ"}${S.bg?"":" (shuning uchun ilovadan chiqqanda eshitmaydi — yoqishni taklif qil)"}.
+- Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
+- Qila olasan: qo'ng'iroq, SMS oynasini ochish, ilovalarni ochish, budilnik, taymer, eslatma, fonar, ovoz balandligi, musiqa, navigator, buyurtmalar, lazer narxi, valyuta kursi, ob-havo, internetdan qidirish.
+- Qila olmaysan: boshqa ilovalar ICHIDA ishlash (masalan Telegram'da xabar o'qish/yozish — faqat Telegram'ni ochasan yoki "share" orqali matn yuborish oynasini ochasan), mashinaning o'zini boshqarish.
 
 FAQAT JSON qaytar: {"say":"aytiladigan matn","actions":[...]}
 Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
@@ -729,7 +749,7 @@ $("send").onclick=()=>{const v=$("txt").value;$("txt").value="";handle(v,false)}
 $("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("send").click()}});
 document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
 $("chipCar").onclick=()=>setCar(!S.car);
-$("chipLoop").onclick=()=>loop?stopLoop():startLoop();
+$("chipLoop").onclick=()=>setBg(!S.bg);
 
 /* ================= Buyurtmalar ekrani ================= */
 let oFilter="ochiq";
@@ -821,8 +841,7 @@ bind("sRate",v=>{S.rate=+v;$("sRateV").textContent=v},"input");
 bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 ["r1","r2","r3","r4"].forEach(k=>bind(k,v=>S.rates[k]=+String(v).replace(/[^\d]/g,"")||0));
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
-sw("swBg","bg",()=>{const r=N.bgListen(!!S.bg);if(r==="noperm"){S.bg=false;saveAll();loadSet();box("Ruxsat kerak","Avval mikrofon ruxsatini bering, keyin qayta yoqing.")}
-  if(S.bg){if(!S.wake){S.wake=true;saveAll();loadSet()} startLoop(true)} refreshBg()});
+$("swBg").onclick=()=>setBg(!S.bg,true);
 bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
 sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
@@ -852,7 +871,7 @@ function refreshBg(){
 $("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhbat tozalandi.")};
 
 /* ================= Ishga tushirish ================= */
-loadSet();renderOrders();renderNotes();refreshBg();
+loadSet();renderOrders();renderNotes();refreshBg();chipText();
 if(S.bg){ try{ if(N.bgRunning&&!N.bgRunning())N.bgListen(true) }catch(e){} setTimeout(()=>{ if(!loop&&state==="idle")startLoop(true) },1200); }
 setTimeout(applyVoice,600);
 if(S.car) setTimeout(()=>setCar(true,true),900);
