@@ -609,6 +609,15 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
         }
 
+        @JavascriptInterface public String readAsset(String path) {
+            try (InputStream is = getAssets().open(path)) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[16384]; int n;
+                while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+                return Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+            } catch (Exception e) { return ""; }
+        }
+
         @JavascriptInterface public String recentMsgs(int n) { return MsgReceiver.recent(MainActivity.this, n); }
 
         @JavascriptInterface public String reply(String to, String text) { return MsgReceiver.reply(MainActivity.this, to, text); }

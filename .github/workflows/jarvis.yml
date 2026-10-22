@@ -3,7 +3,7 @@ name: Jarvis APK
 on:
   push:
     branches: [main]
-    paths: ['jarvis/**', 'jarvis-xabar/**', '.github/workflows/jarvis.yml']
+    paths: ['jarvis/**', 'jarvis-xabar/**', 'catalog/www/dxf/**', 'catalog/www/items.js', '.github/workflows/jarvis.yml']
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Katalog naqshlarini qo'shish
+        run: |
+          mkdir -p jarvis/app/src/main/assets/lib
+          cp catalog/www/dxf/*.dxz jarvis/app/src/main/assets/lib/
+          cp catalog/www/items.js catalog/www/inflate.js jarvis/app/src/main/assets/lib/
+          ls jarvis/app/src/main/assets/lib | wc -l
       - name: APK yig'ish
         env:
           RUN: ${{ github.run_number }}
