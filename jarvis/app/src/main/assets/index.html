@@ -363,8 +363,10 @@ function setState(s,txt){
   $("stDot").className="dot"+(s==="listen"?" on":s==="think"||s==="speak"?" busy":"");
   $("stTx").textContent=txt||({idle:loop?"kutmoqda":"tayyor",listen:"tinglayapman",think:"o'ylayapman",speak:"gapiryapman"}[s]);
 }
+function mdLite(t){ return esc(t).replace(/^#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/^\s*[-*•]\s+/gm,"• ")
+  .replace(/^\|?\s*-{3,}[-|\s:]*$/gm,"").replace(/^\|(.+)\|\s*$/gm,(m,x)=>x.split("|").map(c=>c.trim()).filter(Boolean).join(" — ")).replace(/^-{3,}$/gm,"").replace(/^&gt;\s?/gm,"").replace(/\n{3,}/g,"\n\n"); }
 function addMsg(who,text){
-  const d=document.createElement("div");d.className="m "+who;d.textContent=text;
+  const d=document.createElement("div");d.className="m "+who; if(who==="j"&&/(\*\*|^#|^\|)/m.test(text)) d.innerHTML=mdLite(text); else d.textContent=text;
   $("chat").appendChild(d);$("chat").scrollTop=1e9;
 }
 function sys(t){addMsg("s",t)}
@@ -810,35 +812,60 @@ async function googleTrendsUZ(){
   const r=await http("https://trends.google.com/trending/rss?geo=UZ","GET",UA_M,null,15000);
   if(r.code!==200) return [];
   try{ const doc=new DOMParser().parseFromString(r.body,"text/xml");
-    return [...doc.querySelectorAll("item")].slice(0,12).map(it=>{ const t=(it.querySelector("title")||{}).textContent||""; const tr=(it.getElementsByTagName("ht:approx_traffic")[0]||{}).textContent||""; return t+(tr?` (${tr})`:""); }).filter(Boolean); }catch(e){ return []; }
+    return [...doc.querySelectorAll("item")].slice(0,12).map(it=>{ const t=(it.querySelector("title")||{}).textContent||""; const tr=(it.getElementsByTagName("ht:approx_traffic")[0]||{}).textContent||"";
+      const nw=(it.getElementsByTagName("ht:news_item_title")[0]||{}).textContent||""; return t+(tr?` (${tr})`:"")+(nw?` — ${nw}`:""); }).filter(Boolean); }catch(e){ return []; }
+}
+async function pageTrends(url){
+  const r=await http(url,"GET",{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36","Accept-Language":"en,ru;q=0.8"},null,20000);
+  if(r.code!==200) return [];
+  try{ const doc=new DOMParser().parseFromString(r.body,"text/html");
+    const root=doc.querySelector("article")||doc.querySelector("main")||doc.body; const out=[];
+    const hs=[...root.querySelectorAll("h2,h3")];
+    for(const h of hs){ const t=h.textContent.trim(); if(!t||t.length>90||/^(table of contents|faq|related|how to|what are|conclusion|subscribe)/i.test(t)) continue;
+      if(/(20\d\d|january|february|march|april|may|june|july|august|september|october|november|december)/i.test(t)&&t.length<40) continue;
+      let p=h.nextElementSibling, d=""; for(let k=0;k<4&&p&&!/^H[23]$/.test(p.tagName);k++,p=p.nextElementSibling){ const tx=(p.textContent||"").trim(); if(tx.length>30){ d=tx; break; } }
+      out.push({t,s:d.slice(0,260)}); if(out.length>=10) break; }
+    return out; }catch(e){ return []; }
+}
+async function rssTitles(url,n){
+  const r=await http(url,"GET",UA_M,null,15000); if(r.code!==200) return [];
+  try{ const doc=new DOMParser().parseFromString(r.body,"text/xml"); return [...doc.querySelectorAll("item")].slice(0,n||8).map(it=>((it.querySelector("title")||{}).textContent||"").trim()).filter(Boolean); }catch(e){ return []; }
 }
 async function trendReport(q){
   const now=new Date(), mon=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"][now.getMonth()], ru=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"][now.getMonth()], y=now.getFullYear();
   setState("think","trendlarni qidiryapman");
-  const [gt,ig,yt,tg,niche]=await Promise.all([
+  let [uzS1,uzS2,kun]=await Promise.all([
+    snippets(`trend reels o'zbekcha ${mon} ${y}`),
+    snippets(`тренд узбекистан инстаграм ${ru} ${y} песня челлендж`),
+    rssTitles("https://kun.uz/news/rss",8)
+  ]);
+  let [gt,ig,yt,tg,niche]=await Promise.all([
     googleTrendsUZ(),
-    snippets(`тренды reels instagram ${ru} ${y}`),
-    snippets(`тренды youtube shorts ${ru} ${y}`),
+    pageTrends("https://later.com/blog/instagram-reels-trends/"),
+    pageTrends("https://later.com/blog/tiktok-trends/"),
     snippets(`telegram тренды ${ru} ${y} Узбекистан`),
     snippets(`идеи reels для мастерской металл лазерная резка ${y}`)
   ]);
-  const fmtS=a=>a.slice(0,5).map(x=>`- ${x.t}: ${x.s}`).join("\n")||"(topilmadi)";
-  const got=gt.length+ig.length+yt.length+tg.length;
-  const ctxt=`GOOGLE TRENDS (O'zbekiston, bugun): ${gt.join("; ")||"(olinmadi)"}\n\nINSTAGRAM REELS:\n${fmtS(ig)}\n\nYOUTUBE SHORTS:\n${fmtS(yt)}\n\nTELEGRAM:\n${fmtS(tg)}\n\nMETALL/LAZER USTAXONASI UCHUN G'OYALAR:\n${fmtS(niche)}`;
+  if(!ig.length) ig=await snippets(`тренды reels instagram ${ru} ${y}`);
+  if(!yt.length) yt=await snippets(`тренды youtube shorts ${ru} ${y}`);
+  const fmtS=a=>a.slice(0,7).map(x=>`- ${x.t}: ${x.s}`).join("\n")||"(topilmadi)";
+  const got=gt.length+ig.length+yt.length+tg.length+uzS1.length+uzS2.length+kun.length;
+  const ctxt=`GOOGLE TRENDS (O'zbekiston, bugun): ${gt.join("; ")||"(olinmadi)"}\n\nO'ZBEK TRENDLARI (qidiruv):\n${fmtS([...uzS1,...uzS2])}\n\nKUN.UZ SO'NGGI YANGILIKLAR: ${kun.join("; ")||"(olinmadi)"}\n\nINSTAGRAM REELS (Later.com, har hafta yangilanadi):\n${fmtS(ig)}\n\nTIKTOK / YOUTUBE SHORTS (Later.com):\n${fmtS(yt)}\n\nTELEGRAM:\n${fmtS(tg)}\n\nMETALL/LAZER USTAXONASI UCHUN G'OYALAR:\n${fmtS(niche)}`;
   if(!got){ const g=await groqWeb(`Hozir (${mon} ${y}) Instagram Reels, YouTube Shorts, Telegram va Google'da qanday trendlar bor? O'zbekiston va MDH uchun. Lazer kesish va metall ustaxonasi uchun moslab, O'ZBEK tilida qisqa ayt.`);
     if(g) return {text:g,src:["Groq qidiruv"]};
     return {text:"Trendlarni topib bo'lmadi — internet yoki qidiruv tizimlari javob bermadi.",src:[],err:lastWebErr||"manbalar ochilmadi"}; }
   const full=await askRaw(`Sen Instagram'da metall va lazer kesish ustaxonasini (@metart_shop) rivojlantiradigan marketologsan. Quyidagi manbalardan ENG MUHIM trendlarni tanla va O'ZBEK tilida (lotin) yoz:
-1) Har platforma bo'yicha 2–3 ta asosiy trend (Instagram, YouTube, Telegram, Google O'zbekiston) — har biri bitta qator.
-2) Ulardan 3 ta eng mosini metall/lazer ustaxonasi uchun aniq Reels g'oyasiga aylantir: nima suratga olinadi, birinchi 2 soniya, matn.
-Faqat manbalarda bor narsani trend deb ayt; o'ylab topma. Bugun: ${nowStr()}.
+1) "O'ZBEKISTONDA" bo'limi: Google'da bugun ko'p qidirilgan 3–4 mavzu (nima uchun — qisqa), o'zbek Instagram/TikTok'dagi trend qo'shiq yoki challenge (manbada bo'lsa), Kun.uz'dagi eng ko'p muhokama qilinayotgan 1–2 mavzu.
+2) "DUNYODA" bo'limi: Instagram Reels: 4–5 ta eng so'nggi trend — nomi (asl inglizcha nomi qavsda) va qanday qilinishi bitta qatorda. TikTok/Shorts: 2–3 ta. Google O'zbekiston: bugun ko'p qidirilgan 3 ta mavzu. Telegram: manbada bo'lsa 1–2 ta.
+3) "G'OYALAR" bo'limi: ulardan 3 ta eng mosini (kamida 1 tasi o'zbekcha trend) metall/lazer ustaxonasi uchun aniq Reels g'oyasiga aylantir: nima suratga olinadi, birinchi 2 soniya, matn.
+Faqat manbalarda bor narsani trend deb ayt; o'ylab topma. Bo'limi bo'sh bo'lsa, shunchaki tashlab ket. FORMAT: oddiy matn — sarlavhalar alohida qatorda, bandlar "- " bilan; JADVAL, ** va # belgilarini ISHLATMA. Bugun: ${nowStr()}.
 ${q?"Savol: "+q:""}
 MANBALAR:
 ${ctxt}`);
   if(!full) return {text:"Trendlar topildi, lekin AI xulosa qila olmadi.",src:[]};
   setTimeout(()=>{ addMsg("j",full); N.copy(full); },60);
-  const short=await askRaw(`Quyidagi matnni ovoz chiqarib o'qish uchun 2–3 gapga qisqartir, O'ZBEK tilida, eng muhim 2 trend va 1 g'oya:\n${full}`);
-  return {text:(short||"Trendlar tayyor, to'liq ro'yxatni ekranga chiqardim.")+" To'liq ro'yxatni ekranga chiqardim va nusxaladim.",src:[gt.length?"Google Trends":"",ig.length?"Instagram":"",yt.length?"YouTube":"",tg.length?"Telegram":""].filter(Boolean)};
+  const short=await askRaw(`Quyidagi matnni ovoz chiqarib o'qish uchun 2–3 gapga qisqartir, O'ZBEK tilida: O'zbekistondagi 1 trend, dunyodagi 1 trend va 1 g'oya. Belgilarsiz:\n${full}`);
+  return {text:(short||"Trendlar tayyor, to'liq ro'yxatni ekranga chiqardim.")+" To'liq ro'yxatni ekranga chiqardim va nusxaladim.",src:[gt.length?"Google Trends O'zbekiston":"",kun.length?"Kun.uz":"",(uzS1.length+uzS2.length)?"o'zbekcha qidiruv":"",ig.length?"Instagram (Later.com)":"",yt.length?"TikTok/Shorts (Later.com)":"",tg.length?"Telegram":""].filter(Boolean)};
 }
 
 async function askAI(userText){
