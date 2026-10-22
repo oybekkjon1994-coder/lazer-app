@@ -333,10 +333,10 @@ function sys(t){addMsg("s",t)}
 const J = window.J = {
   _cb:{},
   onTtsReady(){applyVoice()},
-  onListenStart(){setState("listen");$("live").textContent="Gapiring…"},
+  onListenStart(){setState("listen");$("live").textContent=(loop&&S.wake&&Date.now()>followUntil)?"\"Jarvis\" deb chaqiring":"Gapiring…"},
   onListenEnd(){$("live").textContent="…"},
   onRms(v){const k=1+Math.max(0,Math.min(10,v))/22;core.style.transform="scale("+k+")"},
-  onPartial(t){$("live").textContent=t},
+  onPartial(t){ if(loop&&S.wake&&Date.now()>followUntil&&!WAKE.test(t)){$("live").textContent="";return} $("live").textContent=t},
   onSpeech(t){core.style.transform="";$("live").textContent="";errStreak=0;
     if(!t){afterTurn();return}
     handle(t,true)},
@@ -350,10 +350,10 @@ const J = window.J = {
     if(loop&&errStreak>=5)stopLoop();
     setState("idle")},
   onSpeakStart(){setState("speak")},
-  onSpeakDone(){followUntil=Date.now()+10000;if(state==="speak"||state==="think")setState("idle");afterTurn()},
+  onSpeakDone(){if(labbay){followUntil=Date.now()+8000;labbay=false}if(state==="speak"||state==="think")setState("idle");afterTurn()},
   external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
     N.stopListen(); if(state==="listen")setState("idle");
-    if(!String(cmd||"").trim()){ followUntil=Date.now()+12000; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
+    if(!String(cmd||"").trim()){ labbay=true; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
   onShown(){ refreshBg(); if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
@@ -368,7 +368,7 @@ function http(url,method,headers,body,ms){
     N.http(id,url,method,JSON.stringify(headers||{}),body?JSON.stringify(body):"")});
 }
 function listen(){ if(state==="listen")return; N.stopSpeak(); N.listen(S.stt); setState("listen","ulanmoqda…") }
-function afterTurn(){ if(loop && state==="idle") setTimeout(()=>{ if(loop&&state==="idle") listen() },350) }
+function afterTurn(){ if(loop && state==="idle") setTimeout(()=>{ if(loop&&state==="idle") listen() },800) }
 function chipText(){ $("chipLoop").textContent="Doimiy tinglash: "+(S.bg||loop?"yoqiq":"o'chiq"); $("chipLoop").classList.toggle("on",!!S.bg); }
 function setBg(on,quiet){
   S.bg=!!on; if(S.bg)S.wake=true; saveAll(); loadSet();
@@ -387,7 +387,7 @@ function startLoop(quiet){if(loop)return;loop=true;errStreak=0;if(S.awake)N.keep
   if(state==="idle"&&!busy)listen()}
 function stopLoop(){loop=false;setTimeout(chipText,0);N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
 
-let followUntil=0;
+let followUntil=0, labbay=false;
 function setCar(on,quiet){
   S.car=!!on; saveAll(); document.body.classList.toggle("car",S.car); $("chipCar").classList.toggle("on",S.car);
   if(S.car){ S.voice=true; S.wake=true; saveAll(); loadSet(); N.keepAwake(true); if(!loop)startLoop(true);
@@ -724,10 +724,11 @@ async function handle(text,byVoice){
   text=String(text).trim(); if(!text) return afterTurn();
   if(byVoice && loop && S.wake && !WAKE.test(text) && Date.now()>followUntil){ setState("idle"); return afterTurn(); }
   if(busy) return; busy=true;
+  followUntil=0;
   addMsg("u",text);
   const clean=text.replace(/^.*?\b(hey |ey )?(jarv\S*|djarv\S*|jarw\S*|charv\S*|jerv\S*|джарв\S*|жарв\S*)[,!.\s]*/i,"").trim();
   try{
-    if(!clean){ followUntil=Date.now()+12000; say(`Labbay, ${S.name}?`); return; }
+    if(!clean){ labbay=true; say(`Labbay, ${S.name}?`); return; }
     const q=quick(clean);
     if(q!==null){ say(q); return; }
     { const fw=await fastWeb(norm(clean)); if(fw){ hist.push({r:"u",t:clean},{r:"j",t:fw}); say(fw); return; } }
