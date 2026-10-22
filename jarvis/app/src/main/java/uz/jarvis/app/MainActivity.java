@@ -59,12 +59,14 @@ public class MainActivity extends Activity {
     SharedPreferences prefs;
     long lastRms = 0;
     static volatile boolean visible = false;
+    static MainActivity inst;
     boolean pageReady = false;
     String pendingCmd = null;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        inst = this;
         prefs = getSharedPreferences("jarvis", MODE_PRIVATE);
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -110,6 +112,12 @@ public class MainActivity extends Activity {
     }
 
     void takeIntent(Intent i) {
+        if (i != null && i.getBooleanExtra("report", false)) {
+            i.removeExtra("report");
+            if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
+            if (pageReady) js("J.morning()"); else pendingCmd = "#report#";
+            return;
+        }
         if (i == null || !i.getBooleanExtra("wake", false)) return;
         String cmd = i.getStringExtra("cmd");
         i.removeExtra("wake");
@@ -118,7 +126,10 @@ public class MainActivity extends Activity {
         if (pageReady) deliver(cmd == null ? "" : cmd); else pendingCmd = cmd == null ? "" : cmd;
     }
 
-    void deliver(String cmd) { js("J.external(" + q(cmd) + ")"); }
+    void deliver(String cmd) {
+        if ("#report#".equals(cmd)) js("J.morning()");
+        else js("J.external(" + q(cmd) + ")");
+    }
 
     boolean bgOn() { return prefs.getBoolean("bg", false); }
 
@@ -172,6 +183,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (inst == this) inst = null;
         if (rec != null) rec.destroy();
         if (tts != null) tts.shutdown();
         super.onDestroy();
@@ -449,6 +461,34 @@ public class MainActivity extends Activity {
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
         }
+
+        @JavascriptInterface public String recentMsgs(int n) { return MsgService.recent(n); }
+
+        @JavascriptInterface public String reply(String to, String text) { return MsgService.reply(MainActivity.this, to, text); }
+
+        @JavascriptInterface public boolean hasNotifAccess() {
+            String s = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+            return s != null && s.contains(getPackageName());
+        }
+
+        @JavascriptInterface public void askNotifAccess() {
+            try {
+                Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception e) { appSettings(); }
+        }
+
+        @JavascriptInterface public void copy(String text) {
+            runOnUiThread(() -> {
+                try {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Jarvis", text));
+                } catch (Exception ignored) {}
+            });
+        }
+
+        @JavascriptInterface public void scheduleReport(boolean on, int h, int m) { ReportReceiver.schedule(MainActivity.this, on, h, m); }
 
         @JavascriptInterface public String media(String cmd) {
             int code;
