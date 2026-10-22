@@ -456,6 +456,9 @@ function quick(t){
   if(nv){ const key=nv[1]==="uy"?"uy":"ustaxona", addr=S.places[key];
     if(!addr) return `${key==="uy"?"Uy":"Ustaxona"} manzili kiritilmagan. Sozlamalar, Mashina bo'limida kiriting.`;
     const r=N.navigate(addr,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":`${key==="uy"?"Uyga":"Ustaxonaga"} yo'l ochildi.`; }
+  if(/(tinglash|eshitish|mikrofon|quloq)/.test(s) && /(o'chir|to'xtat|bas qil|kerak emas|yop|uchir|ochir)/.test(s)){
+    setBg(false,true); stopLoop(); N.stopListen(); return "Tinglash o'chirildi. Kerak bo'lsa, mikrofon tugmasini bosing.";}
+  if(/(tinglash|eshitish|doimiy tinglash)/.test(s) && /(yoq|ishga tushir|boshla)/.test(s)){ setBg(true,true); return `Doimiy tinglash yoqildi. "Jarvis" deb chaqiring.`; }
   if(/mashina rejim/.test(s)){ if(/(o'chir|yop|bas)/.test(s)){setCar(false,true);return "Mashina rejimi o'chirildi."} setCar(true,true); return `Mashina rejimi yoqildi. Buyruq uchun "Jarvis" deng.` }
   if(/^(stop|to'xta|jim|bas|yetarli|tamom)\b/.test(s.replace(/^jarvis,?\s*/,""))){N.stopSpeak();if(loop)stopLoop();return "Xo'p."}
   return null;
@@ -465,11 +468,13 @@ function quick(t){
 function sysPrompt(){
   const r=S.rates;
   return `Sen "Jarvis"san — Temir odamdagi Jarvis kabi aqlli, xushmuomala va qisqa gapiradigan shaxsiy yordamchi.
+Salomatlik/oila savollarida javob 2–4 gap bo'lishi mumkin.
 Egang lazer kesish, CNC va metall ishlari ustaxonasini yuritadi (Metartshop, Instagram @metart_shop). Unga "${S.name}" deb murojaat qil.
-Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
+Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Har qanday savolga — ish, oila, bola tarbiyasi, salomatlik, hayotiy maslahat — mazmunli, amaliy javob ber; hech qachon savolni chetlab o'tma.
+Salomatlik savollarida (ayniqsa bolalar): avval eng muhim amaliy maslahatni ber, keyin xavfli belgilarni (yuqori harorat, nafas qiyinlashuvi, hushsizlik, to'xtamaydigan yig'i, qayt qilish va h.k.) ayt va bunday holatda darhol shifokorga yoki 103 ga murojaat qilishni maslahat ber. Dori dozasini aytma — shifokor yoki dorixonachiga yo'naltir. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
 Pul summalarini "150 ming so'm" kabi yoz.
 
-Hozirgi vaqt: ${nowStr()}.${S.car?"\nEgang hozir MASHINA haydayapti: javoblar juda qisqa bo'lsin (1 gap), ekranga qarashni talab qilma.":""}
+Hozirgi vaqt: ${nowStr()}.${S.car?"\nEgang hozir mashinada bo'lishi mumkin: javoblarni qisqa qil, ekranga qarashni talab qilma. Lekin savolning O'ZIGA javob ber — mavzuni haydashga burma.":""}
 Saqlangan manzillar: uy — ${S.places.uy||"kiritilmagan"}; ustaxona — ${S.places.ustaxona||"kiritilmagan"}.
 Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.
 Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}
@@ -502,6 +507,7 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"navigate","query":"manzil yoki joy nomi"}           // navigatorda yo'l ochish ("uy"/"ustaxona" — saqlangan manzil)
 {"type":"media","cmd":"play|pause|next|prev"}                 // musiqani boshqarish
 {"type":"place_save","name":"uy|ustaxona","address":"..."}    // manzilni eslab qolish
+{"type":"listen","on":false}                                  // doimiy tinglashni o'chirish/yoqish
 {"type":"web","query":"aniq qidiruv so'rovi"}                // internetdan qidirib javob berish
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
 Yangiliklar, valyuta kursi, ob-havo, narxlar, sport, telefon raqami/manzil, hozirgi voqealar yoki aniq bilmagan har qanday fakt so'ralsa — "web" amalini ishlat va "say"ni BO'SH qoldir (javobni qidiruv natijasi aytadi). O'ylab topma. Xavfli yoki noqonuniy ishga yordam berma.`;
@@ -698,6 +704,7 @@ async function run(a){
     case "navigate":{ let q=String(a.query||"").trim(); const k=norm(q).replace(/(ga|imga|mga)$/,"");
       if(k==="uy"||k==="uyim"||k==="ustaxona"){ q=S.places[k.startsWith("uy")?"uy":"ustaxona"]; if(!q)return"Bu manzil kiritilmagan. Sozlamalarda kiriting."; }
       const r=N.navigate(q,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":""; }
+    case "listen": setBg(!!a.on,true); if(!a.on){stopLoop();N.stopListen()} return "";
     case "media": N.media(a.cmd||"toggle"); return "";
     case "place_save":{ const k=/uy/i.test(a.name||"")?"uy":"ustaxona"; S.places[k]=a.address||""; saveAll(); loadSet(); return ""; }
     case "web":{ setState("think","qidiryapman"); const w=await webAnswer(a.query||"");
