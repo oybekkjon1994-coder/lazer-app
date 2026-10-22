@@ -22,6 +22,7 @@
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+        <package android:name="com.pinterest" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="yandexnavi" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="yandexmaps" /></intent>
@@ -36,6 +37,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter android:label="Jarvis'ga yuborish">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter android:label="Jarvis'ga yuborish">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
         <receiver android:name=".ReminderReceiver" android:exported="false" />

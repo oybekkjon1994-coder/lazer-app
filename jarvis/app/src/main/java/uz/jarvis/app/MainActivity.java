@@ -73,6 +73,7 @@ public class MainActivity extends Activity {
     static MainActivity inst;
     boolean pageReady = false;
     String pendingCmd = null;
+    String pendingShare = null, pendingText = null;
     Uri camUri = null;
     MediaPlayer player = null;
     static final int REQ_IMG = 41;
@@ -91,6 +92,8 @@ public class MainActivity extends Activity {
             @Override public void onPageFinished(WebView v, String url) {
                 pageReady = true;
                 if (pendingCmd != null) { deliver(pendingCmd); pendingCmd = null; }
+                if (pendingShare != null) { js("J.onShared(" + q(pendingShare) + ")"); pendingShare = null; }
+                if (pendingText != null) { js("J.onSharedText(" + q(pendingText) + ")"); pendingText = null; }
             }
         });
         web.setWebChromeClient(new WebChromeClient());
@@ -116,6 +119,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) need.add(Manifest.permission.POST_NOTIFICATIONS);
         askPerms(need.toArray(new String[0]));
         takeIntent(getIntent());
+        takeShare(getIntent());
     }
 
     @Override
@@ -123,6 +127,7 @@ public class MainActivity extends Activity {
         super.onNewIntent(i);
         setIntent(i);
         takeIntent(i);
+        takeShare(i);
     }
 
     void takeIntent(Intent i) {
@@ -198,35 +203,59 @@ public class MainActivity extends Activity {
         Uri u = (data != null && data.getData() != null) ? data.getData() : camUri;
         if (u == null) { js("J.onImage('')"); return; }
         final Uri fu = u;
-        new Thread(() -> {
-            String out = "";
-            try {
-                BitmapFactory.Options o = new BitmapFactory.Options();
-                o.inJustDecodeBounds = true;
-                try (InputStream is = getContentResolver().openInputStream(fu)) { BitmapFactory.decodeStream(is, null, o); }
-                int max = Math.max(o.outWidth, o.outHeight), sample = 1;
-                while (max / (sample * 2) >= 1280) sample *= 2;
-                BitmapFactory.Options o2 = new BitmapFactory.Options();
-                o2.inSampleSize = sample;
-                Bitmap bm;
-                try (InputStream is = getContentResolver().openInputStream(fu)) { bm = BitmapFactory.decodeStream(is, null, o2); }
-                int rot = 0;
-                try (InputStream is = getContentResolver().openInputStream(fu)) {
-                    if (Build.VERSION.SDK_INT >= 24) {
-                        int ori = new ExifInterface(is).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                        rot = ori == ExifInterface.ORIENTATION_ROTATE_90 ? 90 : ori == ExifInterface.ORIENTATION_ROTATE_180 ? 180 : ori == ExifInterface.ORIENTATION_ROTATE_270 ? 270 : 0;
-                    }
-                } catch (Exception ignored) {}
-                float sc = Math.min(1f, 1280f / Math.max(bm.getWidth(), bm.getHeight()));
-                Matrix mx = new Matrix(); mx.postScale(sc, sc); if (rot != 0) mx.postRotate(rot);
-                Bitmap b2 = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), mx, true);
-                ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                b2.compress(Bitmap.CompressFormat.JPEG, 82, bo);
-                out = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
-            } catch (Exception e) { out = ""; }
-            js("J.onImage(" + q(out) + ")");
-        }).start();
+        new Thread(() -> js("J.onImage(" + q(loadB64(fu, 1280)) + ")")).start();
     }
+
+    String loadB64(Uri fu, int maxPx) {
+        String out = "";
+        try {
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            try (InputStream is = getContentResolver().openInputStream(fu)) { BitmapFactory.decodeStream(is, null, o); }
+            int max = Math.max(o.outWidth, o.outHeight), sample = 1;
+            while (max / (sample * 2) >= maxPx) sample *= 2;
+            BitmapFactory.Options o2 = new BitmapFactory.Options();
+            o2.inSampleSize = sample;
+            Bitmap bm;
+            try (InputStream is = getContentResolver().openInputStream(fu)) { bm = BitmapFactory.decodeStream(is, null, o2); }
+            int rot = 0;
+            try (InputStream is = getContentResolver().openInputStream(fu)) {
+                if (Build.VERSION.SDK_INT >= 24) {
+                    int ori = new ExifInterface(is).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                    rot = ori == ExifInterface.ORIENTATION_ROTATE_90 ? 90 : ori == ExifInterface.ORIENTATION_ROTATE_180 ? 180 : ori == ExifInterface.ORIENTATION_ROTATE_270 ? 270 : 0;
+                }
+            } catch (Exception ignored) {}
+            float sc = Math.min(1f, (float) maxPx / Math.max(bm.getWidth(), bm.getHeight()));
+            Matrix mx = new Matrix(); mx.postScale(sc, sc); if (rot != 0) mx.postRotate(rot);
+            Bitmap b2 = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), mx, true);
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            b2.compress(Bitmap.CompressFormat.JPEG, 85, bo);
+            out = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+        } catch (Exception e) { out = ""; }
+        return out;
+    }
+
+    /** Pinterest va boshqa ilovalardan "Ulashish → Jarvis" */
+    void takeShare(Intent i) {
+        if (i == null || !Intent.ACTION_SEND.equals(i.getAction())) return;
+        String type = i.getType();
+        if (type != null && type.startsWith("image/")) {
+            Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM);
+            i.setAction(null);
+            if (u == null) return;
+            new Thread(() -> {
+                String b = loadB64(u, 1280);
+                if (pageReady) js("J.onShared(" + q(b) + ")"); else pendingShare = b;
+            }).start();
+        } else if (type != null && type.startsWith("text/")) {
+            String t = i.getStringExtra(Intent.EXTRA_TEXT);
+            i.setAction(null);
+            if (t != null) { if (pageReady) js("J.onSharedText(" + q(t) + ")"); else pendingText = t; }
+        }
+    }
+
+    File ideasDir() { File d = new File(getFilesDir(), "ideas"); d.mkdirs(); return d; }
+
 
     @Override
     public void onBackPressed() {
@@ -608,6 +637,34 @@ public class MainActivity extends Activity {
                 startActivity(c);
             } catch (Exception ignored) {}
         }
+
+        @JavascriptInterface public String ideaSave(String b64, String tag) {
+            try {
+                String name = System.currentTimeMillis() + "_" + tag.replaceAll("[^A-Za-z0-9_'-]", "") + ".jpg";
+                try (FileOutputStream fo = new FileOutputStream(new File(ideasDir(), name))) { fo.write(Base64.decode(b64, Base64.DEFAULT)); }
+                return name;
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface public String ideaList() {
+            JSONArray a = new JSONArray();
+            File[] fs = ideasDir().listFiles();
+            if (fs != null) {
+                java.util.Arrays.sort(fs, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+                for (File f : fs) a.put(f.getName());
+            }
+            return a.toString();
+        }
+
+        @JavascriptInterface public String ideaRead(String name) {
+            try (InputStream is = new java.io.FileInputStream(new File(ideasDir(), new File(name).getName()))) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] buf = new byte[16384]; int n;
+                while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+                return Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface public boolean ideaDelete(String name) { return new File(ideasDir(), new File(name).getName()).delete(); }
 
         @JavascriptInterface public String readAsset(String path) {
             try (InputStream is = getAssets().open(path)) {

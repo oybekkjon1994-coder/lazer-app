@@ -117,6 +117,8 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipImg">📷 Rasm</button>
     <button class="chip" id="chipDxf">📐 Chizmadan DXF</button>
     <button class="chip" id="chipLib">🧩 Naqshlar</button>
+    <button class="chip" id="chipIdea">💡 G'oyalar</button>
+    <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
     <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
     <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
@@ -284,7 +286,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -404,10 +406,21 @@ const J = window.J = {
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
     if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":""),true) } else msgQueue.push(m); },
   morning(){ go("pJarvis"); voiceIn=true; morningReport(); },
+  onShared(b64){ go("pJarvis"); if(!b64){ sys("Rasmni olib bo'lmadi."); return; }
+    $("sheet").innerHTML=`<h2>📥 Rasm keldi</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px">
+    <div class="row" style="margin-top:12px"><button class="btn" id="shI">💡 G'oyaga saqlash</button><button class="btn g" id="shD">✏️ DXF yasash</button></div>
+    <button class="btn g" id="shA" style="width:100%;margin-top:8px">🔍 Tahlil qilish</button>`;
+    openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)};
+    $("shA").onclick=()=>{ closeModal(); imgMode="ask"; imgQ="Bu naqsh/buyumni lazerda qanday yasash mumkin va taxminiy narxi?"; J.onImage(b64); }; },
+  onSharedText(t){ go("pJarvis"); t=String(t||"").trim(); if(!t)return;
+    if(/pinterest|pin\.it/i.test(t)){ box("Pinterest havolasi","Havola emas, rasmning o'zini yuboring: Pinterest'da pinni oching → ⋯ → \"Rasmni yuklab olish\" yoki Ulashish → Jarvis."); return; }
+    voiceIn=false; handle(t,false); },
   onReplyResult(r){ if(r==="expired")say("Xabar eskirgan, ilovaning o'zidan javob bering."); else if(r==="err")say("Javobni yuborib bo'lmadi."); else if(r==="none")say("Javob berib bo'ladigan xabar topilmadi."); else if(r==="noaccess")say("Jarvis Xabar ilovasida ruxsat berilmagan."); else sys("✓ Yuborildi"); },
   async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
     addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
     setState("think","rasmni ko'ryapman"); busy=true;
+    if(imgMode==="idea"){ imgMode="ask"; setState("idle"); busy=false; saveIdeaUI(b64,()=>openIdeas("")); return; }
+    if(imgMode==="trace"){ imgMode="ask"; setState("idle"); busy=false; traceUI(b64); return; }
     if(imgMode==="dxf"){ try{ const a=await visionAsk(b64,"",PARTS_PROMPT); setState("idle"); imgMode="ask";
         let j=null; try{ j=JSON.parse(String(a).replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/,"$1")) }catch(e){}
         const parts=(j&&Array.isArray(j.parts)?j.parts:[]).map(p=>({w:+p.w||0,h:+p.h||0,d:+p.d||0,qty:+p.qty||1,unsure:!!p.unsure}));
@@ -611,6 +624,10 @@ function quick(t){
   if(isTrendQ(g) && !/(eslat|post yoz|ssenariy)/.test(g)){ setTimeout(async()=>{ if(busy)return; busy=true; try{ const w=await trendReport(g); setState("idle");
       if(w.src&&w.src.length) sys("Manbalar: "+w.src.join(", ")); if(w.err) sys("Sabab: "+w.err); say(w.text); } finally{busy=false} },30); return "Trendlarni qidiryapman, bir oz kuting."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
+  if(/pinterest|pinterst|pintrest/.test(g)){ const q=g.replace(/^(jarvis,?\s*)?/,"").replace(/(pinterest|pinterst|pintrest)(dan|da|ni|ga)?/g,"").replace(/(top(ib ber)?|qidir|och|ko'rsat|g'oyalar(ini)?)/g,"").trim();
+    setTimeout(async()=>{ say(await pinterestSearch(q)); },30); return ""; }
+  if(/(g'oya(lar)?(im)?(ni)? (ko'rsat|och)|g'oyalar papka)/.test(g)){ const t=IDEA_TAGS.find(x=>g.includes(x.slice(0,5))); setTimeout(()=>openIdeas(t||""),30); return "G'oyalarni ochdim."; }
+  if(/(rasm(dan)?|surat(dan)?).*(kontur|chiz).*(dxf)|kontur(dan)? dxf/.test(g)){ setTimeout(()=>{imgMode="trace";N.pickImage(false)},50); return "Rasmni tanlang."; }
   if(/(naqsh(lar)? katalog|katalog(ni)? och|naqshlarni ko'rsat|tayyor dxf)/.test(g)){ setTimeout(()=>openLib(""),50); return "Katalogni ochdim, naqshni tanlang."; }
   if(/(chizma(dan)?|rasm(dan)?|surat(dan)?).*dxf|dxf.*(chizma|rasm|surat)/.test(g)){ setTimeout(()=>askImage("","dxf"),50); return "Chizmani suratga oling."; }
   if(/(rasm(ga)? (qara|ko'r|tahlil)|rasmni (ko'r|tahlil)|surat(ga)? qara|rasm(ga)? ol)/.test(s)){ setTimeout(()=>askImage(""),50); return "Rasmni tanlang yoki suratga oling."; }
@@ -650,6 +667,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Kunlik bilim: "Jarvis, bugungi bilim". Hazil rejimi: "Jarvis, hazil rejim" / "jiddiy rejim".
 - Tabiiy o'zbekcha ovoz: Sozlamalar → Azure (bepul kalit kerak).
 - Trendlardan keyin "videolarini ko'rsat" desa — trend videolarini YouTube/Instagram/TikTok'da ochasan (tugmalar ekranda).
+- Pinterest: "📌 Pinterest" yoki "Jarvis, Pinterest'dan darvoza g'oyalari" — qidiruvni ochasan. Pinterest'dan rasm Ulashish→Jarvis orqali keladi: g'oyaga saqlash, kontur DXF yoki tahlil. "💡 G'oyalar" — saqlangan rasmlar (turlar bo'yicha).
 - Naqshlar katalogi: Lazer ustaxonasidagi ${LIB().length} ta tayyor DXF naqsh (darvoza, panjara, dekor, naqsh/medalyon, soat, kamin, ko'zgu, polka, belgi) ichingda BOR. Egang naqsh, darvoza, panjara DXF so'rasa yoki "tayyor DXF bormi" desa — "pattern" amalini ishlat (o'lcham, ramka mm). Hech qachon "menda tayyor DXF yo'q" dema. "🧩 Naqshlar" tugmasi ham bor.
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
 - DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
@@ -685,6 +703,8 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"reply","to":"...","text":"..."}                      // faqat egang aniq matnni aytib "yubor" desa
 {"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1}  // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm
 {"type":"pattern","query":"naqsh nomi/turi: masalan 'panjara 12 qirrali'","w":600,"h":400,"frame":3,"fit":"fit|stretch","thickness":2,"qty":1}  // KATALOGDAGI tayyor naqshdan DXF (o'lchamga moslab, ramka bilan)
+{"type":"pinterest","query":"..."}                             // Pinterest'da g'oya qidirish
+{"type":"ideas","tag":"darvoza|panjara|mangal|soat|polka|dekor|pech|boshqa"} // saqlangan g'oyalarni ko'rsatish
 {"type":"photo","question":"...","dxf":false}                 // dxf:true — chizma suratidan o'lchamlarni o'qib DXF yasash                               // rasmni ko'rib berish (kamera/galereya ochiladi)
 {"type":"show","text":"uzun matn"}                              // post, OLX e'lon, ssenariy — ekranga chiqarish (ovoz chiqarib o'qilmaydi)
 {"type":"copy","text":"..."}                                    // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
@@ -983,6 +1003,8 @@ async function run(a,ctx){
       if(!hits.length){ setTimeout(()=>openLib(a.query||"",o),50); return "Katalogda aniq mosini topmadim, ro'yxatdan tanlang."; }
       if(hits.length===1||(a.query&&norm(hits[0].id)===norm(a.query))){ setTimeout(()=>makeFromLib(hits[0].id,o),50); return ""; }
       setTimeout(()=>openLib(a.query||"",o),50); return `Katalogda ${hits.length} ta mos naqsh bor, birini tanlang.`; }
+    case "pinterest": return await pinterestSearch(a.query||"");
+    case "ideas": setTimeout(()=>openIdeas(a.tag||""),50); return "";
     case "photo": setTimeout(()=>askImage(a.question||"",a.dxf?"dxf":"ask"),50); return "";
     case "dxf":{ const sp=a; if(!(+sp.w&&+sp.h)&&!+sp.d) return "O'lchamlar to'liq emas.";
       const r=dxfFrom(sp); const nm=(String(sp.name||"detal").replace(/[^\w\-]+/g,"_")||"detal")+"_"+Date.now().toString().slice(-5)+".dxf";
@@ -1061,6 +1083,9 @@ $("chipImg").onclick=()=>askImage("");
 $("chipRead").onclick=()=>openReader();
 $("chipDxf").onclick=()=>askImage("","dxf");
 $("chipLib").onclick=()=>openLib("");
+$("chipIdea").onclick=()=>openIdeas("");
+$("chipPin").onclick=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
+  openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
 $("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>setBg(!S.bg);
@@ -1215,9 +1240,12 @@ function askImage(q,mode){ imgQ=q||""; imgMode=mode||"ask";
   $("sheet").innerHTML=`<h2>Rasm</h2><p class="mut">Chizma, detal, hujjat yoki mahsulot rasmini yuboring — nima ekanini, qanday yasash va taxminiy narxini aytaman.</p>
   <label>Savol (ixtiyoriy)</label><input id="imgQ" value="${esc(imgQ)}" placeholder="Masalan: buni lazerda kesish qancha bo'ladi?">
   <button class="btn g" id="imgDxf" style="width:100%;margin-top:10px">📐 O'lchamli chizmadan DXF yasash</button>
+  <div class="row" style="margin-top:8px"><button class="btn g" id="imgTr">✏️ Rasm konturidan DXF</button><button class="btn g" id="imgId">💡 G'oyaga saqlash</button></div>
   <div class="row" style="margin-top:14px"><button class="btn" id="imgCam">📷 Kamera</button><button class="btn g" id="imgGal">🖼 Galereya</button></div>`;
   openModal(); const go=c=>{imgQ=$("imgQ").value.trim();closeModal();setState("think","rasm kutilmoqda");N.pickImage(c)};
-  $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); $("imgDxf").onclick=()=>askImage("","dxf"); }
+  $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); $("imgDxf").onclick=()=>askImage("","dxf");
+  $("imgTr").onclick=()=>{closeModal();imgMode="trace";setState("think","rasm kutilmoqda");N.pickImage(false)};
+  $("imgId").onclick=()=>{closeModal();imgMode="idea";setState("think","rasm kutilmoqda");N.pickImage(false)}; }
 
 /* ================= Katalog naqshlari (Lazer ustaxonasidan) ================= */
 const LIB=()=>Array.isArray(window.BUILTIN)?window.BUILTIN:[];
@@ -1310,6 +1338,132 @@ function openLib(q,o){
       closeModal(); makeFromLib(d.dataset.id,oo); }); };
   let curCat=""; $("lbC").querySelectorAll("button").forEach(b=>b.onclick=()=>{curCat=b.dataset.c;$("lbQ").value=curCat;$("lbC").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));draw()});
   $("lbQ").oninput=draw; draw();
+}
+
+/* ================= Rasmdan kontur DXF (Pinterest rasmlari uchun) ================= */
+function loadImg(b64){ return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src="data:image/jpeg;base64,"+b64; }); }
+function otsu(gray){ const h=new Array(256).fill(0); for(const g of gray)h[g]++; const tot=gray.length; let sum=0; for(let i=0;i<256;i++)sum+=i*h[i];
+  let sB=0,wB=0,best=0,th=128; for(let i=0;i<256;i++){ wB+=h[i]; if(!wB)continue; const wF=tot-wB; if(!wF)break; sB+=i*h[i]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){best=v;th=i} } return th; }
+function traceImage(im,o){
+  const R=o.res||500, k=Math.min(1,R/Math.max(im.width,im.height)), w=Math.max(2,Math.round(im.width*k)), h=Math.max(2,Math.round(im.height*k));
+  const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,w,h); cx.drawImage(im,0,0,w,h);
+  const d=cx.getImageData(0,0,w,h).data, gray=new Uint8Array(w*h); for(let i=0;i<w*h;i++) gray[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
+  const th=o.th==null||o.th<0?otsu(gray):o.th;
+  const W=w+2,H=h+2, B=new Uint8Array(W*H); for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=gray[y*w+x]<th?1:0; if(o.inv)v^=1; B[(y+1)*W+x+1]=v; }
+  // marching squares
+  const segs=[]; const P=(x,y)=>x+","+y;
+  for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){
+    const a=B[y*W+x],b=B[y*W+x+1],c=B[(y+1)*W+x+1],e=B[(y+1)*W+x]; const cs=a*8+b*4+c*2+e; if(cs===0||cs===15)continue;
+    const T=[x+.5,y],Rr=[x+1,y+.5],Bo=[x+.5,y+1],L=[x,y+.5];
+    const add=(p,q)=>segs.push([p,q]);
+    switch(cs){case 1:case 14:add(L,Bo);break;case 2:case 13:add(Bo,Rr);break;case 3:case 12:add(L,Rr);break;case 4:case 11:add(T,Rr);break;
+      case 5:add(L,T);add(Bo,Rr);break;case 6:case 9:add(T,Bo);break;case 7:case 8:add(L,T);break;case 10:add(T,Rr);add(L,Bo);break;}
+  }
+  const adj=new Map(); const put=(k,v)=>{ if(!adj.has(k))adj.set(k,[]); adj.get(k).push(v); };
+  segs.forEach((s2,i)=>{ put(P(...s2[0]),i); put(P(...s2[1]),i); });
+  const used=new Uint8Array(segs.length), loops=[];
+  for(let i=0;i<segs.length;i++){ if(used[i])continue; used[i]=1; const pts=[segs[i][0],segs[i][1]]; let cur=segs[i][1];
+    for(let g=0;g<200000;g++){ const lst=adj.get(P(...cur))||[]; const j=lst.find(n=>!used[n]); if(j==null)break; used[j]=1; const s2=segs[j]; const nx=P(...s2[0])===P(...cur)?s2[1]:s2[0]; pts.push(nx); cur=nx; }
+    loops.push(pts); }
+  const area=p=>{ let A=0; for(let i=0;i<p.length;i++){const q=p[(i+1)%p.length];A+=p[i][0]*q[1]-q[0]*p[i][1]} return Math.abs(A/2); };
+  const dp=(pts,eps)=>{ if(pts.length<3)return pts; let mx=0,ix=0; const [x1,y1]=pts[0],[x2,y2]=pts[pts.length-1]; const L2=Math.hypot(x2-x1,y2-y1)||1;
+    for(let i=1;i<pts.length-1;i++){ const dd=Math.abs((y2-y1)*pts[i][0]-(x2-x1)*pts[i][1]+x2*y1-y2*x1)/L2; if(dd>mx){mx=dd;ix=i} }
+    return mx>eps?[...dp(pts.slice(0,ix+1),eps).slice(0,-1),...dp(pts.slice(ix),eps)]:[pts[0],pts[pts.length-1]]; };
+  const minA=Math.max(4,(o.minArea||0.0002)*w*h);
+  const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),o.eps||0.7).slice(0,-1),...dp(p.slice(half),o.eps||0.7).slice(0,-1)]; }).filter(p=>p.length>=3);
+  return {loops:out,w,h,th};
+}
+function traceDxf(tr,o){
+  const W=+o.W, H=+o.H, fr=Math.max(0,+o.frame||0), iw=W-2*fr, ih=H-2*fr; if(iw<=0||ih<=0) return null;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; tr.loops.forEach(p=>p.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}));
+  if(!tr.loops.length) return null;
+  const k=Math.min(iw/(x1-x0||1),ih/(y1-y0||1)), ox=fr+(iw-(x1-x0)*k)/2, oy=fr+(ih-(y1-y0)*k)/2;
+  const T=(x,y)=>[ox+(x-x0)*k, oy+(y1-y)*k]; const f=n=>(+n).toFixed(3); const L=[]; let len=0; const svg=[];
+  const poly=(pts,ly)=>{ L.push("0","POLYLINE","8",ly,"66","1","10","0","20","0","30","0","70","1"); for(const q of pts)L.push("0","VERTEX","8",ly,"10",f(q[0]),"20",f(q[1]),"30","0"); L.push("0","SEQEND","8",ly);
+    for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length];len+=Math.hypot(q[0]-pts[i][0],q[1]-pts[i][1])} };
+  if(fr>0){ poly([[0,0],[W,0],[W,H],[0,H]],"KONTUR"); svg.push(`<rect x="0" y="0" width="${W}" height="${H}"/>`); }
+  for(const p of tr.loops){ const q=p.map(([x,y])=>T(x,y)); poly(q,"NAQSH"); svg.push(`<polygon points="${q.map(z=>z[0].toFixed(1)+","+z[1].toFixed(1)).join(" ")}"/>`); }
+  const dxf=["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n");
+  const mg=Math.max(W,H)*0.03;
+  const pv=`<svg viewBox="${-mg} ${-(H+mg)} ${W+2*mg} ${H+2*mg}" style="width:100%;max-height:280px;background:#06131d;border-radius:8px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(W,H)/300}">${svg.join("")}</g></svg>`;
+  return {dxf,len:len/1000,pv,n:tr.loops.length};
+}
+async function traceUI(b64){
+  const im=await loadImg(b64); if(!im){ say("Rasmni ochib bo'lmadi."); return; }
+  const o={th:-1,inv:false,W:600,H:Math.round(600*im.height/im.width),frame:3,thick:2,res:500,eps:0.7,minArea:0.0002};
+  $("sheet").innerHTML=`<h2>✏️ Rasmdan DXF</h2><p class="mut">Oq fonda qora shakl eng yaxshi chiqadi (naqsh, logo, siluet). Chegarani surib, chiziqlar to'g'ri chiqqanini ko'ring.</p>
+  <div id="trPv" style="margin:8px 0"></div><div class="mut" id="trInfo"></div>
+  <label>Chegara (yorug'lik): <span id="trThV">avto</span></label><input id="trTh" type="range" min="10" max="245" style="padding:0">
+  <div class="row"><div class="tog" style="border:0;flex:1"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div></div>
+  <label>Aniqlik</label><select id="trRes"><option value="350">Tez (oddiy shakl)</option><option value="500" selected>O'rtacha</option><option value="800">Yuqori (mayda naqsh)</option></select>
+  <div class="row"><div><label>Eni (mm)</label><input id="trW" inputmode="decimal" value="${o.W}"></div><div><label>Bo'yi (mm)</label><input id="trH" inputmode="decimal" value="${o.H}"></div></div>
+  <div class="row"><div><label>Ramka (mm)</label><input id="trF" inputmode="decimal" value="${o.frame}"></div><div><label>Qalinlik (mm)</label><input id="trT" inputmode="decimal" value="${o.thick}"></div></div>
+  <div class="row" style="margin-top:14px"><button class="btn g" id="trX">Bekor</button><button class="btn" id="trOk">DXF yasash</button></div>`;
+  openModal(); let tr=null;
+  const redraw=()=>{ tr=traceImage(im,o); if(o.th<0){ $("trTh").value=tr.th; } $("trThV").textContent=o.th<0?`avto (${tr.th})`:o.th;
+    const r=traceDxf(tr,{W:o.W,H:o.H,frame:o.frame}); $("trPv").innerHTML=r?r.pv:'<div class="empty">Kontur topilmadi — chegarani yoki ranglarni almashtiring</div>';
+    $("trInfo").textContent=r?`${r.n} ta kontur · kesish ${r.len.toFixed(2)} m`:""; };
+  const num=id=>parseFloat(String($(id).value).replace(",","."))||0;
+  $("trTh").oninput=()=>{o.th=+$("trTh").value;redraw()};
+  $("trInv").onclick=()=>{o.inv=!o.inv;$("trInv").classList.toggle("on",o.inv);redraw()};
+  $("trRes").onchange=()=>{o.res=+$("trRes").value;redraw()};
+  $("trW").onchange=()=>{const nw=num("trW"); if(nw>0){o.H=Math.round(o.H*nw/o.W);o.W=nw;$("trH").value=o.H;redraw()}};
+  $("trH").onchange=()=>{const nh=num("trH"); if(nh>0){o.H=nh;redraw()}};
+  $("trF").onchange=()=>{o.frame=num("trF");redraw()};
+  $("trX").onclick=closeModal;
+  $("trOk").onclick=()=>{ o.thick=num("trT")||2; const r=tr&&traceDxf(tr,{W:o.W,H:o.H,frame:o.frame}); if(!r){box("Xato","Kontur topilmadi.");return}
+    closeModal(); const nm=`rasm_${o.W}x${o.H}_${Date.now().toString().slice(-5)}.dxf`; const uri=N.saveFile(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thick,1);
+    const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${r.pv}</div><div class="mut">${r.n} ta kontur · kesish ${r.len.toFixed(2)} m${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
+    const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
+    say(uri?`DXF tayyor: ${o.W} ga ${o.H}, kesish ${r.len.toFixed(1)} metr${lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}.`:"DXF yasaldi, lekin saqlab bo'lmadi."); };
+  setTimeout(redraw,30);
+}
+
+/* ================= G'oyalar papkasi ================= */
+const IDEA_TAGS=["darvoza","panjara","mangal","soat","polka","dekor","pech","boshqa"];
+function ideaTagOf(n){ const m=String(n).match(/^\d+_([^.]+)\.jpg$/); return m?m[1]:"boshqa"; }
+function saveIdeaUI(b64,after){
+  $("sheet").innerHTML=`<h2>💡 G'oyaga saqlash</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:260px;object-fit:contain;border-radius:8px">
+  <label>Turi</label><div class="seg" id="idT">${IDEA_TAGS.map((t,i)=>`<button data-t="${t}" class="${i===0?"on":""}">${t}</button>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><button class="btn g" id="idX">Bekor</button><button class="btn" id="idOk">Saqlash</button></div>`;
+  openModal(); let tag=IDEA_TAGS[0];
+  $("idT").querySelectorAll("button").forEach(b=>b.onclick=()=>{tag=b.dataset.t;$("idT").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b))});
+  $("idX").onclick=closeModal;
+  $("idOk").onclick=()=>{ const n=N.ideaSave(b64,tag); closeModal(); if(n){ sys(`💡 G'oya saqlandi: ${tag}`); if(after)after(); } else box("Xato","Saqlab bo'lmadi."); };
+}
+function openIdeas(tag){
+  let list=[]; try{list=JSON.parse(N.ideaList())}catch(e){}
+  const tags=[...new Set(list.map(ideaTagOf))];
+  const show=tag?list.filter(n=>ideaTagOf(n)===tag):list;
+  $("sheet").innerHTML=`<h2>💡 G'oyalar (${list.length})</h2>
+  <div class="seg"><button data-t="" class="${!tag?"on":""}">Hammasi</button>${tags.map(t=>`<button data-t="${t}" class="${t===tag?"on":""}">${t}</button>`).join("")}</div>
+  <p class="mut">Pinterest'da rasmni oching → Ulashish → <b>Jarvis</b>. Yoki pastdagi tugma bilan galereyadan qo'shing.</p>
+  <button class="btn g" id="idAdd" style="width:100%;margin-bottom:10px">+ Galereyadan qo'shish</button>
+  <div id="idGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${show.length?"":`<div class="empty" style="grid-column:1/-1">Hali g'oya yo'q</div>`}</div>`;
+  openModal();
+  $("sheet").querySelectorAll(".seg button").forEach(b=>b.onclick=()=>openIdeas(b.dataset.t));
+  $("idAdd").onclick=()=>{ closeModal(); imgMode="idea"; setState("think","rasm kutilmoqda"); N.pickImage(false); };
+  const grid=$("idGrid");
+  show.slice(0,60).forEach((n,i)=>{ const c=document.createElement("div"); c.style.cssText="aspect-ratio:1;background:var(--bg);border-radius:8px;overflow:hidden;border:1px solid var(--line)";
+    grid.appendChild(c); setTimeout(()=>{ const b=N.ideaRead(n); if(b){ c.innerHTML=`<img src="data:image/jpeg;base64,${b}" style="width:100%;height:100%;object-fit:cover">`; c.onclick=()=>ideaActions(n,b); } },20*i); });
+}
+function ideaActions(n,b64){
+  $("sheet").innerHTML=`<h2>💡 ${esc(ideaTagOf(n))}</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:340px;object-fit:contain;border-radius:8px">
+  <div class="row" style="margin-top:12px"><button class="btn" id="iaD">✏️ DXF yasash</button><button class="btn g" id="iaA">🔍 Tahlil</button></div>
+  <button class="btn g" id="iaX" style="width:100%;margin-top:8px;color:var(--bad)">O'chirish</button>`;
+  openModal();
+  $("iaD").onclick=()=>{ closeModal(); traceUI(b64); };
+  $("iaA").onclick=()=>{ closeModal(); imgMode="ask"; imgQ="Bu naqsh/buyumni lazerda qanday yasash mumkin va taxminiy narxi?"; J.onImage(b64); };
+  $("iaX").onclick=()=>box("O'chirish","Bu g'oya o'chirilsinmi?",()=>{ N.ideaDelete(n); openIdeas(""); });
+}
+
+/* ================= Pinterest ================= */
+async function pinterestSearch(q){
+  let qq=String(q||"").trim(); if(!qq){ N.openUrl("https://www.pinterest.com/"); return "Pinterest'ni ochdim."; }
+  const en=await askRaw(`Pinterest qidiruvi uchun quyidagini 2–5 so'zli INGLIZCHA qidiruv so'roviga aylantir (lazer kesish/metall kontekstida bo'lsa "laser cut", "metal" so'zlarini qo'sh). Faqat so'rovni qaytar: ${qq}`);
+  if(en&&en.length<80) qq=en.replace(/["'.]/g,"").trim();
+  N.openUrl("https://www.pinterest.com/search/pins/?q="+encodeURIComponent(qq));
+  return `Pinterest'da "${qq}" bo'yicha qidiruvni ochdim. Yoqqan rasmni Ulashish orqali Jarvis'ga yuboring — g'oyaga saqlayman yoki DXF qilaman.`;
 }
 
 /* ================= Chizma suratidan DXF ================= */
