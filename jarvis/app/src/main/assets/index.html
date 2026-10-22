@@ -396,14 +396,14 @@ const J = window.J = {
   onCloudFail(code){ sys(code===401||code===403?"Azure kaliti yoki hududi xato — oddiy ovozga o'tdim.":"Bulut ovozi ishlamadi — oddiy ovoz bilan aytaman.");
     if(code===401||code===403){S.cloud=false;saveAll();loadSet()} N.speak(forTTS(lastSpoken),S.rate,S.pitch); },
   onSpeakDone(){if(reading){ setTimeout(readNext,150); return; } if(labbay){followUntil=Date.now()+8000;labbay=false}
-    if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgLine(m)); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
+    if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgLine(m),true); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
   onMessage(js){ let m; try{m=JSON.parse(js)}catch(e){return}
     lastMsg=m; sys(`📩 ${m.app} · ${m.from}: ${m.text}`);
     { const bo=botOrderFrom(m); if(bo){ orders.push(bo); S.botSeen=Math.max(S.botSeen||0,m.time||Date.now()); saveAll(); renderOrders();
         say(`Lazer botdan yangi buyurtma${bo.price?`, ${fmt(bo.price)} so'm`:""}. Buyurtmalarga qo'shdim.`); return; } }
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
-    if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":"")) } else msgQueue.push(m); },
-  morning(){ go("pJarvis"); morningReport(); },
+    if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":""),true) } else msgQueue.push(m); },
+  morning(){ go("pJarvis"); voiceIn=true; morningReport(); },
   onReplyResult(r){ if(r==="expired")say("Xabar eskirgan, ilovaning o'zidan javob bering."); else if(r==="err")say("Javobni yuborib bo'lmadi."); else if(r==="none")say("Javob berib bo'ladigan xabar topilmadi."); else if(r==="noaccess")say("Jarvis Xabar ilovasida ruxsat berilmagan."); else sys("✓ Yuborildi"); },
   async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
     addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
@@ -417,7 +417,7 @@ const J = window.J = {
     try{ const a=await visionAsk(b64,imgQ); setState("idle");
       say(a||"Rasmni tahlil qilib bo'lmadi. Pastda sababi yozilgan."); }
     finally{ busy=false; } },
-  external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
+  external(cmd){ voiceIn=true; go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
     N.stopListen(); if(state==="listen")setState("idle");
     if(!String(cmd||"").trim()){ labbay=true; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
@@ -474,11 +474,12 @@ function speakRaw(text){
       JSON.stringify({"Ocp-Apim-Subscription-Key":S.azKey,"Content-Type":"application/ssml+xml","X-Microsoft-OutputFormat":"audio-24khz-48kbitrate-mono-mp3","User-Agent":"Jarvis"}),ssml);
   } else N.speak(forTTS(text),S.rate,S.pitch);
 }
-function say(text){
+let voiceIn=true; // oxirgi so'rov ovoz bilanmi
+function say(text,force){
   if(!text)return afterTurn();
   N.stopListen();
   addMsg("j",text);
-  if(S.voice){setState("speak");speakRaw(text)}
+  if(S.voice&&(voiceIn||force)){setState("speak");speakRaw(text)}
   else{setState("idle");afterTurn()}
 }
 /* ---- uzun matnni bo'laklab o'qish (45) ---- */
@@ -885,7 +886,7 @@ ${ctxt}`);
     ...gt.slice(0,4).map(x=>({name:x.split(" (")[0].split(" — ")[0],src:"Google O'zbekiston"}))];
   setTimeout(()=>{ addMsg("j",full); N.copy(full); trendCard(lastTrends); },60);
   const short=await askRaw(`Quyidagi matnni ovoz chiqarib o'qish uchun 2–3 gapga qisqartir, O'ZBEK tilida: O'zbekistondagi 1 trend, dunyodagi 1 trend va 1 g'oya. Belgilarsiz:\n${full}`);
-  return {text:(short||"Trendlar tayyor, to'liq ro'yxatni ekranga chiqardim.")+" To'liq ro'yxatni ekranga chiqardim va nusxaladim.",src:[gt.length?"Google Trends O'zbekiston":"",kun.length?"Kun.uz":"",(uzS1.length+uzS2.length)?"o'zbekcha qidiruv":"",ig.length?"Instagram (Later.com)":"",yt.length?"TikTok/Shorts (Later.com)":"",tg.length?"Telegram":""].filter(Boolean)};
+  return {text:(short||"Trendlar tayyor."),src:[gt.length?"Google Trends O'zbekiston":"",kun.length?"Kun.uz":"",(uzS1.length+uzS2.length)?"o'zbekcha qidiruv":"",ig.length?"Instagram (Later.com)":"",yt.length?"TikTok/Shorts (Later.com)":"",tg.length?"Telegram":""].filter(Boolean)};
 }
 
 async function askAI(userText){
@@ -1022,6 +1023,7 @@ async function handle(text,byVoice){
   text=String(text).trim(); if(!text) return afterTurn();
   if(byVoice && loop && S.wake && !WAKE.test(text) && Date.now()>followUntil){ setState("idle"); return afterTurn(); }
   if(busy) return; busy=true;
+  voiceIn=!!byVoice;
   followUntil=0;
   addMsg("u",text);
   const clean=text.replace(/^.*?\b(hey |ey )?(jarv\S*|djarv\S*|jarw\S*|charv\S*|jerv\S*|джарв\S*|жарв\S*)[,!.\s]*/i,"").trim();
@@ -1054,12 +1056,12 @@ $("mic").onclick=()=>{ if(state==="listen"){N.stopListen();setState("idle");if(l
 $("send").onclick=()=>{const v=$("txt").value;$("txt").value="";handle(v,false)};
 $("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("send").click()}});
 document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
-$("chipRep").onclick=()=>morningReport();
+$("chipRep").onclick=()=>{voiceIn=false;morningReport()};
 $("chipImg").onclick=()=>askImage("");
 $("chipRead").onclick=()=>openReader();
 $("chipDxf").onclick=()=>askImage("","dxf");
 $("chipLib").onclick=()=>openLib("");
-$("chipHunt").onclick=()=>huntOrders(true);
+$("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
 $("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>setBg(!S.bg);
 
