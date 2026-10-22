@@ -118,6 +118,7 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipDxf">📐 Chizmadan DXF</button>
     <button class="chip" id="chipLib">🧩 Naqshlar</button>
     <button class="chip" id="chipIdea">💡 G'oyalar</button>
+    <button class="chip" id="chipPc">💻 Kompyuter</button>
     <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
     <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
@@ -216,6 +217,12 @@ body.car #mic{width:76px;height:76px}
     <button class="btn g" id="sAzT" style="width:100%;margin-top:10px">Ovozni sinash</button>
   </div>
   <div class="card">
+    <b>💻 Kompyuter</b>
+    <p class="mut" style="margin:6px 0 0">Kompyuterda "start-jarvis.bat" ishlab turishi kerak (Windows yoqilganda o'zi ishga tushadi).</p>
+    <div class="tog"><span>Yasalgan DXF'larni kompyuterga avtomatik yuborish</span><div class="sw" id="swPcA"></div></div>
+    <div class="row" style="margin-top:8px"><button class="btn g" id="pcT">Ulanishni tekshirish</button><button class="btn g" id="pcB">Zaxira hozir</button></div>
+  </div>
+  <div class="card">
     <b>Bilim va buyurtma ovchisi</b>
     <div class="tog"><span>Ertalab kunlik bilim aytish</span><div class="sw" id="swTip"></div></div>
     <div class="tog"><span>OLX'dan buyurtma qidirish (ochiq turganda har 30 daqiqa)</span><div class="sw" id="swHunt"></div></div>
@@ -295,7 +302,7 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},persona:"jiddiy",tip:true,tipLog:[],cloud:false,azKey:"",azRegion:"",azVoice:"uz-UZ-SardorNeural",hunt:true,huntQ:"lazer kesish kerak, лазерная резка нужно, darvoza kerak, panjara kerak, металлоконструкции",huntSeen:[],readMsg:"always",botName:"lazer",botSeen:0,botTopic:"jarvis-buyurtma-4ed9ca010a0a034b",botSince:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},pcCmd:"jpc-f0bee4431e70c63f53a1",pcRep:"jpr-1a8864bea9d1aefc3126",pcKey:"4374ec1a95fa6fc479d85760",pcAuto:true,pcLastBak:0,persona:"jiddiy",tip:true,tipLog:[],cloud:false,azKey:"",azRegion:"",azVoice:"uz-UZ-SardorNeural",hunt:true,huntQ:"lazer kesish kerak, лазерная резка нужно, darvoza kerak, panjara kerak, металлоконструкции",huntSeen:[],readMsg:"always",botName:"lazer",botSeen:0,botTopic:"jarvis-buyurtma-4ed9ca010a0a034b",botSince:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
@@ -434,7 +441,7 @@ const J = window.J = {
     N.stopListen(); if(state==="listen")setState("idle");
     if(!String(cmd||"").trim()){ labbay=true; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
-  onShown(){ refreshBg(); try{syncBot()}catch(e){} pollBot(false); if(S.bg && !loop) startLoop(true); },
+  onShown(){ refreshBg(); try{pcBackup(false)}catch(e){} try{syncBot()}catch(e){} pollBot(false); if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
@@ -444,7 +451,7 @@ function http(url,method,headers,body,ms){
   return new Promise(res=>{const id="h"+Date.now()+Math.random();let done=false;
     J._cb[id]=(c,b)=>{if(done)return;done=true;res({code:c,body:b})};
     if(ms)setTimeout(()=>{if(done)return;done=true;delete J._cb[id];res({code:-1,body:"timeout"})},ms);
-    N.http(id,url,method,JSON.stringify(headers||{}),body?JSON.stringify(body):"")});
+    N.http(id,url,method,JSON.stringify(headers||{}),body==null?"":(typeof body==="string"?body:JSON.stringify(body)))});
 }
 function listen(){ if(state==="listen")return; N.stopSpeak(); lastBeat=Date.now(); N.listen(S.stt); setState("listen","ulanmoqda…") }
 function afterTurn(){ if(loop && state==="idle") setTimeout(()=>{ if(loop&&state==="idle") listen() },800) }
@@ -624,6 +631,16 @@ function quick(t){
   if(isTrendQ(g) && !/(eslat|post yoz|ssenariy)/.test(g)){ setTimeout(async()=>{ if(busy)return; busy=true; try{ const w=await trendReport(g); setState("idle");
       if(w.src&&w.src.length) sys("Manbalar: "+w.src.join(", ")); if(w.err) sys("Sabab: "+w.err); say(w.text); } finally{busy=false} },30); return "Trendlarni qidiryapman, bir oz kuting."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
+  if(/kompyuter|komp'yuter|kampyuter|компьютер|noutbuk/.test(g)){
+    if(/(dxf|fayl|chizma).*(yubor|o'tkaz|tashla)|(yubor|o'tkaz).*(dxf)/.test(g)&&!/(dan|топ)/.test(g.split(/kompyuter|kampyuter/)[1]||"")){ if(!lastDxf) return "Hali DXF yasalmagan."; setTimeout(()=>pcFile(lastDxf.n,lastDxf.c,false),20); return `${lastDxf.n} kompyuterga yuborilmoqda.`; }
+    const fm=g.match(/(?:kompyuter|kampyuter|komp'yuter)(?:dan|da)\s+(.+?)\s*(?:ni|nomli)?\s*(?:fayl(?:ni|ini)?)?\s*(?:top|qidir|ol|yubor|ber)/);
+    if(fm){ setTimeout(async()=>{ say(await pcFind(fm[1].replace(/(dxf|faylini|faylni|fayl)$/,"").trim())); },20); return "Kompyuterdan qidiryapman."; }
+    if(/navbat/.test(g)){ pcQueue(true); return "Navbatni kompyuterda ochyapman."; }
+    if(/zaxira|backup/.test(g)){ pcBackup(true); return "Zaxirani kompyuterga yuboryapman."; }
+    if(/papka/.test(g)){ pcSend({cmd:"open_folder"}); return "Jarvis papkasini kompyuterda ochyapman."; }
+    if(/(holat|yoqiq|ishlayaptimi|qalay|nima gap)/.test(g)||/^(kompyuter|kampyuter)\??$/.test(g)){ setTimeout(async()=>say(await pcStatus()),20); return "Kompyuterni tekshiryapman."; } }
+  if(/(lazer )?bot(ni)? (yoq|ishga tushir|qayta)/.test(g)){ setTimeout(async()=>{ const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text); },20); return ""; }
+  if(/bot ishlayaptimi|bot qalay/.test(g)){ setTimeout(async()=>say(await pcStatus()),20); return "Tekshiryapman."; }
   if(/pinterest|pinterst|pintrest/.test(g)){ const q=g.replace(/^(jarvis,?\s*)?/,"").replace(/(pinterest|pinterst|pintrest)(dan|da|ni|ga)?/g,"").replace(/(top(ib ber)?|qidir|och|ko'rsat|g'oyalar(ini)?)/g,"").trim();
     setTimeout(async()=>{ say(await pinterestSearch(q)); },30); return ""; }
   if(/(g'oya(lar)?(im)?(ni)? (ko'rsat|och)|g'oyalar papka)/.test(g)){ const t=IDEA_TAGS.find(x=>g.includes(x.slice(0,5))); setTimeout(()=>openIdeas(t||""),30); return "G'oyalarni ochdim."; }
@@ -667,6 +684,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Kunlik bilim: "Jarvis, bugungi bilim". Hazil rejimi: "Jarvis, hazil rejim" / "jiddiy rejim".
 - Tabiiy o'zbekcha ovoz: Sozlamalar → Azure (bepul kalit kerak).
 - Trendlardan keyin "videolarini ko'rsat" desa — trend videolarini YouTube/Instagram/TikTok'da ochasan (tugmalar ekranda).
+- Kompyuter: "Jarvis kompyuter" dasturi orqali ulangansan. Qila olasan: holatini aytish, lazer botni yoqish/kuzatish, kompyuterdan fayl topib telefonga olish, DXF'larni kompyuterga yuborish (avtomatik ham), navbatni kompyuterda ko'rsatish (Navbat.html), kunlik zaxira. Kompyuterga oid so'rovda "pc" amalini ishlat.
 - Pinterest: "📌 Pinterest" yoki "Jarvis, Pinterest'dan darvoza g'oyalari" — qidiruvni ochasan. Pinterest'dan rasm Ulashish→Jarvis orqali keladi: g'oyaga saqlash, kontur DXF yoki tahlil. "💡 G'oyalar" — saqlangan rasmlar (turlar bo'yicha).
 - Naqshlar katalogi: Lazer ustaxonasidagi ${LIB().length} ta tayyor DXF naqsh (darvoza, panjara, dekor, naqsh/medalyon, soat, kamin, ko'zgu, polka, belgi) ichingda BOR. Egang naqsh, darvoza, panjara DXF so'rasa yoki "tayyor DXF bormi" desa — "pattern" amalini ishlat (o'lcham, ramka mm). Hech qachon "menda tayyor DXF yo'q" dema. "🧩 Naqshlar" tugmasi ham bor.
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
@@ -703,6 +721,7 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"reply","to":"...","text":"..."}                      // faqat egang aniq matnni aytib "yubor" desa
 {"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1}  // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm
 {"type":"pattern","query":"naqsh nomi/turi: masalan 'panjara 12 qirrali'","w":600,"h":400,"frame":3,"fit":"fit|stretch","thickness":2,"qty":1}  // KATALOGDAGI tayyor naqshdan DXF (o'lchamga moslab, ramka bilan)
+{"type":"pc","cmd":"status|find|send_dxf|queue|backup|bot_start|open_folder","q":"fayl nomi (find uchun)"}  // KOMPYUTER bilan ishlash
 {"type":"pinterest","query":"..."}                             // Pinterest'da g'oya qidirish
 {"type":"ideas","tag":"darvoza|panjara|mangal|soat|polka|dekor|pech|boshqa"} // saqlangan g'oyalarni ko'rsatish
 {"type":"photo","question":"...","dxf":false}                 // dxf:true — chizma suratidan o'lchamlarni o'qib DXF yasash                               // rasmni ko'rib berish (kamera/galereya ochiladi)
@@ -1003,12 +1022,21 @@ async function run(a,ctx){
       if(!hits.length){ setTimeout(()=>openLib(a.query||"",o),50); return "Katalogda aniq mosini topmadim, ro'yxatdan tanlang."; }
       if(hits.length===1||(a.query&&norm(hits[0].id)===norm(a.query))){ setTimeout(()=>makeFromLib(hits[0].id,o),50); return ""; }
       setTimeout(()=>openLib(a.query||"",o),50); return `Katalogda ${hits.length} ta mos naqsh bor, birini tanlang.`; }
+    case "pc":{ const c=a.cmd;
+      if(c==="status") return await pcStatus();
+      if(c==="find") return await pcFind(a.q||"");
+      if(c==="send_dxf"){ if(!lastDxf) return "Hali DXF yasalmagan."; await pcFile(lastDxf.n,lastDxf.c,false); return ""; }
+      if(c==="queue"){ pcQueue(true); return ""; }
+      if(c==="backup"){ pcBackup(true); return ""; }
+      if(c==="bot_start"){ const d=await pcAsk({cmd:"bot_start"},["text"],25000); return d.text; }
+      if(c==="open_folder"){ pcSend({cmd:"open_folder"}); return ""; }
+      return ""; }
     case "pinterest": return await pinterestSearch(a.query||"");
     case "ideas": setTimeout(()=>openIdeas(a.tag||""),50); return "";
     case "photo": setTimeout(()=>askImage(a.question||"",a.dxf?"dxf":"ask"),50); return "";
     case "dxf":{ const sp=a; if(!(+sp.w&&+sp.h)&&!+sp.d) return "O'lchamlar to'liq emas.";
       const r=dxfFrom(sp); const nm=(String(sp.name||"detal").replace(/[^\w\-]+/g,"_")||"detal")+"_"+Date.now().toString().slice(-5)+".dxf";
-      const uri=N.saveFile(nm,"application/dxf",r.dxf);
+      const uri=saveF(nm,"application/dxf",r.dxf);
       const lp=sp.thickness?laserPrice(r.len,sp.thickness,sp.qty||1):null;
       setTimeout(()=>{ const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${r.svg}</div><div class="mut">${r.W}×${r.H} mm · kesish ${r.len.toFixed(2)} m${lp&&lp.rate?` · ${lp.name}: ${fmt(lp.total)} so'm`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
         const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf"); },60);
@@ -1084,6 +1112,18 @@ $("chipRead").onclick=()=>openReader();
 $("chipDxf").onclick=()=>askImage("","dxf");
 $("chipLib").onclick=()=>openLib("");
 $("chipIdea").onclick=()=>openIdeas("");
+$("chipPc").onclick=()=>{ $("sheet").innerHTML=`<h2>💻 Kompyuter</h2>
+  <button class="btn g" id="c1" style="width:100%;margin-bottom:8px">Holatini tekshirish</button>
+  <button class="btn g" id="c2" style="width:100%;margin-bottom:8px">Oxirgi DXF'ni kompyuterga yuborish</button>
+  <label>Kompyuterdan fayl qidirish</label><div class="row"><input id="cq" placeholder="masalan: mangal"><button class="btn" id="c3" style="flex:0 0 auto">Top</button></div>
+  <button class="btn g" id="c4" style="width:100%;margin-top:8px">Navbatni kompyuterda ochish</button>
+  <button class="btn g" id="c5" style="width:100%;margin-top:8px">Lazer botni yoqish</button>`;
+  openModal(); voiceIn=false;
+  $("c1").onclick=async()=>{closeModal();say(await pcStatus())};
+  $("c2").onclick=()=>{closeModal(); if(lastDxf) pcFile(lastDxf.n,lastDxf.c,false); else say("Hali DXF yasalmagan.")};
+  $("c3").onclick=async()=>{const q=$("cq").value.trim(); if(!q)return; closeModal(); say(await pcFind(q))};
+  $("c4").onclick=()=>{closeModal();pcQueue(true);sys("💻 Navbat yuborildi")};
+  $("c5").onclick=async()=>{closeModal(); const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text)}; };
 $("chipPin").onclick=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
   openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
@@ -1094,7 +1134,7 @@ $("chipLoop").onclick=()=>setBg(!S.bg);
 let oFilter="ochiq";
 document.querySelectorAll("#oSeg button").forEach(b=>b.onclick=()=>{oFilter=b.dataset.f;
   document.querySelectorAll("#oSeg button").forEach(x=>x.classList.toggle("on",x===b));renderOrders()});
-function renderOrders(){
+function renderOrders(){ try{pcQueue(false)}catch(e){}
   const open=openOrders(), debt=open.reduce((s,o)=>s+Math.max(0,(+o.price||0)-(+o.paid||0)),0);
   const _d=new Date(),today=`${_d.getFullYear()}-${pad(_d.getMonth()+1)}-${pad(_d.getDate())}`;
   const late=open.filter(o=>o.due&&o.due<=today&&o.status!=="tayyor").length;
@@ -1166,6 +1206,7 @@ function loadSet(){
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
   $("sPers").value=S.persona||"jiddiy"; $("swCloud").classList.toggle("on",!!S.cloud); $("sAzK").value=S.azKey||""; $("sAzR").value=S.azRegion||""; $("sAzV").value=S.azVoice||"uz-UZ-SardorNeural";
+  $("swPcA").classList.toggle("on",!!S.pcAuto);
   $("swTip").classList.toggle("on",!!S.tip); $("swHunt").classList.toggle("on",!!S.hunt); $("sHuntQ").value=S.huntQ||"";
   $("sRead").value=S.readMsg||"always";$("sTopic").value=S.botTopic||"";$("sRepT").value=S.reportTime||"07:30";
   $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);
@@ -1188,7 +1229,9 @@ $("swBg").onclick=()=>setBg(!S.bg,true);
 bind("sRead",v=>S.readMsg=v);
 bind("sPers",v=>S.persona=v); bind("sAzK",v=>S.azKey=v.trim()); bind("sAzR",v=>S.azRegion=v.trim().toLowerCase().replace(/\s+/g,"")); bind("sAzV",v=>S.azVoice=v);
 bind("sHuntQ",v=>{S.huntQ=v});
-sw("swCloud","cloud"); sw("swTip","tip"); sw("swHunt","hunt");
+sw("swCloud","cloud"); sw("swPcA","pcAuto");
+$("pcT").onclick=async()=>{ $("pcT").textContent="…"; const t=await pcStatus(); $("pcT").textContent="Ulanishni tekshirish"; box("💻 Kompyuter",t); };
+$("pcB").onclick=()=>pcBackup(true); sw("swTip","tip"); sw("swHunt","hunt");
 $("sAzT").onclick=()=>{ if(!S.azKey||!S.azRegion){box("Azure","Avval kalit va hududni kiriting.");return} const c=S.cloud; S.cloud=true; speakRaw(`Salom, ${S.name}. Men Jarvisman. Endi tabiiy o'zbekcha ovozda gapiryapman.`); S.cloud=c; };bind("sTopic",v=>{S.botTopic=v.trim();S.botSince=0});
 bind("sRepT",v=>{S.reportTime=v||"07:30";schedReport()});
 sw("swRep","report",()=>schedReport());sw("swRate","rateWatch");
@@ -1316,7 +1359,7 @@ function makeFromLib(id,o){
   const pt=libLoad(id); if(!pt){ say("Bu naqshni ochib bo'lmadi."); return; }
   const r=placePattern(pt,o); if(!r){ say("O'lcham ramkadan kichik bo'lib qoldi."); return; }
   const q=Math.max(1,+o.qty||1), nm=`${id}_${o.w}x${o.h}${o.frame?"_r"+o.frame:""}.dxf`;
-  const uri=N.saveFile(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thickness||2,q);
+  const uri=saveF(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thickness||2,q);
   const el=addHtml(`<b>${esc(pt.it.name)}</b><div class="mut">${o.w}×${o.h} mm${o.frame?` · ramka ${o.frame} mm`:""} · ${o.fit==="stretch"?"cho'zilgan":"proporsiya saqlangan"}</div><div style="margin:8px 0">${r.pv}</div><div class="mut">Kesish ${r.len.toFixed(2)} m${q>1?` × ${q} dona`:""}${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div><div class="row" style="margin-top:8px">${uri?`<button class="btn sm" data-a="send">Yuborish</button>`:""}<button class="btn sm g" data-a="other">Boshqa naqsh</button></div>`);
   const sb=el.querySelector('[data-a="send"]'); if(sb) sb.onclick=()=>N.shareFile(uri,"application/dxf");
   el.querySelector('[data-a="other"]').onclick=()=>openLib(pt.it.cat,o);
@@ -1339,6 +1382,45 @@ function openLib(q,o){
   let curCat=""; $("lbC").querySelectorAll("button").forEach(b=>b.onclick=()=>{curCat=b.dataset.c;$("lbQ").value=curCat;$("lbC").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));draw()});
   $("lbQ").oninput=draw; draw();
 }
+
+/* ================= Kompyuter bilan aloqa ================= */
+let lastDxf=null;
+function saveF(n,m,c){ const u=N.saveFile(n,m,c); if(m==="application/dxf"){ lastDxf={n,c}; if(S.pcAuto&&S.pcCmd) pcFile(n,c,true); } return u; }
+const pcOn=()=>!!(S.pcCmd&&S.pcRep&&S.pcKey);
+async function pcSend(obj){ if(!pcOn()) return false; const r=await http(`https://ntfy.sh/${S.pcCmd}`,"POST",{},{k:S.pcKey,...obj},15000); return r.code===200; }
+async function pcFile(name,content,quiet){ if(!pcOn()) return false;
+  const r=await http(`https://ntfy.sh/${S.pcCmd}`,"PUT",{"Filename":encodeURIComponent(name),"Title":"J"+S.pcKey},String(content),30000);
+  if(!quiet) sys(r.code===200?`💻 ${name} kompyuterga yuborildi`:"💻 Kompyuterga yuborib bo'lmadi");
+  return r.code===200; }
+async function pcWait(types,ms){ const t0=Math.floor(Date.now()/1000)-2, end=Date.now()+(ms||20000);
+  while(Date.now()<end){ await new Promise(z=>setTimeout(z,2000));
+    const r=await http(`https://ntfy.sh/${S.pcRep}/json?poll=1&since=${t0}`,"GET",{},null,10000); if(r.code!==200) continue;
+    for(const line of String(r.body).split("\n").reverse()){ if(!line.trim())continue; let ev; try{ev=JSON.parse(line)}catch(e){continue} if(ev.event!=="message")continue;
+      if(ev.attachment&&ev.title==="R"+S.pcKey&&types.includes("file")) return {type:"file",att:ev.attachment};
+      let d; try{d=JSON.parse(ev.message)}catch(e){continue} if(d.k!==S.pcKey)continue; if(types.includes(d.type)||types.includes("*")) return d; } }
+  return null; }
+async function pcAsk(obj,types,ms){ if(!pcOn()) return {type:"err",text:"Kompyuter ulanmagan. Sozlamalarda kompyuter kanalini tekshiring."};
+  const ok=await pcSend(obj); if(!ok) return {type:"err",text:"Internetga ulanib bo'lmadi."};
+  const d=await pcWait(types,ms); return d||{type:"err",text:"Kompyuter javob bermadi. Kompyuter yoqiqmi va Jarvis kompyuter dasturi ishlayaptimi?"}; }
+async function pcStatus(){ const d=await pcAsk({cmd:"status"},["status"],20000); if(d.type!=="status") return d.text;
+  return `Kompyuter yoqiq${d.uptimeH!=null?`, ${d.uptimeH} soatdan beri ishlayapti`:""}. Lazer bot ${d.bot?"ishlayapti":"ishlamayapti — \"Jarvis, botni yoq\" deng"}.${d.freeDiskGB!=null?` C diskda ${d.freeDiskGB} GB bo'sh joy.`:""}`; }
+async function pcFind(q){ const d=await pcAsk({cmd:"find",q},["found"],40000); if(d.type!=="found") return d.text;
+  if(!d.files.length) return `Kompyuterdan "${q}" nomli fayl topilmadi.`;
+  setTimeout(()=>{ const el=addHtml(`<b>💻 Kompyuterdan topildi: ${esc(q)}</b>`+d.files.map((f,i)=>`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">${esc(f.name)}<div class="mut">${esc(f.dir)} · ${f.kb} KB</div><button class="btn sm g" data-i="${i+1}" style="margin-top:6px">📲 Telefonga olish</button></div>`).join(""));
+    el.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>pcGet(+b.dataset.i,d.files[+b.dataset.i-1].name)); },50);
+  return `${d.files.length} ta fayl topdim. Keraklisini bosing.`; }
+async function pcGet(i,name){ sys(`💻 ${name} olinmoqda…`); const d=await pcAsk({cmd:"send",i},["file","text"],45000);
+  if(d.type!=="file"){ say(d.text||"Faylni olib bo'lmadi."); return; }
+  const url=d.att.url, nm=decodeURIComponent(d.att.name||name);
+  if(/\.(dxf|svg|txt|csv|plt|nc)$/i.test(nm)){ const r=await http(url,"GET",{},null,30000); if(r.code===200){ const u=N.saveFile(nm,/\.svg$/i.test(nm)?"image/svg+xml":"application/dxf",r.body);
+      const el=addHtml(`<b>📲 ${esc(nm)}</b><div class="mut">Yuklamalar, Jarvis papkasiga saqlandi</div>${u?'<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>':""}`); const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(u,"application/dxf"); say(`${nm} telefonga keldi.`); return; } }
+  N.openUrl(url); say(`${nm} yuklab olinmoqda.`); }
+let qTimer=null;
+function pcQueue(open){ if(!pcOn()) return; clearTimeout(qTimer); qTimer=setTimeout(()=>{
+  const list=openOrders().map(o=>({client:o.client,item:o.item,due:o.due,status:o.status,price:o.price})); pcFile(open?"jarvis-navbat-open.json":"jarvis-navbat.json",JSON.stringify(list),true); }, open?0:3000); }
+function pcBackup(force){ if(!pcOn()) return; if(!force&&Date.now()-(S.pcLastBak||0)<20*3600e3) return;
+  const set=Object.assign({},S); delete set.key; delete set.keys; delete set.azKey;
+  pcFile("jarvis-zaxira.json",JSON.stringify({at:Date.now(),orders,notes,settings:set}),true).then(ok=>{ if(ok){S.pcLastBak=Date.now();saveAll(); if(force) sys("💻 Zaxira kompyuterga saqlandi");} }); }
 
 /* ================= Rasmdan kontur DXF (Pinterest rasmlari uchun) ================= */
 function loadImg(b64){ return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src="data:image/jpeg;base64,"+b64; }); }
@@ -1412,7 +1494,7 @@ async function traceUI(b64){
   $("trF").onchange=()=>{o.frame=num("trF");redraw()};
   $("trX").onclick=closeModal;
   $("trOk").onclick=()=>{ o.thick=num("trT")||2; const r=tr&&traceDxf(tr,{W:o.W,H:o.H,frame:o.frame}); if(!r){box("Xato","Kontur topilmadi.");return}
-    closeModal(); const nm=`rasm_${o.W}x${o.H}_${Date.now().toString().slice(-5)}.dxf`; const uri=N.saveFile(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thick,1);
+    closeModal(); const nm=`rasm_${o.W}x${o.H}_${Date.now().toString().slice(-5)}.dxf`; const uri=saveF(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thick,1);
     const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${r.pv}</div><div class="mut">${r.n} ta kontur · kesish ${r.len.toFixed(2)} m${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
     const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
     say(uri?`DXF tayyor: ${o.W} ga ${o.H}, kesish ${r.len.toFixed(1)} metr${lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}.`:"DXF yasaldi, lekin saqlab bo'lmadi."); };
@@ -1533,7 +1615,7 @@ function buildPartsDxf(parts,o){
   const dxf=["0","SECTION","2","HEADER","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n");
   const pv=`<svg viewBox="${-mg} ${-(TH+mg)} ${TW+2*mg} ${TH+2*mg}" style="width:100%;max-height:260px;background:#06131d;border-radius:8px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(TW,TH)/250}">${svg.join("")}</g></svg>`;
   const nm=(String(o.name||"chizma").replace(/[^\w\-]+/g,"_")||"chizma")+"_"+Date.now().toString().slice(-5)+".dxf";
-  const uri=N.saveFile(nm,"application/dxf",dxf);
+  const uri=saveF(nm,"application/dxf",dxf);
   const lenM=(contour+pattern)/1000, lp=laserPrice(lenM,o.th,1);
   const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${pv}</div><div class="mut">${count} ta detal · kontur ${(contour/1000).toFixed(2)} m${pattern?` · naqsh ${(pattern/1000).toFixed(2)} m`:""} · jami ${lenM.toFixed(2)} m${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
   const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
