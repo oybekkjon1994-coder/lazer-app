@@ -115,6 +115,8 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipCar">🚗 Mashina</button>
     <button class="chip" id="chipRep">Hisobot</button>
     <button class="chip" id="chipImg">📷 Rasm</button>
+    <button class="chip" id="chipRead">📖 O'qish</button>
+    <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
     <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
     <button class="chip" data-q="Fonarni yoq">Fonar</button>
     <button class="chip" data-q="Soat necha?">Soat</button>
@@ -199,6 +201,23 @@ body.car #mic{width:76px;height:76px}
     <button class="btn g" id="sTestVoice" style="width:100%;margin-top:8px">Ovozni sinash</button>
   </div>
   <div class="card">
+    <b>Xarakter va ovoz sifati</b>
+    <label>Jarvis xarakteri</label>
+    <select id="sPers"><option value="jiddiy">Jiddiy, qisqa</option><option value="hazil">Hazilkash (Toni Stark uslubida)</option></select>
+    <div class="tog"><span>Tabiiy o'zbekcha ovoz (Azure)</span><div class="sw" id="swCloud"></div></div>
+    <p class="mut" style="margin:4px 0 0">portal.azure.com → "Speech service" yarating (Free F0 — oyiga 500 ming belgi bepul) → "Keys and Endpoint" dan kalit va hududni oling.</p>
+    <label>Azure kaliti</label><input id="sAzK" type="password">
+    <div class="row"><div><label>Hudud (Region)</label><input id="sAzR" placeholder="masalan: westeurope"></div>
+    <div><label>Ovoz</label><select id="sAzV"><option value="uz-UZ-SardorNeural">Sardor (erkak)</option><option value="uz-UZ-MadinaNeural">Madina (ayol)</option></select></div></div>
+    <button class="btn g" id="sAzT" style="width:100%;margin-top:10px">Ovozni sinash</button>
+  </div>
+  <div class="card">
+    <b>Bilim va buyurtma ovchisi</b>
+    <div class="tog"><span>Ertalab kunlik bilim aytish</span><div class="sw" id="swTip"></div></div>
+    <div class="tog"><span>OLX'dan buyurtma qidirish (ochiq turganda har 30 daqiqa)</span><div class="sw" id="swHunt"></div></div>
+    <label>Qidiruv so'zlari (vergul bilan)</label><textarea id="sHuntQ" rows="2"></textarea>
+  </div>
+  <div class="card">
     <b>Tugmasiz boshqarish</b>
     <p class="mut" style="margin:6px 0 4px">Yoqilsa, Jarvis ilova yopiq bo'lsa ham "Jarvis" so'zini kutadi. Masalan: <i>"Jarvis, fonarni yoq"</i> yoki shunchaki <i>"Jarvis"</i> — u "Labbay?" deydi. Batareya tezroq sarflanadi.</p>
     <div class="tog"><span>Fonda ham tinglash</span><div class="sw" id="swBg"></div></div>
@@ -261,7 +280,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -270,7 +289,7 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},readMsg:"always",botName:"lazer",botSeen:0,botTopic:"jarvis-buyurtma-4ed9ca010a0a034b",botSince:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},persona:"jiddiy",tip:true,tipLog:[],cloud:false,azKey:"",azRegion:"",azVoice:"uz-UZ-SardorNeural",hunt:true,huntQ:"lazer kesish kerak, лазерная резка нужно, darvoza kerak, panjara kerak, металлоконструкции",huntSeen:[],readMsg:"always",botName:"lazer",botSeen:0,botTopic:"jarvis-buyurtma-4ed9ca010a0a034b",botSince:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
@@ -368,7 +387,9 @@ const J = window.J = {
     if(loop&&errStreak>=5)stopLoop();
     setState("idle")},
   onSpeakStart(){setState("speak")},
-  onSpeakDone(){if(labbay){followUntil=Date.now()+8000;labbay=false}
+  onCloudFail(code){ sys(code===401||code===403?"Azure kaliti yoki hududi xato — oddiy ovozga o'tdim.":"Bulut ovozi ishlamadi — oddiy ovoz bilan aytaman.");
+    if(code===401||code===403){S.cloud=false;saveAll();loadSet()} N.speak(forTTS(lastSpoken),S.rate,S.pitch); },
+  onSpeakDone(){if(reading){ setTimeout(readNext,150); return; } if(labbay){followUntil=Date.now()+8000;labbay=false}
     if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgLine(m)); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
   onMessage(js){ let m; try{m=JSON.parse(js)}catch(e){return}
     lastMsg=m; sys(`📩 ${m.app} · ${m.from}: ${m.text}`);
@@ -420,7 +441,7 @@ function startLoop(quiet){if(loop)return;loop=true;errStreak=0;if(S.awake)N.keep
   if(state==="idle"&&!busy)listen()}
 function stopLoop(){loop=false;setTimeout(chipText,0);N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
 
-let followUntil=0, labbay=false;
+let followUntil=0, labbay=false, pausedRead=null;
 let msgQueue=[], pendingReply=null, lastMsg=null;
 function msgLine(m){ return `${m.app}, ${m.from}dan xabar: ${m.text}` }
 function setCar(on,quiet){
@@ -429,12 +450,75 @@ function setCar(on,quiet){
     if(!quiet) say(`Mashina rejimi yoqildi, ${S.name}. Buyruq uchun "Jarvis" deng.`); }
   else { if(!quiet) say("Mashina rejimi o'chirildi."); if(!S.bg)stopLoop(); }
 }
+let lastSpoken="";
+function cloudOK(){ return S.cloud && S.azKey && S.azRegion }
+function xmlEsc(t){ return String(t).replace(/[<>&'"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[c])) }
+function speakRaw(text){
+  lastSpoken=text;
+  if(cloudOK()){
+    const rate=Math.round((S.rate-1)*100), pitch=Math.round((S.pitch-1)*50);
+    const ssml=`<speak version="1.0" xml:lang="uz-UZ"><voice name="${S.azVoice||"uz-UZ-SardorNeural"}"><prosody rate="${rate}%" pitch="${pitch}%">${xmlEsc(text.replace(/[*_#`>]/g,""))}</prosody></voice></speak>`;
+    N.cloudSpeak(`https://${S.azRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+      JSON.stringify({"Ocp-Apim-Subscription-Key":S.azKey,"Content-Type":"application/ssml+xml","X-Microsoft-OutputFormat":"audio-24khz-48kbitrate-mono-mp3","User-Agent":"Jarvis"}),ssml);
+  } else N.speak(forTTS(text),S.rate,S.pitch);
+}
 function say(text){
   if(!text)return afterTurn();
   N.stopListen();
   addMsg("j",text);
-  if(S.voice){setState("speak");N.speak(forTTS(text),S.rate,S.pitch)}
+  if(S.voice){setState("speak");speakRaw(text)}
   else{setState("idle");afterTurn()}
+}
+/* ---- uzun matnni bo'laklab o'qish (45) ---- */
+let reading=null; // {chunks,i,title,translate}
+function chunkText(t){ const out=[]; let cur="";
+  for(const sn of String(t).replace(/\s+/g," ").split(/(?<=[.!?…])\s+/)){ if((cur+" "+sn).length>700&&cur){out.push(cur.trim());cur=""} cur+=" "+sn }
+  if(cur.trim())out.push(cur.trim()); return out }
+async function readNext(){
+  if(!reading) return;
+  if(reading.i>=reading.chunks.length){ const t=reading.title; reading=null; say(`${t?t+" — ":""}o'qib tugatdim.`); return; }
+  let part=reading.chunks[reading.i++];
+  if(reading.translate){ setState("think","tarjima qilyapman"); part=(await translateUz(part))||part; }
+  N.stopListen(); setState("speak"); speakRaw(part);
+}
+async function translateUz(t){
+  const r=await askRaw(`Quyidagi matnni O'ZBEK tiliga (lotin) tabiiy, ravon tarjima qil. Faqat tarjimani qaytar, izohsiz:\n\n${t}`);
+  return r; }
+async function askRaw(prompt){
+  if(S.prov==="groq"){ const r=await http("https://api.groq.com/openai/v1/chat/completions","POST",{"Content-Type":"application/json","Authorization":"Bearer "+S.key},
+      {model:S.groqModel||DEF.groqModel,temperature:0.4,messages:[{role:"user",content:prompt}]},30000);
+    try{return JSON.parse(r.body).choices[0].message.content.trim()}catch(e){return null} }
+  const r=await gemini({"Content-Type":"application/json","x-goog-api-key":S.key},{contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:2000}},{keep:true});
+  try{return JSON.parse(r.body).candidates[0].content.parts.filter(p=>!p.thought).map(p=>p.text||"").join("").trim()}catch(e){return null}
+}
+async function startReading(src,translate){
+  src=String(src||"").trim(); if(!src) return;
+  let title="", text=src;
+  if(/^https?:\/\//i.test(src)){
+    setState("think","sahifani ochyapman");
+    const r=await http(src,"GET",{"User-Agent":"Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile","Accept-Language":"uz,ru;q=0.8"},null,20000);
+    if(r.code!==200){ setState("idle"); say("Sahifani ochib bo'lmadi."); return; }
+    const doc=new DOMParser().parseFromString(r.body,"text/html");
+    doc.querySelectorAll("script,style,nav,header,footer,aside,form,noscript").forEach(e=>e.remove());
+    title=(doc.querySelector("h1")||doc.querySelector("title")||{}).textContent||"";
+    const root=doc.querySelector("article")||doc.querySelector("main")||doc.body;
+    text=[...root.querySelectorAll("p,h2,h3,li")].map(e=>e.textContent.trim()).filter(x=>x.length>30).join(" ");
+    if(text.length<200) text=(root.textContent||"").trim();
+  }
+  const chunks=chunkText(text);
+  if(!chunks.length){ setState("idle"); say("O'qiydigan matn topilmadi."); return; }
+  const mins=Math.max(1,Math.round(text.length/900));
+  reading={chunks,i:0,title:title.trim().slice(0,80),translate:!!translate};
+  addMsg("j",`📖 ${reading.title||"Matn"} — taxminan ${mins} daqiqa. To'xtatish: "Jarvis, to'xta". Davom: "Jarvis, davom et".`);
+  readNext();
+}
+function openReader(){
+  $("sheet").innerHTML=`<h2>📖 O'qib berish</h2><p class="mut">Maqola havolasini yoki istalgan matnni qo'ying — ovoz chiqarib o'qib beraman. Mashinada qulay.</p>
+  <textarea id="rdTx" rows="5" placeholder="https://... yoki matn"></textarea>
+  <div class="tog" style="border:0"><span>O'zbekchaga tarjima qilib o'qish</span><div class="sw" id="rdTr"></div></div>
+  <div class="row" style="margin-top:8px"><button class="btn g" id="rdX">Bekor</button><button class="btn" id="rdOk">O'qi</button></div>`;
+  openModal(); let tr=false; $("rdTr").onclick=()=>{tr=!tr;$("rdTr").classList.toggle("on",tr)};
+  $("rdX").onclick=closeModal; $("rdOk").onclick=()=>{const v=$("rdTx").value;closeModal();startReading(v,tr)};
 }
 function applyVoice(){
   ttsLang = N.setVoice(S.tts)||"default";
@@ -501,6 +585,13 @@ function quick(t){
     if(!N.xabarInstalled()) return NOAPP; if(!N.hasNotifAccess()) return "Jarvis Xabar ilovasini ochib, ruxsat bering.";
     let l=[];try{l=JSON.parse(N.recentMsgs(5))}catch(e){} if(!l.length) return "Yangi xabar yo'q.";
     return l.map(m=>`${m.from}: ${m.text}`).join(". "); }
+  if(reading && /^(to'xta|stop|pauza|bas|jim)/.test(g)){ const r=reading; reading=null; N.stopSpeak(); pausedRead=r; return "To'xtatdim. Davom ettirish uchun: Jarvis, davom et."; }
+  if(/^(davom et|davom ettir|o'qishda davom)/.test(g) && pausedRead){ reading=pausedRead; pausedRead=null; setTimeout(readNext,50); return ""; }
+  if(/(maqola|kitob|matn).*(o'qi|o'qib ber)|o'qib ber$/.test(g)){ setTimeout(openReader,50); return "Havola yoki matnni qo'ying."; }
+  if(/(bugungi bilim|kunlik bilim|bilim ber|qiziq narsa ayt|yangi narsa o'rgat)/.test(g)){ setTimeout(()=>dailyTip(true),30); return ""; }
+  if(/(buyurtma (qidir|top|ovla)|e'lon(lar)?ni (qidir|tekshir)|olx(da|ni) (qidir|tekshir))/.test(g)){ setTimeout(()=>huntOrders(true),30); return "OLX'dan qidiryapman."; }
+  if(/(hazil(kash)? rejim|hazillash)/.test(g)&&!/(o'chir|bas)/.test(g)){ S.persona="hazil"; saveAll(); loadSet(); return "Hazil rejimi yoqildi, xo'jayin. Endi ishlar qiziqroq bo'ladi."; }
+  if(/(jiddiy rejim|hazil(ni)? (o'chir|bas))/.test(g)){ S.persona="jiddiy"; saveAll(); loadSet(); return "Jiddiy rejimga qaytdim."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
   if(/(rasm(ga)? (qara|ko'r|tahlil)|rasmni (ko'r|tahlil)|surat(ga)? qara|rasm(ga)? ol)/.test(s)){ setTimeout(()=>askImage(""),50); return "Rasmni tanlang yoki suratga oling."; }
   if(/(ertalabki hisobot|kunlik hisobot|bugungi hisobot|hisobotni ber|hisobot ber)/.test(s)){ setTimeout(morningReport,30); return ""; }
@@ -518,7 +609,7 @@ function sysPrompt(){
   return `Sen "Jarvis"san — Temir odamdagi Jarvis kabi aqlli, xushmuomala va qisqa gapiradigan shaxsiy yordamchi.
 Salomatlik/oila savollarida javob 2–4 gap bo'lishi mumkin.
 Egang lazer kesish, CNC va metall ishlari ustaxonasini yuritadi (Metartshop, Instagram @metart_shop). Unga "${S.name}" deb murojaat qil.
-Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Har qanday savolga — ish, oila, bola tarbiyasi, salomatlik, hayotiy maslahat — mazmunli, amaliy javob ber; hech qachon savolni chetlab o'tma.
+${S.persona==="hazil"?"Xarakteringiz: Toni Starkning Jarvisi kabi — juda odobli, lekin nozik kinoya va yengil hazil bilan gapir (har javobda emas, o'rni kelganda). Hazil hech qachon haqoratli yoki qo'pol bo'lmasin; jiddiy mavzularda (salomatlik, pul, oila muammosi) hazil qilma.\n":""}Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Har qanday savolga — ish, oila, bola tarbiyasi, salomatlik, hayotiy maslahat — mazmunli, amaliy javob ber; hech qachon savolni chetlab o'tma.
 Salomatlik savollarida (ayniqsa bolalar): avval eng muhim amaliy maslahatni ber, keyin xavfli belgilarni (yuqori harorat, nafas qiyinlashuvi, hushsizlik, to'xtamaydigan yig'i, qayt qilish va h.k.) ayt va bunday holatda darhol shifokorga yoki 103 ga murojaat qilishni maslahat ber. Dori dozasini aytma — shifokor yoki dorixonachiga yo'naltir. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
 Pul summalarini "150 ming so'm" kabi yoz.
 
@@ -534,6 +625,10 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Tugmasiz/doimiy tinglash: Jarvis ekranidagi "Doimiy tinglash" tugmasi yoki Sozlamalar → "Fonda ham tinglash". Yoqilgach ilovadan chiqsa ham "Jarvis" so'zini eshitadi. Buning uchun "Boshqa ilovalar ustida ko'rsatish" va "Batareya cheklovisiz" ruxsatlari kerak (Sozlamalar → Tugmasiz boshqarish → "Ruxsat" tugmalari). Xiaomi/Redmi'da Sozlamalar → Ilovalar → Jarvis → "Avtozapusk" va "Fonda oyna ochish"ni yoqish kerak. Bildirishnomada "Jarvis tinglayapti" turishi kerak.
 - Hozir fon rejimi: ${S.bg?"YOQILGAN":"O'CHIQ"}${S.bg?"":" (shuning uchun ilovadan chiqqanda eshitmaydi — yoqishni taklif qil)"}.
 - Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
+- O'qib berish: "📖 O'qish" — maqola havolasi yoki matnni ovoz chiqarib o'qiydi, kerak bo'lsa o'zbekchaga tarjima qilib. "to'xta"/"davom et".
+- Buyurtma ovchisi: "🎯 Buyurtma qidir" yoki "Jarvis, buyurtma qidir" — OLX'dan xizmat so'ragan e'lonlarni topadi.
+- Kunlik bilim: "Jarvis, bugungi bilim". Hazil rejimi: "Jarvis, hazil rejim" / "jiddiy rejim".
+- Tabiiy o'zbekcha ovoz: Sozlamalar → Azure (bepul kalit kerak).
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
 - DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
 - Lazer bot (@lazer_uz77_bot) hisoblagan har bir buyurtma Jarvis'ga avtomatik tushadi (xabar o'qish ruxsatisiz).
@@ -842,6 +937,8 @@ $("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$
 document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
 $("chipRep").onclick=()=>morningReport();
 $("chipImg").onclick=()=>askImage("");
+$("chipRead").onclick=()=>openReader();
+$("chipHunt").onclick=()=>huntOrders(true);
 $("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>setBg(!S.bg);
 
@@ -920,6 +1017,8 @@ function loadSet(){
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
+  $("sPers").value=S.persona||"jiddiy"; $("swCloud").classList.toggle("on",!!S.cloud); $("sAzK").value=S.azKey||""; $("sAzR").value=S.azRegion||""; $("sAzV").value=S.azVoice||"uz-UZ-SardorNeural";
+  $("swTip").classList.toggle("on",!!S.tip); $("swHunt").classList.toggle("on",!!S.hunt); $("sHuntQ").value=S.huntQ||"";
   $("sRead").value=S.readMsg||"always";$("sTopic").value=S.botTopic||"";$("sRepT").value=S.reportTime||"07:30";
   $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);
   $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";$("sCity").value=S.city||"";
@@ -938,7 +1037,11 @@ bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 ["r1","r2","r3","r4"].forEach(k=>bind(k,v=>S.rates[k]=+String(v).replace(/[^\d]/g,"")||0));
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
 $("swBg").onclick=()=>setBg(!S.bg,true);
-bind("sRead",v=>S.readMsg=v);bind("sTopic",v=>{S.botTopic=v.trim();S.botSince=0});
+bind("sRead",v=>S.readMsg=v);
+bind("sPers",v=>S.persona=v); bind("sAzK",v=>S.azKey=v.trim()); bind("sAzR",v=>S.azRegion=v.trim().toLowerCase().replace(/\s+/g,"")); bind("sAzV",v=>S.azVoice=v);
+bind("sHuntQ",v=>{S.huntQ=v});
+sw("swCloud","cloud"); sw("swTip","tip"); sw("swHunt","hunt");
+$("sAzT").onclick=()=>{ if(!S.azKey||!S.azRegion){box("Azure","Avval kalit va hududni kiriting.");return} const c=S.cloud; S.cloud=true; speakRaw(`Salom, ${S.name}. Men Jarvisman. Endi tabiiy o'zbekcha ovozda gapiryapman.`); S.cloud=c; };bind("sTopic",v=>{S.botTopic=v.trim();S.botSince=0});
 bind("sRepT",v=>{S.reportTime=v||"07:30";schedReport()});
 sw("swRep","report",()=>schedReport());sw("swRate","rateWatch");
 bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
@@ -1066,6 +1169,52 @@ function syncBot(){
 /* ================= Instagram uchun eng yaxshi vaqt (31) ================= */
 const BEST_TIME="Obunachilaringiz eng faol vaqti: har kuni kechqurun 21:00 atrofida (20:00–22:00), kunduzi esa 13:00. Eng yaxshisi — Reels'ni 20:45–21:00 da joylash.";
 
+/* ================= Kunlik bilim (44) ================= */
+const TIP_TOPICS=["payvandlash siri","metall turlari va xossalari","lazer stanok parvarishi","biznes va savdo maslahati","mijoz bilan muomala","ruscha foydali ibora (ish uchun)","inglizcha foydali so'z (texnik)","chizma va DXF bo'yicha maslahat","Instagram'da sotish siri","xavfsizlik texnikasi"];
+async function dailyTip(speakNow){
+  const log=S.tipLog||[]; const topic=TIP_TOPICS[(log.length)%TIP_TOPICS.length];
+  const t=await askRaw(`Lazer kesish va metall ustaxonasi egasi uchun "${topic}" mavzusida bitta qisqa, amaliy va qiziqarli bilim ayt. O'ZBEK tilida (lotin), 2–4 gap, ovoz chiqarib o'qishga mos (ro'yxat va belgilarsiz). Oldingi mavzular takrorlanmasin: ${log.slice(-10).join("; ")}`);
+  if(!t){ if(speakNow) say("Bugungi bilimni tayyorlay olmadim."); return null; }
+  S.tipLog=[...log,t.slice(0,60)].slice(-40); saveAll();
+  if(speakNow){ say("Bugungi bilim: "+t); }
+  return t;
+}
+
+/* ================= Buyurtma ovchisi — OLX (54) ================= */
+async function huntOrders(speakNow){
+  const qs=String(S.huntQ||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,6);
+  if(!qs.length){ if(speakNow)say("Qidiruv so'zlari kiritilmagan."); return []; }
+  const found=[]; let reached=false;
+  for(const q of qs){
+    const r=await http(`https://www.olx.uz/list/q-${encodeURIComponent(q.replace(/\s+/g,"-"))}/?search%5Border%5D=created_at:desc`,"GET",
+      {"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"ru,uz;q=0.8"},null,20000);
+    if(r.code!==200) continue; reached=true;
+    const doc=new DOMParser().parseFromString(r.body,"text/html");
+    for(const c of doc.querySelectorAll('[data-cy="l-card"],[data-testid="l-card"]')){
+      const a=c.querySelector("a[href]"); if(!a)continue;
+      let href=a.getAttribute("href")||""; if(href.startsWith("/"))href="https://www.olx.uz"+href;
+      const id=(href.match(/ID([A-Za-z0-9]+)\.html/)||[])[1]||href.split("?")[0];
+      const title=((c.querySelector("h4,h6,[data-cy='ad-card-title']")||{}).textContent||"").trim();
+      const loc=((c.querySelector('[data-testid="location-date"]')||{}).textContent||"").trim();
+      const price=((c.querySelector('[data-testid="ad-price"]')||{}).textContent||"").trim();
+      if(!title||(S.huntSeen||[]).includes(id)||found.some(f=>f.id===id))continue;
+      found.push({id,title,loc,price,href});
+    }
+  }
+  if(!reached){ if(speakNow) say("OLX sahifasini ochib bo'lmadi. Keyinroq urinib ko'ring."); return []; }
+  S.huntSeen=[...(S.huntSeen||[]),...found.map(f=>f.id)].slice(-400); saveAll();
+  if(!found.length){ if(speakNow) say("Yangi e'lon topilmadi."); return []; }
+  // AI bilan: qaysilari xizmat SO'RAYOTGAN mijoz (taklif emas)
+  let pick=found;
+  const cls=await askRaw(`Quyidagi OLX e'lonlaridan qaysilari lazer kesish, metall buyum, darvoza, panjara, metall konstruksiya kabi xizmatni SO'RAYOTGAN (xaridor/buyurtmachi) e'lon? Xizmat TAKLIF qilayotgan raqobatchilarni chiqarib tashla. Faqat raqamlarni vergul bilan qaytar, bo'lmasa "yo'q".\n${found.map((f,i)=>`${i+1}. ${f.title} | ${f.price} | ${f.loc}`).join("\n")}`);
+  if(cls){ const nums=(cls.match(/\d+/g)||[]).map(Number).filter(n=>n>=1&&n<=found.length); pick=nums.map(n=>found[n-1]); }
+  if(!pick.length){ if(speakNow) say(`${found.length} ta yangi e'lon bor, lekin ularning hammasi raqobatchilar taklifi.`); return []; }
+  setTimeout(()=>{ const el=addHtml(`<b>🎯 Buyurtma ovchisi — ${pick.length} ta mos e'lon</b>`+pick.slice(0,8).map(f=>`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">${esc(f.title)}<div class="mut">${esc(f.price)} · ${esc(f.loc)}</div><button class="btn sm g" data-u="${esc(f.href)}" style="margin-top:6px">Ochish</button></div>`).join(""));
+    el.querySelectorAll("button[data-u]").forEach(b=>b.onclick=()=>N.openUrl(b.dataset.u)); },60);
+  if(speakNow) say(`${pick.length} ta mos e'lon topdim. Birinchisi: ${pick[0].title}.`);
+  return pick;
+}
+
 /* ================= Ertalabki hisobot va dollar kuzatuvi ================= */
 async function rateCheck(force){
   if(!force && S.rateLast && Date.now()-(S.rateLast.t||0)<3*3600e3) return null;
@@ -1092,11 +1241,14 @@ async function morningReport(){
     const debt=open.reduce((a,o)=>a+Math.max(0,(+o.price||0)-(+o.paid||0)),0); if(debt) parts.push(`Mijozlardan olinadigan qoldiq ${fmt(debt)} so'm.`);
     const end=new Date(); end.setHours(23,59,59);
     const rem=notes.filter(n=>!n.done&&n.at&&n.at<=end.getTime()); if(rem.length) parts.push(`Bugungi eslatmalar: ${rem.slice(0,4).map(n=>n.text).join("; ")}.`);
+    if(S.hunt){ try{ const h=await huntOrders(false); if(h&&h.length) parts.push(`OLX'da ${h.length} ta mos buyurtma e'loni bor, ekranda ko'rsatdim.`); }catch(e){} }
+    if(S.tip){ try{ const t=await dailyTip(false); if(t) parts.push("Bugungi bilim: "+t); }catch(e){} }
     setState("idle"); say(parts.join(" "));
   } finally { busy=false; }
 }
 
 setInterval(()=>{ if(state==="idle"&&!busy) pollBot(false) },120000);
+setInterval(async()=>{ if(S.hunt&&state==="idle"&&!busy){ const h=await huntOrders(false); if(h&&h.length&&state==="idle") say(`OLX'da ${h.length} ta yangi buyurtma e'loni bor.`); } },30*60000);
 setTimeout(()=>pollBot(false),2500);
 
 /* ================= Nazoratchi: doimiy tinglash to'xtab qolmasin ================= */

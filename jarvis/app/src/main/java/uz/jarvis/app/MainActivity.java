@@ -13,6 +13,7 @@ import android.database.Cursor;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -73,6 +74,7 @@ public class MainActivity extends Activity {
     boolean pageReady = false;
     String pendingCmd = null;
     Uri camUri = null;
+    MediaPlayer player = null;
     static final int REQ_IMG = 41;
 
     @Override
@@ -313,7 +315,48 @@ public class MainActivity extends Activity {
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, p, "j" + System.currentTimeMillis());
         }
 
-        @JavascriptInterface public void stopSpeak() { if (ttsReady) tts.stop(); }
+        @JavascriptInterface public void stopSpeak() {
+            if (ttsReady) tts.stop();
+            runOnUiThread(() -> { if (player != null) { try { player.stop(); player.release(); } catch (Exception ignored) {} player = null; } });
+        }
+
+        /** Bulut ovozi (Azure): SSML yuboriladi, mp3 olinib o'ynatiladi. */
+        @JavascriptInterface public void cloudSpeak(String url, String headers, String body) {
+            new Thread(() -> {
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setRequestMethod("POST");
+                    c.setConnectTimeout(15000);
+                    c.setReadTimeout(30000);
+                    JSONObject h = new JSONObject(headers);
+                    Iterator<String> it = h.keys();
+                    while (it.hasNext()) { String k = it.next(); c.setRequestProperty(k, h.getString(k)); }
+                    c.setDoOutput(true);
+                    try (OutputStream os = c.getOutputStream()) { os.write(body.getBytes(StandardCharsets.UTF_8)); }
+                    int code = c.getResponseCode();
+                    if (code != 200) { js("J.onCloudFail(" + code + ")"); return; }
+                    File f = new File(getCacheDir(), "say.mp3");
+                    try (InputStream is = c.getInputStream(); FileOutputStream fo = new FileOutputStream(f)) {
+                        byte[] buf = new byte[8192]; int n;
+                        while ((n = is.read(buf)) > 0) fo.write(buf, 0, n);
+                    }
+                    runOnUiThread(() -> {
+                        try {
+                            if (player != null) { player.release(); player = null; }
+                            player = new MediaPlayer();
+                            player.setDataSource(f.getAbsolutePath());
+                            player.setOnCompletionListener(mp -> { js("J.onSpeakDone()"); });
+                            player.setOnErrorListener((mp, w, e) -> { js("J.onSpeakDone()"); return true; });
+                            player.prepare();
+                            player.start();
+                            js("J.onSpeakStart()");
+                        } catch (Exception e) { js("J.onCloudFail(-2)"); }
+                    });
+                } catch (Exception e) {
+                    js("J.onCloudFail(0)");
+                }
+            }).start();
+        }
 
         // ---------- xotira ----------
         @JavascriptInterface public void save(String k, String v) { prefs.edit().putString(k, v).apply(); }
