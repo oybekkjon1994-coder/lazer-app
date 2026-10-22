@@ -17,6 +17,8 @@ import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.provider.AlarmClock;
 import android.provider.ContactsContract;
 import android.speech.RecognitionListener;
@@ -55,6 +57,9 @@ public class MainActivity extends Activity {
     String ttsLang = "";
     SharedPreferences prefs;
     long lastRms = 0;
+    static volatile boolean visible = false;
+    boolean pageReady = false;
+    String pendingCmd = null;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -65,7 +70,12 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView v, String url) {
+                pageReady = true;
+                if (pendingCmd != null) { deliver(pendingCmd); pendingCmd = null; }
+            }
+        });
         web.setWebChromeClient(new WebChromeClient());
         web.setBackgroundColor(0xFF05101A);
         web.addJavascriptInterface(new Bridge(), "Native");
@@ -88,6 +98,53 @@ public class MainActivity extends Activity {
         need.add(Manifest.permission.RECORD_AUDIO);
         if (Build.VERSION.SDK_INT >= 33) need.add(Manifest.permission.POST_NOTIFICATIONS);
         askPerms(need.toArray(new String[0]));
+        takeIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        takeIntent(i);
+    }
+
+    void takeIntent(Intent i) {
+        if (i == null || !i.getBooleanExtra("wake", false)) return;
+        String cmd = i.getStringExtra("cmd");
+        i.removeExtra("wake");
+        if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
+        else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        if (pageReady) deliver(cmd == null ? "" : cmd); else pendingCmd = cmd == null ? "" : cmd;
+    }
+
+    void deliver(String cmd) { js("J.external(" + q(cmd) + ")"); }
+
+    boolean bgOn() { return prefs.getBoolean("bg", false); }
+
+    void svc(String action) {
+        try {
+            Intent i = new Intent(this, ListenService.class).setAction(action);
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        visible = true;
+        if (bgOn()) svc(ListenService.PAUSE);
+        js("J.onShown && J.onShown()");
+    }
+
+    @Override
+    protected void onPause() {
+        visible = false;
+        js("J.onHidden && J.onHidden()");
+        if (rec != null) rec.cancel();
+        if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(false); setTurnScreenOn(false); }
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        if (bgOn()) svc(ListenService.RESUME);
+        super.onPause();
     }
 
     void askPerms(String[] perms) {
@@ -391,6 +448,53 @@ public class MainActivity extends Activity {
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
         }
+
+        @JavascriptInterface public String bgListen(boolean on) {
+            prefs.edit().putBoolean("bg", on).apply();
+            if (on) {
+                if (!has(Manifest.permission.RECORD_AUDIO)) { askPerms(new String[]{Manifest.permission.RECORD_AUDIO}); return "noperm"; }
+                svc("start");
+                svc(ListenService.PAUSE); // ilova ochiq — o'zi tinglaydi
+            } else {
+                stopService(new Intent(MainActivity.this, ListenService.class));
+            }
+            return "ok";
+        }
+
+        @JavascriptInterface public boolean bgRunning() { return ListenService.running; }
+
+        @JavascriptInterface public boolean canOverlay() {
+            return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(MainActivity.this);
+        }
+
+        @JavascriptInterface public void askOverlay() {
+            try {
+                Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                startActivity(i);
+            } catch (Exception e) { appSettings(); }
+        }
+
+        @JavascriptInterface public boolean batteryOk() {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            return pm.isIgnoringBatteryOptimizations(getPackageName());
+        }
+
+        @JavascriptInterface public void askBattery() {
+            try {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()));
+                startActivity(i);
+            } catch (Exception e) { appSettings(); }
+        }
+
+        @JavascriptInterface public void appSettings() {
+            try {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception ignored) {}
+        }
+
+        @JavascriptInterface public void toBack() { runOnUiThread(() -> moveTaskToBack(true)); }
 
         @JavascriptInterface public void share(String text) {
             Intent i = new Intent(Intent.ACTION_SEND);
