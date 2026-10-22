@@ -261,7 +261,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -282,7 +282,8 @@ let orders = ld("orders",[]);
 let notes = ld("notes",[]);
 let hist = ld("hist",[]);
 let seq = ld("seq",100);
-const saveAll = () => {sv("set",S);sv("orders",orders);sv("notes",notes);sv("hist",hist.slice(-24));sv("seq",seq)};
+const pushMsg=()=>{ try{ N.pushMsgSettings&&N.pushMsgSettings(S.readMsg||"always",!!S.car) }catch(e){} };
+const saveAll = () => { pushMsg();sv("set",S);sv("orders",orders);sv("notes",notes);sv("hist",hist.slice(-24));sv("seq",seq)};
 const nid = () => (++seq, sv("seq",seq), seq);
 
 /* ================= Raqamni o'zbekcha so'zga ================= */
@@ -376,6 +377,7 @@ const J = window.J = {
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
     if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":"")) } else msgQueue.push(m); },
   morning(){ go("pJarvis"); morningReport(); },
+  onReplyResult(r){ if(r==="expired")say("Xabar eskirgan, ilovaning o'zidan javob bering."); else if(r==="err")say("Javobni yuborib bo'lmadi."); else if(r==="none")say("Javob berib bo'ladigan xabar topilmadi."); else if(r==="noaccess")say("Jarvis Xabar ilovasida ruxsat berilmagan."); else sys("✓ Yuborildi"); },
   async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
     addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
     setState("think","rasmni ko'ryapman"); busy=true;
@@ -490,16 +492,13 @@ function quick(t){
     if(!addr) return `${key==="uy"?"Uy":"Ustaxona"} manzili kiritilmagan. Sozlamalar, Mashina bo'limida kiriting.`;
     const r=N.navigate(addr,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":`${key==="uy"?"Uyga":"Ustaxonaga"} yo'l ochildi.`; }
   if(pendingReply && /^(ha|ha yubor|yubor|yuboraver|jo'nat|ok|mayli)$/.test(g)){
-    const r=N.reply(pendingReply.to||"",pendingReply.text); pendingReply=null;
-    return r==="none"?"Javob berib bo'ladigan xabar topilmadi.":r==="expired"?"Bu xabarning muddati o'tgan, ilovaning o'zidan javob bering.":r==="err"?"Yuborib bo'lmadi.":"Yuborildi."; }
+    const r=N.reply(pendingReply.to||"",pendingReply.text); pendingReply=null; return replyMsg(r); }
   if(pendingReply && /^(yo'q|kerak emas|bekor|yubormа|yuborma)$/.test(g)){ pendingReply=null; return "Bekor qilindi."; }
   { const m1=g.match(/^(?:(.+?)(?:ga|ka|qa) )?javob (?:ber|yoz|yubor|qaytar)[:,]?\s+(.+)$/);
     if(m1 && !/(tayyorla|o'yla|nima deb)/.test(g)){ const to=m1[1]||"", txt=m1[2];
-      const r=N.reply(to,txt); if(r==="none") return N.hasNotifAccess()?"Javob berib bo'ladigan xabar topilmadi.":"Avval Sozlamalarda xabarlarni o'qish ruxsatini bering.";
-      if(r==="expired") return "Xabar eskirgan, ilovaning o'zidan javob bering."; if(r==="err") return "Yuborib bo'lmadi.";
-      return `${r.split("|")[1]}ga yuborildi.`; } }
+      return replyMsg(N.reply(to,txt)); } }
   if(/(xabarlar|xabarni o'qi|xabarlarni o'qi|kim yozdi|yangi xabar|kim yozgan)/.test(s)){
-    if(!N.hasNotifAccess()) return "Xabarlarni o'qish uchun Sozlamalarda ruxsat bering.";
+    if(!N.xabarInstalled()) return NOAPP; if(!N.hasNotifAccess()) return "Jarvis Xabar ilovasini ochib, ruxsat bering.";
     let l=[];try{l=JSON.parse(N.recentMsgs(5))}catch(e){} if(!l.length) return "Yangi xabar yo'q.";
     return l.map(m=>`${m.from}: ${m.text}`).join(". "); }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
@@ -538,6 +537,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
 - DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
 - Lazer bot (${S.botName}) Telegram'da yozgan xabarlar avtomatik buyurtma bo'ladi.
+- Xabarlar alohida "Jarvis Xabar" ilovasi orqali ishlaydi (Xiaomi uni Jarvis ichida bloklaydi). U o'rnatilmagan bo'lsa shuni ayt.
 - Xabarlar: kelgan Telegram/WhatsApp/Instagram/SMS xabarlarini o'qiysan va ovoz bilan javob yuborasan ("Jarvis, javob ber: ..."). Buning uchun Sozlamalar → Xabarlar va hisobot → "Ruxsat". Ertalabki hisobot vaqti ham shu yerda.
 - Qila olasan: qo'ng'iroq, SMS oynasini ochish, ilovalarni ochish, budilnik, taymer, eslatma, fonar, ovoz balandligi, musiqa, navigator, buyurtmalar, lazer narxi, valyuta kursi, ob-havo, internetdan qidirish.
 - Qila olmaysan: boshqa ilovalar ICHIDA ishlash (masalan Telegram'da xabar o'qish/yozish — faqat Telegram'ni ochasan yoki "share" orqali matn yuborish oynasini ochasan), mashinaning o'zini boshqarish.
@@ -782,7 +782,7 @@ async function run(a){
       if(!uri) return "DXF tayyor, lekin faylni saqlab bo'lmadi.";
       return `DXF tayyor, Yuklamalar, Jarvis papkasiga saqlandi. Kesish uzunligi ${r.len.toFixed(1)} metr${lp&&lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}.`; }
     case "reply_draft": pendingReply={to:a.to||"",text:a.text||""}; return "";
-    case "reply":{ const r=N.reply(a.to||"",a.text||""); return r==="none"?"Javob berib bo'ladigan xabar topilmadi.":r==="expired"?"Xabar eskirgan.":r==="err"?"Yuborib bo'lmadi.":""; }
+    case "reply":{ const r=N.reply(a.to||"",a.text||""); return (r==="none"||r==="noapp")?replyMsg(r):""; }
     case "show": setTimeout(()=>addMsg("j",a.text||""),60); return "";
     case "copy": N.copy(a.text||""); return "";
     case "contact_save":{ const n=String(a.name||"").trim(), num=String(a.number||"").replace(/[^\d+]/g,"");
@@ -958,10 +958,14 @@ $("bImp").onclick=()=>{ $("sheet").innerHTML=`<h2>Zaxiradan tiklash</h2><textare
     notes.forEach(n=>{if(!n.done&&n.at>Date.now())N.remind(n.at,n.text,n.id)});saveAll();loadSet();renderOrders();renderNotes();box("Tayyor","Ma'lumotlar tiklandi ✓")}
     catch(e){box("Xato","Matn noto'g'ri.")}};
 };
+const NOAPP="Buning uchun Jarvis Xabar ilovasini o'rnating. Sozlamalar, Xabarlar bo'limida ko'rsatma bor.";
+function replyMsg(r){ if(r==="noapp")return NOAPP; if(r==="none")return N.hasNotifAccess()?"Javob berib bo'ladigan xabar topilmadi.":"Avval Jarvis Xabar ilovasida ruxsat bering.";
+  return `${(r.split("|")[1]||"")}ga yuborilmoqda.`; }
 function schedReport(){ const [h,m]=(S.reportTime||"07:30").split(":").map(Number); N.scheduleReport(!!S.report,h||7,m||0); }
-function refreshMsgPerm(){ const el=$("msgPerm"); if(!el)return; const ok=N.hasNotifAccess();
-  el.innerHTML=`<span>${ok?"✓":"✗"} Xabarlarni o'qish ruxsati<br><span class="mut">Telegram, WhatsApp, Instagram, SMS</span></span>${ok?"":'<button class="btn sm" id="pNt">Ruxsat</button>'}`;
-  if($("pNt"))$("pNt").onclick=()=>box("Xabarlarga ruxsat",'Ochilgan ro\'yxatda "Jarvis"ni toping va yoqing. Shundan keyin kelgan xabarlarni o\'qib beradi va siz ovoz bilan javob qaytara olasiz.',()=>N.askNotifAccess()); }
+function refreshMsgPerm(){ const el=$("msgPerm"); if(!el)return; const inst=N.xabarInstalled(), ok=inst&&N.hasNotifAccess();
+  el.innerHTML=`<span>${ok?"✓ Xabarlar ulangan":inst?"✗ Jarvis Xabar'da ruxsat berilmagan":"✗ Jarvis Xabar o'rnatilmagan"}<br><span class="mut">Telegram, WhatsApp, Instagram, SMS — alohida "Jarvis Xabar" ilovasi orqali</span></span>${ok?"":`<button class="btn sm" id="pNt">${inst?"Ochish":"Qanday?"}</button>`}`;
+  if($("pNt"))$("pNt").onclick=()=> inst ? N.askNotifAccess()
+    : box("Jarvis Xabar",'Xabarlarni o\'qish uchun "Jarvis Xabar" degan kichik ilova kerak (Xiaomi uni Jarvis ichida bloklaydi). Claude chatidan jarvis-xabar.apk faylini olib o\'rnating, ochib "Ruxsat berish"ni bosing.'); }
 function refreshBg(){ refreshMsgPerm();
   const el=$("bgPerm"); if(!el)return;
   if(!S.bg){el.innerHTML="";return}

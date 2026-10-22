@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission android:name="uz.jarvis.MSG" android:protectionLevel="signature" />
+    <uses-permission android:name="uz.jarvis.MSG" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -15,6 +17,7 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <queries>
+        <package android:name="uz.jarvis.xabar" />
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
@@ -37,10 +40,12 @@
         </activity>
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <receiver android:name=".ReportReceiver" android:exported="false" />
-        <service android:name=".MsgService" android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
-        </service>
+        <receiver android:name=".MsgReceiver" android:exported="true" android:permission="uz.jarvis.MSG">
+            <intent-filter>
+                <action android:name="uz.jarvis.MESSAGE" />
+                <action android:name="uz.jarvis.REPLY_RESULT" />
+            </intent-filter>
+        </receiver>
         <service android:name=".ListenService" android:exported="false" android:foregroundServiceType="microphone" />
     </application>
 </manifest>

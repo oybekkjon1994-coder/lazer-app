@@ -3,7 +3,7 @@ name: Jarvis APK
 on:
   push:
     branches: [main]
-    paths: ['jarvis/**', '.github/workflows/jarvis.yml']
+    paths: ['jarvis/**', 'jarvis-xabar/**', '.github/workflows/jarvis.yml']
   workflow_dispatch:
 
 permissions:
@@ -33,22 +33,15 @@ jobs:
           $BT/zipalign -f -p 4 jarvis/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
           $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out jarvis.apk aligned.apk
           $BT/apksigner verify --print-certs jarvis.apk
-      - name: Yengil versiya (xabar o'qish xizmatisiz)
+      - name: Jarvis Xabar APK
         env:
           RUN: ${{ github.run_number }}
           KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
         run: |
-          python3 - <<'PY'
-          import re
-          p="jarvis/app/src/main/AndroidManifest.xml"; s=open(p).read()
-          s=re.sub(r'\s*<service android:name="\.MsgService".*?</service>','',s,flags=re.S)
-          open(p,"w").write(s)
-          PY
-          grep -c MsgService jarvis/app/src/main/AndroidManifest.xml || true
-          gradle -p jarvis assembleRelease --no-daemon
+          gradle -p jarvis-xabar assembleRelease --no-daemon
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
-          $BT/zipalign -f -p 4 jarvis/app/build/outputs/apk/release/app-release-unsigned.apk aligned2.apk
-          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out jarvis-lite.apk aligned2.apk
+          $BT/zipalign -f -p 4 jarvis-xabar/app/build/outputs/apk/release/app-release-unsigned.apk aligned2.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out jarvis-xabar.apk aligned2.apk
       - uses: actions/upload-artifact@v4
         with:
           name: jarvis-apk
@@ -60,4 +53,4 @@ jobs:
           name: Jarvis ${{ github.run_number }}
           files: |
             jarvis.apk
-            jarvis-lite.apk
+            jarvis-xabar.apk

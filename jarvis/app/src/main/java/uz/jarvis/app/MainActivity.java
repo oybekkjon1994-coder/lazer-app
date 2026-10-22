@@ -566,22 +566,27 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
         }
 
-        @JavascriptInterface public String recentMsgs(int n) { return MsgService.recent(n); }
+        @JavascriptInterface public String recentMsgs(int n) { return MsgReceiver.recent(MainActivity.this, n); }
 
-        @JavascriptInterface public String reply(String to, String text) { return MsgService.reply(MainActivity.this, to, text); }
+        @JavascriptInterface public String reply(String to, String text) { return MsgReceiver.reply(MainActivity.this, to, text); }
+
+        @JavascriptInterface public boolean xabarInstalled() { return MsgReceiver.installed(MainActivity.this); }
 
         @JavascriptInterface public boolean hasNotifAccess() {
             String s = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-            return s != null && s.contains(getPackageName());
+            return s != null && s.contains(MsgReceiver.XABAR) && MsgReceiver.installed(MainActivity.this);
         }
 
         @JavascriptInterface public void askNotifAccess() {
-            try {
-                Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-            } catch (Exception e) { appSettings(); }
+            Intent i = getPackageManager().getLaunchIntentForPackage(MsgReceiver.XABAR);
+            if (i == null) {
+                try { i = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS); } catch (Exception e) { return; }
+            }
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(i); } catch (Exception ignored) {}
         }
+
+        @JavascriptInterface public void pushMsgSettings(String readMsg, boolean car) { MsgReceiver.settings(MainActivity.this, readMsg, car); }
 
         @JavascriptInterface public void copy(String text) {
             runOnUiThread(() -> {
