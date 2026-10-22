@@ -93,6 +93,11 @@ h2{font-size:16px;margin:4px 0 10px;color:var(--cy);font-weight:600;letter-spaci
 #modal .sheet{background:var(--bg2);width:100%;max-height:90%;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 16px 22px;border-top:1px solid var(--line)}
 .empty{text-align:center;color:var(--mut);padding:30px 10px}
 a{color:var(--cy)}
+body.car #orb{width:210px;height:210px}
+body.car .m{font-size:20px}
+body.car .chips .chip{font-size:16px;padding:10px 16px}
+body.car #mic{width:76px;height:76px}
+.chip.on{background:var(--cy);color:var(--bg);border-color:var(--cy)}
 </style>
 </head>
 <body>
@@ -107,6 +112,7 @@ a{color:var(--cy)}
   <div id="live"></div>
   <div id="chat"></div>
   <div class="chips">
+    <button class="chip" id="chipCar">🚗 Mashina</button>
     <button class="chip" data-q="Bugungi hisobotni ber">Hisobot</button>
     <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
     <button class="chip" data-q="Fonarni yoq">Fonar</button>
@@ -197,6 +203,14 @@ a{color:var(--cy)}
     <div id="bgPerm"></div>
   </div>
   <div class="card">
+    <b>Mashina</b>
+    <p class="mut" style="margin:6px 0 0">"Jarvis, uyga yo'l" yoki "ustaxonaga olib bor" deganda shu manzillarga yo'l ochiladi.</p>
+    <label>Uy manzili</label><input id="plUy" placeholder="Masalan: Samarqand, Mirzo Ulug'bek ko'chasi 12">
+    <label>Ustaxona manzili</label><input id="plUs" placeholder="Masalan: Samarqand, Sanoat zonasi">
+    <label>Navigator</label>
+    <select id="sNav"><option value="auto">Avtomatik (Yandex → Google)</option><option value="yandex">Yandex Navigator</option><option value="google">Google Maps</option></select>
+  </div>
+  <div class="card">
     <b>Lazer kesish narxi (so'm / metr)</b>
     <div class="row"><div><label>1–2 mm</label><input id="r1" inputmode="numeric"></div><div><label>3–4 mm</label><input id="r2" inputmode="numeric"></div></div>
     <div class="row"><div><label>5–6 mm</label><input id="r3" inputmode="numeric"></div><div><label>8–10 mm</label><input id="r4" inputmode="numeric"></div></div>
@@ -234,7 +248,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -243,10 +257,11 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
+S.places = Object.assign({},DEF.places,S.places||{});
 if(!S.v2){S.v2=1;if(S.model==="gemini-flash-latest"||S.model==="gemini-2.5-flash")S.model=DEF.model;}
 let orders = ld("orders",[]);
 let notes = ld("notes",[]);
@@ -359,6 +374,12 @@ function startLoop(quiet){if(loop)return;loop=true;errStreak=0;$("chipLoop").tex
 function stopLoop(){loop=false;$("chipLoop").textContent="Doimiy tinglash: o'chiq";N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
 
 let followUntil=0;
+function setCar(on,quiet){
+  S.car=!!on; saveAll(); document.body.classList.toggle("car",S.car); $("chipCar").classList.toggle("on",S.car);
+  if(S.car){ S.voice=true; S.wake=true; saveAll(); loadSet(); N.keepAwake(true); if(!loop)startLoop(true);
+    if(!quiet) say(`Mashina rejimi yoqildi, ${S.name}. Buyruq uchun "Jarvis" deng.`); }
+  else { if(!quiet) say("Mashina rejimi o'chirildi."); if(!S.bg)stopLoop(); }
+}
 function say(text){
   if(!text)return afterTurn();
   N.stopListen();
@@ -411,6 +432,17 @@ function quick(t){
     const h=new Date().getHours(), o=openOrders().length;
     return `${h<12?"Xayrli tong":h<18?"Salom":"Xayrli kech"}, ${S.name}. Xizmatingizga tayyorman.${o?` Ochiq buyurtmalar ${o} ta.`:""}`}
   if(/^(rahmat|raxmat|katta rahmat|ofarin|zo'r)( jarvis)?$/.test(g)) return `Arzimaydi, ${S.name}.`;
+  if(/(musiqa|qo'shiq|muzika|музык)/.test(s)||/^(keyingi|oldingi)( qo'shiq| trek)?$/.test(g)){
+    if(/(keyingi|boshqa|almashtir|next)/.test(s)){N.media("next");return ""}
+    if(/(oldingi|orqaga)/.test(s)){N.media("prev");return ""}
+    if(/(to'xtat|pauza|o'chir|jim)/.test(s)){N.media("pause");return ""}
+    if(/(qo'y|yoq|davom|boshla|ijro|och)/.test(s)){N.media("play");return ""}
+  }
+  const nv=s.match(/^(?:jarvis,?\s*)?(uy|ustaxona)(?:ga|imga|mga)?\s*(?:yo'l|olib bor|haydash|marshrut|boramiz|ketdik)/);
+  if(nv){ const key=nv[1]==="uy"?"uy":"ustaxona", addr=S.places[key];
+    if(!addr) return `${key==="uy"?"Uy":"Ustaxona"} manzili kiritilmagan. Sozlamalar, Mashina bo'limida kiriting.`;
+    const r=N.navigate(addr,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":`${key==="uy"?"Uyga":"Ustaxonaga"} yo'l ochildi.`; }
+  if(/mashina rejim/.test(s)){ if(/(o'chir|yop|bas)/.test(s)){setCar(false,true);return "Mashina rejimi o'chirildi."} setCar(true,true); return `Mashina rejimi yoqildi. Buyruq uchun "Jarvis" deng.` }
   if(/^(stop|to'xta|jim|bas|yetarli|tamom)\b/.test(s.replace(/^jarvis,?\s*/,""))){N.stopSpeak();if(loop)stopLoop();return "Xo'p."}
   return null;
 }
@@ -423,7 +455,8 @@ Egang lazer kesish, CNC va metall ishlari ustaxonasini yuritadi (Metartshop, Ins
 Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
 Pul summalarini "150 ming so'm" kabi yoz.
 
-Hozirgi vaqt: ${nowStr()}.
+Hozirgi vaqt: ${nowStr()}.${S.car?"\nEgang hozir MASHINA haydayapti: javoblar juda qisqa bo'lsin (1 gap), ekranga qarashni talab qilma.":""}
+Saqlangan manzillar: uy — ${S.places.uy||"kiritilmagan"}; ustaxona — ${S.places.ustaxona||"kiritilmagan"}.
 Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.
 Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}
 Qaydlar/eslatmalar (JSON): ${JSON.stringify(notes.slice(-30).map(n=>({id:n.id,matn:n.text,vaqt:n.at?new Date(n.at).toLocaleString("ru-RU"):null,bajarildi:!!n.done})))}
@@ -445,6 +478,9 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"delete_order","id":123}
 {"type":"laser_price","meters":12.5,"thickness":3,"qty":1}   // narxni ilova o'zi hisoblab aytadi
 {"type":"share","text":"..."}                                 // matnni Telegram va h.k. orqali yuborish oynasi
+{"type":"navigate","query":"manzil yoki joy nomi"}           // navigatorda yo'l ochish ("uy"/"ustaxona" — saqlangan manzil)
+{"type":"media","cmd":"play|pause|next|prev"}                 // musiqani boshqarish
+{"type":"place_save","name":"uy|ustaxona","address":"..."}    // manzilni eslab qolish
 {"type":"web","query":"aniq qidiruv so'rovi"}                // internetdan qidirib javob berish
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
 Yangiliklar, valyuta kursi, ob-havo, narxlar, sport, telefon raqami/manzil, hozirgi voqealar yoki aniq bilmagan har qanday fakt so'ralsa — "web" amalini ishlat va "say"ni BO'SH qoldir (javobni qidiruv natijasi aytadi). O'ylab topma. Xavfli yoki noqonuniy ishga yordam berma.`;
@@ -580,6 +616,11 @@ async function run(a){
       for(const k of ["status","price","paid","due","note","phone","item","client"]) if(a[k]!==undefined&&a[k]!==null&&a[k]!=="")o[k]=(k==="price"||k==="paid")?+a[k]:a[k];
       saveAll();renderOrders();return""}
     case "delete_order":{const i=orders.findIndex(x=>x.id==a.id);if(i>=0){orders.splice(i,1);saveAll();renderOrders()}return""}
+    case "navigate":{ let q=String(a.query||"").trim(); const k=norm(q).replace(/(ga|imga|mga)$/,"");
+      if(k==="uy"||k==="uyim"||k==="ustaxona"){ q=S.places[k.startsWith("uy")?"uy":"ustaxona"]; if(!q)return"Bu manzil kiritilmagan. Sozlamalarda kiriting."; }
+      const r=N.navigate(q,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":""; }
+    case "media": N.media(a.cmd||"toggle"); return "";
+    case "place_save":{ const k=/uy/i.test(a.name||"")?"uy":"ustaxona"; S.places[k]=a.address||""; saveAll(); loadSet(); return ""; }
     case "web":{ setState("think","qidiryapman"); const w=await webAnswer(a.query||"");
       if(w.src&&w.src.length) setTimeout(()=>sys("Manba: "+w.src.join(", ")),50);
       return w.text; }
@@ -626,6 +667,7 @@ $("mic").onclick=()=>{ if(state==="listen"){N.stopListen();setState("idle");if(l
 $("send").onclick=()=>{const v=$("txt").value;$("txt").value="";handle(v,false)};
 $("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("send").click()}});
 document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
+$("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>loop?stopLoop():startLoop();
 
 /* ================= Buyurtmalar ekrani ================= */
@@ -703,6 +745,7 @@ function loadSet(){
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
+  $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";
   $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
   ["r1","r2","r3","r4"].forEach(k=>$(k).value=S.rates[k]);
 }
@@ -719,6 +762,7 @@ bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
 sw("swBg","bg",()=>{const r=N.bgListen(!!S.bg);if(r==="noperm"){S.bg=false;saveAll();loadSet();box("Ruxsat kerak","Avval mikrofon ruxsatini bering, keyin qayta yoqing.")}
   if(S.bg){if(!S.wake){S.wake=true;saveAll();loadSet()} startLoop(true)} refreshBg()});
+bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);
 sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
 $("sTest").onclick=async()=>{S.key=$("sKey").value.trim();saveAll();$("sTest").textContent="…";
@@ -750,6 +794,7 @@ $("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhba
 loadSet();renderOrders();renderNotes();refreshBg();
 if(S.bg){ try{ if(N.bgRunning&&!N.bgRunning())N.bgListen(true) }catch(e){} setTimeout(()=>{ if(!loop&&state==="idle")startLoop(true) },1200); }
 setTimeout(applyVoice,600);
+if(S.car) setTimeout(()=>setCar(true,true),900);
 (function greet(){const h=new Date().getHours();
   const g=h<5?"Xayrli tun":h<12?"Xayrli tong":h<18?"Xayrli kun":"Xayrli kech";
   const o=openOrders().length;

@@ -27,6 +27,7 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -447,6 +448,41 @@ public class MainActivity extends Activity {
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
+        }
+
+        @JavascriptInterface public String media(String cmd) {
+            int code;
+            switch (cmd) {
+                case "next": code = KeyEvent.KEYCODE_MEDIA_NEXT; break;
+                case "prev": code = KeyEvent.KEYCODE_MEDIA_PREVIOUS; break;
+                case "pause": code = KeyEvent.KEYCODE_MEDIA_PAUSE; break;
+                case "play": code = KeyEvent.KEYCODE_MEDIA_PLAY; break;
+                default: code = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+            }
+            try {
+                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
+                am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, code));
+                return "ok";
+            } catch (Exception e) { return "err"; }
+        }
+
+        @JavascriptInterface public String navigate(String q, String app) {
+            String[] urls;
+            String e = Uri.encode(q);
+            if ("google".equals(app)) urls = new String[]{"google.navigation:q=" + e, "geo:0,0?q=" + e};
+            else if ("yandex".equals(app)) urls = new String[]{"yandexnavi://map_search?text=" + e, "yandexmaps://maps.yandex.ru/?text=" + e, "geo:0,0?q=" + e};
+            else urls = new String[]{"yandexnavi://map_search?text=" + e, "google.navigation:q=" + e, "yandexmaps://maps.yandex.ru/?text=" + e, "geo:0,0?q=" + e};
+            for (String u : urls) {
+                try {
+                    Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (i.resolveActivity(getPackageManager()) == null) continue;
+                    startActivity(i);
+                    return u.startsWith("yandexnavi") ? "Yandex Navigator" : u.startsWith("google") ? "Google Maps" : u.startsWith("yandexmaps") ? "Yandex Xaritalar" : "xarita";
+                } catch (Exception ignored) {}
+            }
+            return "none";
         }
 
         @JavascriptInterface public String bgListen(boolean on) {
