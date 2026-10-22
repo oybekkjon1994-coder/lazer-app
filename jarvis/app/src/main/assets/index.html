@@ -403,7 +403,7 @@ const J = window.J = {
     addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
     setState("think","rasmni ko'ryapman"); busy=true;
     try{ const a=await visionAsk(b64,imgQ); setState("idle");
-      say(a||"Rasmni tahlil qilib bo'lmadi. Sozlamalarda Groq yoki Gemini kaliti borligini tekshiring."); }
+      say(a||"Rasmni tahlil qilib bo'lmadi. Pastda sababi yozilgan."); }
     finally{ busy=false; } },
   external(cmd){ go("pJarvis"); if(S.bg&&!loop){loop=true;chipText();if(S.awake)N.keepAwake(true)}
     N.stopListen(); if(state==="listen")setState("idle");
@@ -1090,19 +1090,30 @@ function askImage(q){ imgQ=q||"";
   $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); }
 async function visionAsk(b64,q){
   const prompt=`Sen lazer kesish va metall ishlari ustasi yordamchisisan. Rasmni ko'rib, O'ZBEK tilida (lotin) 2–5 qisqa gap bilan javob ber: bu nima, qanday material va qalinlik mos, qanday yasaladi (lazer, egish, payvand), mumkin bo'lsa taxminiy kesish uzunligi. Lazer narxi so'm/metr: 1–2mm ${S.rates.r1}, 3–4mm ${S.rates.r2}, 5–6mm ${S.rates.r3}, 8–10mm ${S.rates.r4}. Hujjat yoki matn bo'lsa — mazmunini qisqa ayt. ${q?"Savol: "+q:""}`;
-  const tryGroq=async()=>{ if(!S.keys.groq)return null;
-    for(const m of ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"]){
-      const r=await http("https://api.groq.com/openai/v1/chat/completions","POST",{"Content-Type":"application/json","Authorization":"Bearer "+S.keys.groq},
-        {model:m,temperature:0.3,max_tokens:700,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64}}]}]},40000);
-      if(r.code===200){try{return JSON.parse(r.body).choices[0].message.content.trim()}catch(e){}}
-      if(r.code===401||r.code===403)return null; }
+  let why=[];
+  const tryGroq=async()=>{ const key=S.keys.groq||(S.prov==="groq"?S.key:""); if(!key){why.push("Groq kaliti yo'q");return null;}
+    const H={"Content-Type":"application/json","Authorization":"Bearer "+key};
+    let cands=[S.visionModel,"qwen/qwen3.8-27b","meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"].filter(Boolean);
+    try{ const ml=await http("https://api.groq.com/openai/v1/models","GET",{"Authorization":"Bearer "+key},null,15000);
+      if(ml.code===200){ const ids=JSON.parse(ml.body).data.map(m=>m.id);
+        const vis=ids.filter(id=>/(vision|vl\b|-vl|llama-4|scout|maverick|qwen3\.\d+-\d+b|gemma-3|pixtral)/i.test(id));
+        cands=[...new Set([...cands.filter(c=>ids.includes(c)),...vis])]; } }catch(e){}
+    for(const m of cands.slice(0,6)){
+      const r=await http("https://api.groq.com/openai/v1/chat/completions","POST",H,
+        {model:m,temperature:0.3,max_tokens:700,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64}}]}]},45000);
+      if(r.code===200){try{const t=JSON.parse(r.body).choices[0].message.content.trim(); if(t){ if(S.visionModel!==m){S.visionModel=m;saveAll()} return t;}}catch(e){}}
+      if(r.code===401||r.code===403){why.push("Groq kaliti xato");return null;}
+      try{why.push(m.split("/").pop()+": "+(JSON.parse(r.body).error||{}).message)}catch(e){why.push(m+": "+r.code)}
+    }
     return null; };
-  const tryGem=async()=>{ if(!S.keys.gemini)return null;
+  const tryGem=async()=>{ if(!S.keys.gemini){why.push("Gemini kaliti yo'q");return null;}
     const r=await gemini({"Content-Type":"application/json","x-goog-api-key":S.keys.gemini},
       {contents:[{role:"user",parts:[{inline_data:{mime_type:"image/jpeg",data:b64}},{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:900}},{keep:true,timeout:40000,limit:60000});
     if(r.code===200){try{return JSON.parse(r.body).candidates[0].content.parts.filter(p=>!p.thought).map(p=>p.text||"").join("").trim()}catch(e){}}
     return null; };
-  return (S.prov==="groq"?(await tryGroq())||(await tryGem()):(await tryGem())||(await tryGroq()));
+  const ans=(S.prov==="groq"?(await tryGroq())||(await tryGem()):(await tryGem())||(await tryGroq()));
+  if(!ans && why.length) setTimeout(()=>sys("Sabab: "+why.slice(0,3).join("; ").slice(0,300)),80);
+  return ans;
 }
 
 /* ================= Ovozdan DXF (38) ================= */
