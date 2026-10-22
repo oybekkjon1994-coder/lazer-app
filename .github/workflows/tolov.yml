@@ -24,8 +24,15 @@ jobs:
       - name: APK yig'ish
         env:
           RUN: ${{ github.run_number }}
-        run: gradle -p tolov assembleDebug --no-daemon
-      - run: cp tolov/app/build/outputs/apk/debug/app-debug.apk lazer-tolov.apk
+        run: gradle -p tolov assembleRelease --no-daemon
+      - name: Doimiy kalit bilan imzolash
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 tolov/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out lazer-tolov.apk aligned.apk
+          $BT/apksigner verify --print-certs lazer-tolov.apk
       - name: Releases sahifasiga joylash
         uses: softprops/action-gh-release@v2
         with:
