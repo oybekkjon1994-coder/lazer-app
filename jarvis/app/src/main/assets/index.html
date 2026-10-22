@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Jarvis</title>
+<style>
+:root{
+  --bg:#05101a;--bg2:#0a1a26;--card:#0d2231;--line:#163a50;
+  --cy:#2fd8ff;--cy2:#1a8fb0;--glow:rgba(47,216,255,.35);
+  --tx:#d9f6ff;--mut:#7fa6b8;--ok:#3ee08f;--warn:#ffb547;--bad:#ff5b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+body{display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--bg2);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--cy2)}
+label{display:block;font-size:12px;color:var(--mut);margin:12px 0 4px;letter-spacing:.03em}
+.page{flex:1;overflow-y:auto;display:none;padding:14px 16px 20px}
+.page.on{display:block}
+#pJarvis.on{display:flex;flex-direction:column;padding:0}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 6px}
+header h1{margin:0;font-size:18px;letter-spacing:.35em;font-weight:600;color:var(--cy)}
+.st{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut)}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.busy{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.orbWrap{display:flex;justify-content:center;padding:6px 0 4px}
+#orb{position:relative;width:150px;height:150px;border-radius:50%;display:grid;place-items:center}
+#orb .r1,#orb .r2,#orb .r3{position:absolute;border-radius:50%;border:2px solid var(--cy)}
+#orb .r1{inset:0;opacity:.85;box-shadow:0 0 22px var(--glow),inset 0 0 22px var(--glow);
+  border-style:dashed;animation:spin 18s linear infinite}
+#orb .r2{inset:22px;border-color:var(--cy2);border-width:3px;animation:spin 9s linear infinite reverse;
+  border-top-color:transparent;border-bottom-color:transparent}
+#orb .r3{inset:46px;background:radial-gradient(circle,#e8fdff 0,#7fe9ff 35%,#1a8fb0 70%,transparent 72%);
+  border:0;transition:transform .09s;box-shadow:0 0 30px var(--glow)}
+#orb.listen .r1{border-color:var(--ok);box-shadow:0 0 26px rgba(62,224,143,.45)}
+#orb.think .r2{animation-duration:1.2s}
+#orb.speak .r3{animation:pulse .7s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{transform:scale(1.12)}}
+#live{min-height:20px;text-align:center;color:var(--mut);font-size:13px;padding:0 20px}
+#chat{flex:1;overflow-y:auto;padding:8px 14px 10px;display:flex;flex-direction:column;gap:8px}
+.m{max-width:86%;padding:9px 12px;border-radius:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}
+.m.u{align-self:flex-end;background:#12344a;border-bottom-right-radius:4px}
+.m.j{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+.m.s{align-self:center;background:none;color:var(--mut);font-size:12px;text-align:center;padding:2px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 14px 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:7px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;color:var(--cy);background:var(--bg2)}
+.inbar{display:flex;gap:8px;align-items:center;padding:6px 12px 10px}
+.inbar input{border-radius:24px}
+#mic{flex:none;width:58px;height:58px;border-radius:50%;background:radial-gradient(circle,#1a8fb0,#0b3a52);
+  box-shadow:0 0 16px var(--glow);display:grid;place-items:center}
+#mic.on{background:radial-gradient(circle,#3ee08f,#11603c);box-shadow:0 0 18px rgba(62,224,143,.6)}
+#send{flex:none;width:42px;height:42px;border-radius:50%;background:var(--bg2);border:1px solid var(--line);display:grid;place-items:center}
+.tog{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.sw{width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;flex:none;transition:.2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#9bb;transition:.2s}
+.sw.on{background:var(--cy2)}.sw.on::after{left:23px;background:#fff}
+nav{display:flex;border-top:1px solid var(--line);background:#071521}
+nav button{flex:1;padding:9px 0 11px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button.on{color:var(--cy)}
+nav svg{width:22px;height:22px}
+h2{font-size:16px;margin:4px 0 10px;color:var(--cy);font-weight:600;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.btn{background:var(--cy2);color:#fff;border-radius:10px;padding:11px 14px;font-weight:600;text-align:center}
+.btn.g{background:var(--bg2);border:1px solid var(--line);color:var(--tx)}
+.btn.sm{padding:7px 10px;font-size:13px;font-weight:500}
+.mut{color:var(--mut);font-size:13px}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid}
+.t-yangi{color:var(--cy);border-color:var(--cy2)}
+.t-jarayonda{color:var(--warn);border-color:var(--warn)}
+.t-tayyor{color:var(--ok);border-color:var(--ok)}
+.t-topshirildi{color:var(--mut);border-color:var(--line)}
+.oh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.oh b{font-size:15px}
+.acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.sum b{display:block;font-size:20px;color:var(--cy)}
+.sum span{font-size:11px;color:var(--mut)}
+.seg{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+.seg button{padding:6px 12px;border-radius:16px;border:1px solid var(--line);font-size:13px;color:var(--mut);flex:none}
+.seg button.on{color:var(--bg);background:var(--cy);border-color:var(--cy)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:9}
+#modal.on{display:flex}
+#modal .sheet{background:var(--bg2);width:100%;max-height:90%;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 16px 22px;border-top:1px solid var(--line)}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+a{color:var(--cy)}
+</style>
+</head>
+<body>
+
+<!-- ===== JARVIS ===== -->
+<section id="pJarvis" class="page on">
+  <header>
+    <h1>J.A.R.V.I.S</h1>
+    <div class="st"><span id="stDot" class="dot"></span><span id="stTx">tayyor</span></div>
+  </header>
+  <div class="orbWrap"><div id="orb"><div class="r1"></div><div class="r2"></div><div class="r3" id="core"></div></div></div>
+  <div id="live"></div>
+  <div id="chat"></div>
+  <div class="chips">
+    <button class="chip" data-q="Bugungi hisobotni ber">Hisobot</button>
+    <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
+    <button class="chip" data-q="Fonarni yoq">Fonar</button>
+    <button class="chip" data-q="Soat necha?">Soat</button>
+    <button class="chip" data-q="Zaryad qancha?">Zaryad</button>
+    <button class="chip" id="chipLoop">Doimiy tinglash: o'chiq</button>
+  </div>
+  <div class="inbar">
+    <input id="txt" placeholder="Yozing yoki mikrofonni bosing…" autocomplete="off">
+    <button id="send" aria-label="Yuborish"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2fd8ff" stroke-width="2"><path d="M4 12l16-8-6 16-2-7z"/></svg></button>
+    <button id="mic" aria-label="Gapirish"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  </div>
+</section>
+
+<!-- ===== BUYURTMALAR ===== -->
+<section id="pOrders" class="page">
+  <h2>Buyurtmalar</h2>
+  <div class="sum" id="oSum"></div>
+  <div class="seg" id="oSeg">
+    <button data-f="ochiq" class="on">Ochiq</button>
+    <button data-f="yangi">Yangi</button>
+    <button data-f="jarayonda">Jarayonda</button>
+    <button data-f="tayyor">Tayyor</button>
+    <button data-f="topshirildi">Topshirildi</button>
+    <button data-f="hammasi">Hammasi</button>
+  </div>
+  <button class="btn" id="oAdd" style="width:100%;margin-bottom:12px">+ Yangi buyurtma</button>
+  <div id="oList"></div>
+</section>
+
+<!-- ===== ESLATMALAR ===== -->
+<section id="pNotes" class="page">
+  <h2>Eslatmalar</h2>
+  <div class="card">
+    <label style="margin-top:0">Yangi eslatma / qayd</label>
+    <textarea id="nTx" rows="2" placeholder="Masalan: Akmal akaga list buyurtma qilish"></textarea>
+    <label>Qachon eslatsin (ixtiyoriy)</label>
+    <input id="nAt" type="datetime-local">
+    <button class="btn" id="nAdd" style="width:100%;margin-top:10px">Saqlash</button>
+  </div>
+  <div id="nList"></div>
+</section>
+
+<!-- ===== SOZLAMALAR ===== -->
+<section id="pSet" class="page">
+  <h2>Sozlamalar</h2>
+  <div class="card">
+    <b>Sun'iy intellekt (miya)</b>
+    <p class="mut" style="margin:6px 0 0">Bepul kalit: <b>Gemini</b> — aistudio.google.com → "Get API key". Yoki <b>Groq</b> — console.groq.com → "API Keys".</p>
+    <label>Xizmat</label>
+    <select id="sProv"><option value="gemini">Google Gemini (bepul)</option><option value="groq">Groq (bepul)</option></select>
+    <label>API kalit</label>
+    <input id="sKey" type="password" placeholder="Kalitni shu yerga qo'ying">
+    <label>Model</label>
+    <input id="sModel">
+    <div class="row" style="margin-top:10px">
+      <button class="btn g" id="sKeyBtn">Kalit olish sahifasi</button>
+      <button class="btn" id="sTest">Tekshirish</button>
+    </div>
+  </div>
+  <div class="card">
+    <b>Ovoz</b>
+    <label>Sizga qanday murojaat qilsin</label>
+    <input id="sName" placeholder="xo'jayin">
+    <label>Tinglash tili</label>
+    <select id="sStt"><option value="uz-UZ">O'zbekcha</option><option value="ru-RU">Ruscha</option><option value="tr-TR">Turkcha</option></select>
+    <label>Javob ovozi</label>
+    <select id="sTts">
+      <option value="uz-UZ,tr-TR,ru-RU">Avtomatik (o'zbek → turk → rus)</option>
+      <option value="tr-TR">Turkcha ovoz (o'zbekchaga yaqin)</option>
+      <option value="ru-RU">Ruscha ovoz</option>
+      <option value="en-US">Inglizcha ovoz</option>
+    </select>
+    <div class="mut" id="sTtsInfo" style="margin-top:6px"></div>
+    <label>Tezlik: <span id="sRateV"></span></label>
+    <input id="sRate" type="range" min="0.6" max="1.6" step="0.05" style="padding:0">
+    <label>Ohang (past = jiddiyroq): <span id="sPitchV"></span></label>
+    <input id="sPitch" type="range" min="0.5" max="1.5" step="0.05" style="padding:0">
+    <div class="tog"><span>Javoblarni ovoz chiqarib o'qish</span><div class="sw" id="swVoice"></div></div>
+    <div class="tog"><span>Doimiy tinglash rejimida faqat "Jarvis" desam javob ber</span><div class="sw" id="swWake"></div></div>
+    <div class="tog" style="border:0"><span>Doimiy tinglashda ekran o'chmasin</span><div class="sw" id="swAwake"></div></div>
+    <button class="btn g" id="sTestVoice" style="width:100%;margin-top:8px">Ovozni sinash</button>
+  </div>
+  <div class="card">
+    <b>Lazer kesish narxi (so'm / metr)</b>
+    <div class="row"><div><label>1–2 mm</label><input id="r1" inputmode="numeric"></div><div><label>3–4 mm</label><input id="r2" inputmode="numeric"></div></div>
+    <div class="row"><div><label>5–6 mm</label><input id="r3" inputmode="numeric"></div><div><label>8–10 mm</label><input id="r4" inputmode="numeric"></div></div>
+  </div>
+  <div class="card">
+    <b>Zaxira nusxa</b>
+    <p class="mut" style="margin:6px 0 10px">Buyurtmalar va eslatmalarni boshqa telefonga ko'chirish uchun.</p>
+    <div class="row">
+      <button class="btn g" id="bExp">Ulashish</button>
+      <button class="btn g" id="bImp">Tiklash</button>
+    </div>
+    <button class="btn g" id="bClr" style="width:100%;margin-top:8px">Suhbat tarixini tozalash</button>
+  </div>
+  <p class="mut" style="text-align:center">Jarvis 1.0 · ma'lumotlar faqat shu telefonda saqlanadi</p>
+</section>
+
+<nav id="nav">
+  <button data-p="pJarvis" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Jarvis</button>
+  <button data-p="pOrders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Buyurtmalar</button>
+  <button data-p="pNotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>Eslatmalar</button>
+  <button data-p="pSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Sozlamalar</button>
+</nav>
+
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script>
+"use strict";
+/* ================= Native ko'prik (brauzerda sinash uchun soxta) ================= */
+const N = window.Native || {
+  listen(){setTimeout(()=>J.onSpeechError(100),200)}, stopListen(){},
+  setVoice(){return "default"}, voices(){return "[]"},
+  speak(t){setTimeout(()=>J.onSpeakDone(),300)}, stopSpeak(){},
+  save(k,v){try{localStorage.setItem(k,v)}catch(e){}}, load(k){try{return localStorage.getItem(k)||""}catch(e){return ""}},
+  http(id,url,m,h,b){fetch(url,{method:m,headers:JSON.parse(h||"{}"),body:b||undefined}).then(async r=>J._http(id,r.status,await r.text())).catch(e=>J._http(id,0,"ERR: "+e))},
+  call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
+  remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
+  torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)}
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ================= Saqlash ================= */
+function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
+function sv(k,v){N.save(k,JSON.stringify(v))}
+const DEF = {prov:"gemini",key:"",model:"gemini-flash-latest",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:false,awake:true,
+  rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
+let S = Object.assign({},DEF,ld("set",{}));
+S.rates = Object.assign({},DEF.rates,S.rates||{});
+let orders = ld("orders",[]);
+let notes = ld("notes",[]);
+let hist = ld("hist",[]);
+let seq = ld("seq",100);
+const saveAll = () => {sv("set",S);sv("orders",orders);sv("notes",notes);sv("hist",hist.slice(-24));sv("seq",seq)};
+const nid = () => (++seq, sv("seq",seq), seq);
+
+/* ================= Raqamni o'zbekcha so'zga ================= */
+const U1=["","bir","ikki","uch","to'rt","besh","olti","yetti","sakkiz","to'qqiz"];
+const U10=["","o'n","yigirma","o'ttiz","qirq","ellik","oltmish","yetmish","sakson","to'qson"];
+function n3(n){let s=[];const h=Math.floor(n/100),t=Math.floor(n%100/10),o=n%10;
+  if(h)s.push((h>1?U1[h]+" ":"")+"yuz");if(t)s.push(U10[t]);if(o)s.push(U1[o]);return s.join(" ")}
+function uzNum(n){n=Math.round(Number(n));if(!isFinite(n))return "";if(n===0)return "nol";
+  const neg=n<0;n=Math.abs(n);const parts=[];const units=[["milliard",1e9],["million",1e6],["ming",1e3]];
+  for(const [w,v] of units){const q=Math.floor(n/v);if(q){parts.push((q===1&&w==="ming"?"bir ":n3(q)+" ")+w);n%=v}}
+  if(n)parts.push(n3(n));return (neg?"minus ":"")+parts.join(" ").replace(/\s+/g," ").trim()}
+const fmt = n => Math.round(Number(n)||0).toLocaleString("ru-RU").replace(/ /g," ");
+
+/* ================= Ovozga moslash (transliteratsiya) ================= */
+let ttsLang = "default";
+function forTTS(t){
+  t = String(t).replace(/[*_#`>]/g,"").replace(/[‘’ʻʼ`´]/g,"'");
+  // raqamlarni so'zga (faqat o'zbek matn uchun)
+  t = t.replace(/(\d+)[.,](\d+)/g, (m,a,b) => `${uzNum(+a)} butun ${uzNum(+b)}`);
+  t = t.replace(/\d{1,3}(?:[  ]\d{3})+|\d+/g, m => { const v=Number(m.replace(/[  ]/g,"")); return isFinite(v)?uzNum(v):m; });
+  if (ttsLang.startsWith("uz")) return t;
+  if (ttsLang.startsWith("tr")) {
+    return t.replace(/sh/gi,m=>m[0]==="S"?"Ş":"ş").replace(/ch/gi,m=>m[0]==="C"?"Ç":"ç")
+      .replace(/o'/gi,m=>m[0]==="O"?"O":"o").replace(/g'/gi,m=>m[0]==="G"?"G":"g")
+      .replace(/x/g,"h").replace(/X/g,"H").replace(/q/g,"k").replace(/Q/g,"K")
+      .replace(/j/g,"c").replace(/J/g,"C").replace(/w/g,"v").replace(/'/g,"");
+  }
+  if (ttsLang.startsWith("ru")) {
+    const map=[["sh","ш"],["ch","ч"],["o'","ў"],["g'","ғ"],["ng","нг"],["yo","ё"],["yu","ю"],["ya","я"],["ye","е"],
+      ["a","а"],["b","б"],["d","д"],["e","е"],["f","ф"],["g","г"],["h","ҳ"],["i","и"],["j","ж"],["k","к"],["l","л"],
+      ["m","м"],["n","н"],["o","о"],["p","п"],["q","қ"],["r","р"],["s","с"],["t","т"],["u","у"],["v","в"],["x","х"],
+      ["y","й"],["z","з"],["'","ъ"]];
+    const fix={"ў":"у","ғ":"г","қ":"к","ҳ":"х"};
+    let out="",i=0;const low=t;
+    while(i<low.length){let hit=false;
+      for(const [a,b] of map){const seg=low.substr(i,a.length);if(seg.toLowerCase()===a){
+        let r=fix[b]||b;if(seg[0]!==seg[0].toLowerCase())r=r.toUpperCase();out+=r;i+=a.length;hit=true;break}}
+      if(!hit){out+=low[i];i++}}
+    return out;
+  }
+  return t;
+}
+
+/* ================= Holat va UI ================= */
+let state = "idle";            // idle | listen | think | speak
+let loop = false;              // doimiy tinglash
+let errStreak = 0;
+const orb=$("orb"), core=$("core");
+function setState(s,txt){
+  state=s;orb.className=s==="idle"?"":s;
+  $("mic").classList.toggle("on",s==="listen");
+  $("stDot").className="dot"+(s==="listen"?" on":s==="think"||s==="speak"?" busy":"");
+  $("stTx").textContent=txt||({idle:loop?"kutmoqda":"tayyor",listen:"tinglayapman",think:"o'ylayapman",speak:"gapiryapman"}[s]);
+}
+function addMsg(who,text){
+  const d=document.createElement("div");d.className="m "+who;d.textContent=text;
+  $("chat").appendChild(d);$("chat").scrollTop=1e9;
+}
+function sys(t){addMsg("s",t)}
+
+/* ================= Native callbacklar ================= */
+const J = window.J = {
+  _cb:{},
+  onTtsReady(){applyVoice()},
+  onListenStart(){setState("listen");$("live").textContent="Gapiring…"},
+  onListenEnd(){$("live").textContent="…"},
+  onRms(v){const k=1+Math.max(0,Math.min(10,v))/22;core.style.transform="scale("+k+")"},
+  onPartial(t){$("live").textContent=t},
+  onSpeech(t){core.style.transform="";$("live").textContent="";errStreak=0;
+    if(!t){afterTurn();return}
+    handle(t,true)},
+  onSpeechError(code){core.style.transform="";$("live").textContent="";
+    if(code===9){sys("Mikrofon ruxsatini bering (Sozlamalar → Ilovalar → Jarvis → Ruxsatlar).");stopLoop();setState("idle");return}
+    if(code===100){sys("Bu telefonda ovozni tanish xizmati yo'q. Play Market'dan \"Google\" ilovasini o'rnating.");stopLoop();setState("idle");return}
+    if(loop && (code===6||code===7)){setState("idle");setTimeout(()=>{if(loop&&state==="idle")listen()},250);return}
+    if(loop && (code===5||code===8||code===11) && ++errStreak<5){setState("idle");setTimeout(()=>{if(loop&&state==="idle")listen()},900);return}
+    if(code===2||code===1)sys("Internet aloqasi yo'q — ovozni tanib bo'lmadi.");
+    else if(code===6||code===7){} else if(code===12||code===13)sys("Tanlangan til ovoz xizmatida yo'q. Google ilovasida o'zbek tilini yuklab oling.");
+    if(loop&&errStreak>=5)stopLoop();
+    setState("idle")},
+  onSpeakStart(){setState("speak")},
+  onSpeakDone(){if(state==="speak"||state==="think")setState("idle");afterTurn()},
+  _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
+  back(){ if($("modal").classList.contains("on")){closeModal();return true}
+    if(!$("pJarvis").classList.contains("on")){go("pJarvis");return true} return false }
+};
+function http(url,method,headers,body){
+  return new Promise(res=>{const id="h"+Date.now()+Math.random();J._cb[id]=(c,b)=>res({code:c,body:b});
+    N.http(id,url,method,JSON.stringify(headers||{}),body?JSON.stringify(body):"")});
+}
+function listen(){ if(state==="listen")return; N.stopSpeak(); N.listen(S.stt); setState("listen","ulanmoqda…") }
+function afterTurn(){ if(loop && state==="idle") setTimeout(()=>{ if(loop&&state==="idle") listen() },350) }
+function startLoop(){loop=true;$("chipLoop").textContent="Doimiy tinglash: yoqiq";if(S.awake)N.keepAwake(true);
+  sys(S.wake?"Doimiy tinglash yoqildi. \"Jarvis\" deb murojaat qiling.":"Doimiy tinglash yoqildi.");listen()}
+function stopLoop(){loop=false;$("chipLoop").textContent="Doimiy tinglash: o'chiq";N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
+
+function say(text){
+  if(!text)return afterTurn();
+  addMsg("j",text);
+  if(S.voice){setState("speak");N.speak(forTTS(text),S.rate,S.pitch)}
+  else{setState("idle");afterTurn()}
+}
+function applyVoice(){
+  ttsLang = N.setVoice(S.tts)||"default";
+  if(ttsLang==="wait")return;
+  const nm={"uz-UZ":"o'zbekcha","tr-TR":"turkcha","ru-RU":"ruscha","en-US":"inglizcha","default":"standart"}[ttsLang]||ttsLang;
+  $("sTtsInfo").textContent="Hozirgi ovoz: "+nm+(ttsLang.startsWith("uz")?"":" (o'zbekcha matn shu ovozga moslab o'qiladi)");
+}
+
+/* ================= Yordamchi: vaqt ================= */
+const pad=n=>String(n).padStart(2,"0");
+const OY=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"];
+const HAFTA=["yakshanba","dushanba","seshanba","chorshanba","payshanba","juma","shanba"];
+function nowStr(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}, ${HAFTA[d.getDay()]}`}
+function parseAt(s){ if(!s)return null; const m=String(s).match(/(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime();
+  const t=Date.parse(s); return isNaN(t)?null:t }
+
+/* ================= Lazer narxi ================= */
+function tierFor(mm){mm=Number(mm)||1;if(mm<=2)return["r1","1–2 mm"];if(mm<=4)return["r2","3–4 mm"];if(mm<=6)return["r3","5–6 mm"];return["r4","8–10 mm"]}
+function laserPrice(m,mm,qty){const [k,name]=tierFor(mm);const rate=Number(S.rates[k])||0;const q=Number(qty)||1;
+  return {rate,name,total:Math.round((Number(m)||0)*rate*q)}}
+
+/* ================= Buyurtma statistikasi ================= */
+function openOrders(){return orders.filter(o=>o.status!=="topshirildi")}
+function ordersBrief(){
+  return orders.slice(-40).map(o=>({id:o.id,mijoz:o.client,tel:o.phone,ish:o.item,narx:o.price,tolangan:o.paid||0,
+    muddat:o.due,holat:o.status,izoh:o.note}))}
+
+/* ================= Tez buyruqlar (AI'siz ham ishlaydi) ================= */
+function norm(t){return String(t).toLowerCase().replace(/[‘’ʻʼ`´]/g,"'").replace(/\s+/g," ").trim()}
+function quick(t){
+  const s=norm(t);
+  if(/(fonar|chiroq|fonarik|svet)/.test(s)){
+    if(/(o'chir|uchir|ochir|o'chsin|выкл)/.test(s)){const r=N.torch(false);return r==="ok"?"Fonar o'chirildi.":"Fonarni boshqarib bo'lmadi."}
+    if(/(yoq|och|yonsin|вкл)/.test(s)){const r=N.torch(true);return r==="ok"?"Fonar yoqildi.":r==="noflash"?"Bu telefonda fonar yo'q.":"Fonarni yoqib bo'lmadi."}
+  }
+  if(/soat (necha|nechchi|nechi)|hozir soat|vaqt (necha|qancha)/.test(s)){const d=new Date();
+    return `Hozir soat ${uzNum(d.getHours())}${d.getMinutes()?`, ${uzNum(d.getMinutes())} daqiqa`:" bo'ldi"}.`}
+  if(/(bugun|sana).*(nechanchi|qaysi kun|necha)|bugun qanaqa kun/.test(s)){const d=new Date();
+    return `Bugun ${d.getDate()}-${OY[d.getMonth()]}, ${HAFTA[d.getDay()]}.`}
+  if(/(zaryad|batareya|batarey|akkumulyator)/.test(s)){const b=N.battery();return b>=0?`Zaryad ${b} foiz.`:"Zaryadni bilib bo'lmadi."}
+  if(/^(stop|to'xta|jim|bas|yetarli|tamom)\b/.test(s.replace(/^jarvis,?\s*/,""))){N.stopSpeak();if(loop)stopLoop();return "Xo'p."}
+  return null;
+}
+
+/* ================= AI ================= */
+function sysPrompt(){
+  const r=S.rates;
+  return `Sen "Jarvis"san — Temir odamdagi Jarvis kabi aqlli, xushmuomala va qisqa gapiradigan shaxsiy yordamchi.
+Egang lazer kesish, CNC va metall ishlari ustaxonasini yuritadi (Metartshop, Instagram @metart_shop). Unga "${S.name}" deb murojaat qil.
+Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
+Pul summalarini "150 ming so'm" kabi yoz.
+
+Hozirgi vaqt: ${nowStr()}.
+Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.
+Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}
+Qaydlar/eslatmalar (JSON): ${JSON.stringify(notes.slice(-30).map(n=>({id:n.id,matn:n.text,vaqt:n.at?new Date(n.at).toLocaleString("ru-RU"):null,bajarildi:!!n.done})))}
+
+FAQAT JSON qaytar: {"say":"aytiladigan matn","actions":[...]}
+Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
+{"type":"call","name":"kontakt ismi"} yoki {"type":"call","number":"+998..."}
+{"type":"sms","name":"...","number":"...","text":"..."}
+{"type":"alarm","hour":7,"minute":30,"label":"..."}
+{"type":"timer","seconds":300,"label":"..."}
+{"type":"remind","text":"...","at":"YYYY-MM-DD HH:MM"}   // aniq vaqtda bildirishnoma
+{"type":"note","text":"..."}                             // vaqtsiz qayd
+{"type":"note_done","id":123}
+{"type":"open_app","name":"telegram"}
+{"type":"search","query":"..."}  {"type":"youtube","query":"..."}  {"type":"map","query":"..."}
+{"type":"torch","on":true}  {"type":"volume","percent":70}
+{"type":"add_order","client":"...","phone":"...","item":"...","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}
+{"type":"update_order","id":123,"status":"yangi|jarayonda|tayyor|topshirildi","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}
+{"type":"delete_order","id":123}
+{"type":"laser_price","meters":12.5,"thickness":3,"qty":1}   // narxni ilova o'zi hisoblab aytadi
+{"type":"share","text":"..."}                                 // matnni Telegram va h.k. orqali yuborish oynasi
+Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
+Bilmagan narsangni o'ylab topma — ochiq ayt. Xavfli yoki noqonuniy ishga yordam berma.`;
+}
+
+async function askAI(userText){
+  if(!S.key) return {say:"Men hali to'liq aqlga ega emasman. Sozlamalarga bepul API kalitni kiriting — shunda hamma narsaga javob bera olaman.",actions:[]};
+  const h=hist.slice(-12);
+  let url,headers,body,pick;
+  if(S.prov==="groq"){
+    url="https://api.groq.com/openai/v1/chat/completions";
+    headers={"Content-Type":"application/json","Authorization":"Bearer "+S.key};
+    body={model:S.groqModel||DEF.groqModel,temperature:0.5,response_format:{type:"json_object"},
+      messages:[{role:"system",content:sysPrompt()},...h.map(m=>({role:m.r==="u"?"user":"assistant",content:m.t})),{role:"user",content:userText}]};
+    pick=d=>d.choices[0].message.content;
+  }else{
+    url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(S.model||DEF.model)+":generateContent";
+    headers={"Content-Type":"application/json","x-goog-api-key":S.key};
+    body={systemInstruction:{parts:[{text:sysPrompt()}]},
+      contents:[...h.map(m=>({role:m.r==="u"?"user":"model",parts:[{text:m.t}]})),{role:"user",parts:[{text:userText}]}],
+      generationConfig:{temperature:0.5,responseMimeType:"application/json"}};
+    pick=d=>(d.candidates[0].content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("");
+  }
+  let r=await http(url,"POST",headers,body);
+  if(S.prov==="groq" && (r.code===404||(r.code===400&&/model/i.test(r.body)))){
+    for(const m of ["openai/gpt-oss-120b","llama-3.3-70b-versatile","openai/gpt-oss-20b","llama-3.1-8b-instant"]){
+      if(m===body.model)continue; body.model=m;
+      r=await http(url,"POST",headers,body);
+      if(!(r.code===404||(r.code===400&&/model/i.test(r.body)))){ if(r.code===200){S.groqModel=m;saveAll();loadSet()} break; }
+    }
+  }
+  if(S.prov!=="groq" && r.code===404){
+    for(const m of ["gemini-flash-latest","gemini-3.8-flash","gemini-3.6-flash","gemini-3.5-flash-lite"]){
+      if(m===S.model)continue;
+      r=await http("https://generativelanguage.googleapis.com/v1beta/models/"+m+":generateContent","POST",headers,body);
+      if(r.code!==404){ if(r.code===200){S.model=m;saveAll();loadSet()} break; }
+    }
+  }
+  if(r.code===0) return {say:"Internetga ulanib bo'lmadi. Aloqani tekshiring.",actions:[]};
+  if(r.code===429) return {say:"Bepul limit vaqtincha tugadi. Bir daqiqadan keyin qayta urinib ko'ring.",actions:[]};
+  if(r.code===400||r.code===401||r.code===403) return {say:"API kalit yoki model xato. Sozlamalarda tekshiring.",actions:[],err:r.body};
+  if(r.code===404) return {say:"Model topilmadi. Sozlamalarda model nomini tekshiring.",actions:[],err:r.body};
+  if(r.code>=500) return {say:"AI serveri hozir band. Birozdan keyin urinib ko'ring.",actions:[]};
+  try{
+    const raw=pick(JSON.parse(r.body)).trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+    let o; try{o=JSON.parse(raw)}catch(e){const m=raw.match(/\{[\s\S]*\}/);o=m?JSON.parse(m[0]):{say:raw,actions:[]}}
+    if(typeof o.say!=="string")o.say=String(o.say||"");
+    if(!Array.isArray(o.actions))o.actions=[];
+    return o;
+  }catch(e){ return {say:"Javobni tushunolmadim, qaytadan ayting.",actions:[],err:String(r.body).slice(0,300)} }
+}
+
+/* ================= Amallarni bajarish ================= */
+async function findNumber(a){
+  if(a.number) return {number:String(a.number).replace(/[^\d+]/g,""),name:a.name||a.number};
+  if(!a.name) return null;
+  const nm=String(a.name).trim();
+  const fromOrder=orders.slice().reverse().find(o=>o.phone&&norm(o.client||"").includes(norm(nm)));
+  const raw=N.contacts(nm.split(" ")[0]);
+  if(raw==="noperm") return {perm:true};
+  let list=[];try{list=JSON.parse(raw)}catch(e){}
+  if(list.length){const ex=list.find(c=>norm(c.name)===norm(nm))||list[0];return {number:ex.number,name:ex.name}}
+  if(fromOrder) return {number:fromOrder.phone,name:fromOrder.client};
+  return {none:true};
+}
+async function run(a){
+  const t=a.type;
+  switch(t){
+    case "call":{const f=await findNumber(a);if(!f)return"";if(f.perm)return"Kontaktlarni o'qishga ruxsat bering va qayta ayting.";
+      if(f.none)return`${a.name} kontaktlarda topilmadi.`;N.call(f.number);return""}
+    case "sms":{const f=await findNumber(a);if(!f||f.none)return"Raqam topilmadi.";if(f.perm)return"Kontaktlarga ruxsat bering.";
+      N.sms(f.number,a.text||"");return""}
+    case "alarm":{const r=N.alarm(+a.hour||0,+a.minute||0,a.label||"Jarvis");return r==="ok"?"":"Budilnik ilovasi topilmadi."}
+    case "timer":{const r=N.timer(Math.max(1,+a.seconds||60),a.label||"Jarvis");return r==="ok"?"":"Taymer ilovasi topilmadi."}
+    case "remind":{const at=parseAt(a.at)||(a.in_minutes?Date.now()+a.in_minutes*60000:null);
+      const n={id:nid(),text:a.text||"Eslatma",at:at,done:false,created:Date.now()};notes.push(n);
+      if(at&&at>Date.now())N.remind(at,n.text,n.id);saveAll();renderNotes();return""}
+    case "note":{notes.push({id:nid(),text:a.text||"",at:null,done:false,created:Date.now()});saveAll();renderNotes();return""}
+    case "note_done":{const n=notes.find(x=>x.id==a.id);if(n){n.done=true;N.cancelRemind(n.id);saveAll();renderNotes()}return""}
+    case "open_app":{const r=N.openApp(a.name||"");return r==="notfound"?`${a.name} ilovasi topilmadi.`:""}
+    case "search":N.openUrl("https://www.google.com/search?q="+encodeURIComponent(a.query||""));return"";
+    case "youtube":N.openUrl("https://www.youtube.com/results?search_query="+encodeURIComponent(a.query||""));return"";
+    case "map":N.openUrl("geo:0,0?q="+encodeURIComponent(a.query||""));return"";
+    case "torch":{const r=N.torch(!!a.on);return r==="ok"?"":"Fonarni boshqarib bo'lmadi."}
+    case "volume":N.volume(Math.max(0,Math.min(100,+a.percent||50)));return"";
+    case "share":N.share(a.text||"");return"";
+    case "add_order":{orders.push({id:nid(),client:a.client||"Mijoz",phone:a.phone||"",item:a.item||"",price:+a.price||0,paid:+a.paid||0,
+      due:a.due||"",note:a.note||"",status:"yangi",created:Date.now()});saveAll();renderOrders();return""}
+    case "update_order":{const o=orders.find(x=>x.id==a.id);if(!o)return"Bunday buyurtma topilmadi.";
+      for(const k of ["status","price","paid","due","note","phone","item","client"]) if(a[k]!==undefined&&a[k]!==null&&a[k]!=="")o[k]=(k==="price"||k==="paid")?+a[k]:a[k];
+      saveAll();renderOrders();return""}
+    case "delete_order":{const i=orders.findIndex(x=>x.id==a.id);if(i>=0){orders.splice(i,1);saveAll();renderOrders()}return""}
+    case "laser_price":{const p=laserPrice(a.meters,a.thickness,a.qty);if(!p.rate)return"Sozlamalarda bu qalinlik narxini kiriting.";
+      return `${p.name}, ${a.meters} metr${(+a.qty||1)>1?", "+a.qty+" dona":""}: jami ${fmt(p.total)} so'm.`}
+  }
+  return "";
+}
+
+/* ================= Asosiy oqim ================= */
+const WAKE=/(jarv|djarv|jarw|charv|жарв|джарв|жарвис)/i;
+let busy=false;
+async function handle(text,byVoice){
+  text=String(text).trim(); if(!text) return afterTurn();
+  if(byVoice && loop && S.wake && !WAKE.test(text)){ setState("idle"); return afterTurn(); }
+  if(busy) return; busy=true;
+  addMsg("u",text);
+  const clean=text.replace(/^(hey |ey )?(jarvis|джарвис|жарвис|djarvis)[,\s]*/i,"");
+  try{
+    const q=quick(clean);
+    if(q!==null){ say(q); return; }
+    setState("think");
+    const res=await askAI(clean||text);
+    if(res.err) console.log(res.err);
+    let extra=[];
+    for(const a of res.actions||[]){ try{ const m=await run(a); if(m) extra.push(m) }catch(e){ console.log(e) } }
+    const out=[res.say,...extra].filter(Boolean).join(" ");
+    hist.push({r:"u",t:clean||text},{r:"j",t:out});hist=hist.slice(-24);sv("hist",hist);
+    setState("idle");
+    say(out||"Bajarildi.");
+  } finally { busy=false; }
+}
+
+/* ================= Navigatsiya ================= */
+function go(p){document.querySelectorAll(".page").forEach(e=>e.classList.toggle("on",e.id===p));
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
+  if(p==="pOrders")renderOrders(); if(p==="pNotes")renderNotes()}
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>go(b.dataset.p));
+
+/* ================= Jarvis ekrani ================= */
+$("mic").onclick=()=>{ if(state==="listen"){N.stopListen();setState("idle");if(loop)stopLoop();return}
+  if(state==="speak"){N.stopSpeak();setState("idle")} listen() };
+$("send").onclick=()=>{const v=$("txt").value;$("txt").value="";handle(v,false)};
+$("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("send").click()}});
+document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dataset.q,false));
+$("chipLoop").onclick=()=>loop?stopLoop():startLoop();
+
+/* ================= Buyurtmalar ekrani ================= */
+let oFilter="ochiq";
+document.querySelectorAll("#oSeg button").forEach(b=>b.onclick=()=>{oFilter=b.dataset.f;
+  document.querySelectorAll("#oSeg button").forEach(x=>x.classList.toggle("on",x===b));renderOrders()});
+function renderOrders(){
+  const open=openOrders(), debt=open.reduce((s,o)=>s+Math.max(0,(+o.price||0)-(+o.paid||0)),0);
+  const _d=new Date(),today=`${_d.getFullYear()}-${pad(_d.getMonth()+1)}-${pad(_d.getDate())}`;
+  const late=open.filter(o=>o.due&&o.due<=today&&o.status!=="tayyor").length;
+  $("oSum").innerHTML=`<div><b>${open.length}</b><span>ochiq</span></div><div><b>${late}</b><span>muddati keldi</span></div><div><b>${fmt(debt/1000)}k</b><span>qoldiq so'm</span></div>`;
+  let list=orders.slice().reverse();
+  if(oFilter==="ochiq")list=list.filter(o=>o.status!=="topshirildi");else if(oFilter!=="hammasi")list=list.filter(o=>o.status===oFilter);
+  $("oList").innerHTML=list.length?list.map(o=>{const rest=Math.max(0,(+o.price||0)-(+o.paid||0));
+    return `<div class="card"><div class="oh"><div><b>${esc(o.client)}</b><div class="mut">${esc(o.item)}</div></div><span class="tag t-${o.status}">${o.status}</span></div>
+    <div class="mut" style="margin-top:6px">${o.price?`Narx: ${fmt(o.price)} so'm`:"Narx: —"}${o.paid?` · To'langan: ${fmt(o.paid)}`:""}${rest&&o.price?` · Qoldiq: <b style="color:var(--warn)">${fmt(rest)}</b>`:""}</div>
+    ${o.due?`<div class="mut">Muddat: ${esc(o.due)}${o.due<=today&&o.status!=="tayyor"&&o.status!=="topshirildi"?' <b style="color:var(--bad)">!</b>':""}</div>`:""}
+    ${o.note?`<div class="mut">${esc(o.note)}</div>`:""}
+    <div class="acts">${o.phone?`<button class="btn sm g" data-call="${o.id}">Qo'ng'iroq</button>`:""}
+    <button class="btn sm g" data-next="${o.id}">${{yangi:"→ Jarayonda",jarayonda:"→ Tayyor",tayyor:"→ Topshirildi",topshirildi:"↺ Yangi"}[o.status]}</button>
+    <button class="btn sm g" data-edit="${o.id}">Tahrirlash</button></div></div>`}).join(""):`<div class="empty">Bu yerda buyurtma yo'q.<br>Jarvisga ayting: "Akmal akadan buyurtma qo'sh, 20 ta panjara, 2 million"</div>`;
+}
+$("oList").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  const id=+(b.dataset.call||b.dataset.next||b.dataset.edit);const o=orders.find(x=>x.id===id);if(!o)return;
+  if(b.dataset.call)N.call(o.phone);
+  if(b.dataset.next){o.status={yangi:"jarayonda",jarayonda:"tayyor",tayyor:"topshirildi",topshirildi:"yangi"}[o.status];saveAll();renderOrders()}
+  if(b.dataset.edit)orderForm(o)};
+$("oAdd").onclick=()=>orderForm(null);
+function orderForm(o){
+  const v=o||{client:"",phone:"",item:"",price:"",paid:"",due:"",note:"",status:"yangi"};
+  $("sheet").innerHTML=`<h2>${o?"Buyurtmani tahrirlash":"Yangi buyurtma"}</h2>
+  <label>Mijoz</label><input id="fC" value="${esc(v.client)}">
+  <label>Telefon</label><input id="fP" type="tel" value="${esc(v.phone)}" placeholder="+998">
+  <label>Ish</label><input id="fI" value="${esc(v.item)}" placeholder="Masalan: 3mm list, darvoza bezagi">
+  <div class="row"><div><label>Narx (so'm)</label><input id="fPr" inputmode="numeric" value="${esc(v.price)}"></div>
+  <div><label>To'langan</label><input id="fPa" inputmode="numeric" value="${esc(v.paid)}"></div></div>
+  <div class="row"><div><label>Muddat</label><input id="fD" type="date" value="${esc(v.due)}"></div>
+  <div><label>Holat</label><select id="fS">${["yangi","jarayonda","tayyor","topshirildi"].map(s=>`<option ${s===v.status?"selected":""}>${s}</option>`).join("")}</select></div></div>
+  <label>Izoh</label><input id="fN" value="${esc(v.note)}">
+  <div class="row" style="margin-top:14px">${o?`<button class="btn g" id="fDel" style="color:var(--bad)">O'chirish</button>`:`<button class="btn g" id="fX">Bekor</button>`}<button class="btn" id="fOk">Saqlash</button></div>`;
+  openModal();
+  const num=x=>+String(x).replace(/[^\d]/g,"")||0;
+  $("fOk").onclick=()=>{const d={client:$("fC").value.trim()||"Mijoz",phone:$("fP").value.trim(),item:$("fI").value.trim(),
+    price:num($("fPr").value),paid:num($("fPa").value),due:$("fD").value,status:$("fS").value,note:$("fN").value.trim()};
+    if(o)Object.assign(o,d);else orders.push(Object.assign({id:nid(),created:Date.now()},d));saveAll();closeModal();renderOrders()};
+  if($("fX"))$("fX").onclick=closeModal;
+  if($("fDel"))$("fDel").onclick=()=>{if(confirm("Buyurtma o'chirilsinmi?")){orders=orders.filter(x=>x!==o);saveAll();closeModal();renderOrders()}};
+}
+function openModal(){$("modal").classList.add("on")}
+function closeModal(){$("modal").classList.remove("on")}
+$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
+
+/* ================= Eslatmalar ekrani ================= */
+function renderNotes(){
+  const list=notes.slice().sort((a,b)=>(a.done-b.done)||((a.at||9e15)-(b.at||9e15)));
+  $("nList").innerHTML=list.length?list.map(n=>`<div class="card" style="${n.done?"opacity:.5":""}"><div class="oh"><div>${esc(n.text)}
+    ${n.at?`<div class="mut">${new Date(n.at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${n.at<Date.now()&&!n.done?" · o'tib ketdi":""}</div>`:""}</div>
+    <div class="row" style="flex:none;gap:6px"><button class="btn sm g" data-done="${n.id}">${n.done?"↺":"✓"}</button><button class="btn sm g" data-del="${n.id}">✕</button></div></div></div>`).join("")
+    :`<div class="empty">Eslatma yo'q.<br>Jarvisga ayting: "Ertaga soat 9 da metall olishni eslat"</div>`;
+}
+$("nList").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.done){const n=notes.find(x=>x.id==b.dataset.done);n.done=!n.done;if(n.done)N.cancelRemind(n.id);else if(n.at>Date.now())N.remind(n.at,n.text,n.id)}
+  if(b.dataset.del){const n=notes.find(x=>x.id==b.dataset.del);N.cancelRemind(n.id);notes=notes.filter(x=>x!==n)}
+  saveAll();renderNotes()};
+$("nAdd").onclick=()=>{const t=$("nTx").value.trim();if(!t)return;const at=$("nAt").value?new Date($("nAt").value).getTime():null;
+  const n={id:nid(),text:t,at,done:false,created:Date.now()};notes.push(n);if(at&&at>Date.now())N.remind(at,t,n.id);
+  $("nTx").value="";$("nAt").value="";saveAll();renderNotes()};
+
+/* ================= Sozlamalar ================= */
+function loadSet(){
+  $("sProv").value=S.prov;$("sKey").value=S.key;$("sModel").value=S.prov==="groq"?S.groqModel:S.model;
+  $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
+  $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
+  $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
+  ["r1","r2","r3","r4"].forEach(k=>$(k).value=S.rates[k]);
+}
+function bind(id,fn,ev){$(id).addEventListener(ev||"change",()=>{fn($(id).value);saveAll()})}
+bind("sProv",v=>{S.prov=v;$("sModel").value=v==="groq"?S.groqModel:S.model});
+bind("sKey",v=>S.key=v.trim());
+bind("sModel",v=>{if(S.prov==="groq")S.groqModel=v.trim()||DEF.groqModel;else S.model=v.trim()||DEF.model});
+bind("sName",v=>S.name=v.trim()||DEF.name);
+bind("sStt",v=>S.stt=v);
+bind("sTts",v=>{S.tts=v;applyVoice()});
+bind("sRate",v=>{S.rate=+v;$("sRateV").textContent=v},"input");
+bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
+["r1","r2","r3","r4"].forEach(k=>bind(k,v=>S.rates[k]=+String(v).replace(/[^\d]/g,"")||0));
+function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
+sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
+$("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
+$("sTest").onclick=async()=>{S.key=$("sKey").value.trim();saveAll();$("sTest").textContent="…";
+  const r=await askAI("Salom! Bitta qisqa gap bilan o'zingni tanishtir.");$("sTest").textContent="Tekshirish";
+  alert(r.err?("Xato: "+r.say+"\n\n"+String(r.err).slice(0,250)):("Ishlayapti ✓\n\n"+r.say))};
+$("sTestVoice").onclick=()=>{applyVoice();N.speak(forTTS(`Salom, ${S.name}. Men Jarvisman, xizmatingizga tayyorman.`),S.rate,S.pitch)};
+$("bExp").onclick=()=>N.share(JSON.stringify({jarvis:1,orders,notes,rates:S.rates}));
+$("bImp").onclick=()=>{const t=prompt("Zaxira matnini shu yerga qo'ying:");if(!t)return;
+  try{const d=JSON.parse(t);if(!d.jarvis)throw 0;orders=d.orders||[];notes=d.notes||[];if(d.rates)S.rates=d.rates;
+    notes.forEach(n=>{if(!n.done&&n.at>Date.now())N.remind(n.at,n.text,n.id)});saveAll();loadSet();renderOrders();renderNotes();alert("Tiklandi ✓")}
+  catch(e){alert("Matn noto'g'ri.")}};
+$("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhbat tozalandi.")};
+
+/* ================= Ishga tushirish ================= */
+loadSet();renderOrders();renderNotes();
+setTimeout(applyVoice,600);
+(function greet(){const h=new Date().getHours();
+  const g=h<5?"Xayrli tun":h<12?"Xayrli tong":h<18?"Xayrli kun":"Xayrli kech";
+  const o=openOrders().length;
+  addMsg("j",`${g}, ${S.name}. Men Jarvisman.${o?` Ochiq buyurtmalar: ${o} ta.`:""} Mikrofonni bosing yoki yozing.`);
+  if(!S.key)sys("To'liq aql uchun Sozlamalar → API kalit kiriting (bepul).");
+})();
+</script>
+</body>
+</html>
