@@ -1428,6 +1428,14 @@ function pcBackup(force){ if(!pcOn()) return; if(!force&&Date.now()-(S.pcLastBak
 function loadImg(b64){ return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src="data:image/jpeg;base64,"+b64; }); }
 function otsu(gray){ const h=new Array(256).fill(0); for(const g of gray)h[g]++; const tot=gray.length; let sum=0; for(let i=0;i<256;i++)sum+=i*h[i];
   let sB=0,wB=0,best=0,th=128; for(let i=0;i<256;i++){ wB+=h[i]; if(!wB)continue; const wF=tot-wB; if(!wF)break; sB+=i*h[i]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){best=v;th=i} } return th; }
+function autoTh(gray){ // qora va fon cho'qqilari orasidagi eng chuqur botiq — soyalar shaklga qo'shilmaydi
+  const h=new Array(256).fill(0); for(const g of gray)h[g]++; const s=h.map((_,i)=>{let a=0,c=0;for(let j=i-4;j<=i+4;j++)if(j>=0&&j<256){a+=h[j];c++}return a/c});
+  const ot=otsu(gray); let p1=0,p2=255; for(let i=0;i<=ot;i++) if(s[i]>s[p1])p1=i; p2=ot; for(let i=ot;i<256;i++) if(s[i]>s[p2])p2=i;
+  if(p2-p1<40) return ot; let v=p1; for(let i=p1;i<=p2;i++) if(s[i]<s[v])v=i;
+  // botiq yetarlicha chuqur bo'lmasa — Otsu
+  if(s[v]>0.35*Math.min(s[p1],s[p2])) return ot;
+  // botiq keng bo'lsa, uning qora tomonga yaqin o'rtasini olamiz
+  let a=v,b=v; const lim=s[v]*1.6+1; while(a>p1&&s[a-1]<=lim)a--; while(b<p2&&s[b+1]<=lim)b++; return Math.round(Math.min(ot,(a+b)/2)); }
 function grayOf(im,cr,R){ // cr = [x,y,w,h] asl rasmda
   const k=Math.min(4,R/Math.max(cr[2],cr[3])), w=Math.max(2,Math.round(cr[2]*k)), h=Math.max(2,Math.round(cr[3]*k));
   const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,w,h);
@@ -1438,7 +1446,7 @@ function grayOf(im,cr,R){ // cr = [x,y,w,h] asl rasmda
 function blur(g,w,h,n){ let a=g; for(let t=0;t<n;t++){ const b=new Uint8Array(w*h);
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let s2=0,c=0; for(let dy=-1;dy<=1;dy++){const yy=y+dy; if(yy<0||yy>=h)continue; for(let dx=-1;dx<=1;dx++){const xx=x+dx; if(xx<0||xx>=w)continue; s2+=a[yy*w+xx];c++}} b[y*w+x]=s2/c|0; } a=b; } return a; }
 function mainCrop(im,o){ // eng katta qora shakl (chetlarga tegmaydigan) atrofini topish
-  const R=400, G=grayOf(im,[0,0,im.width,im.height],R), w=G.w,h=G.h, g=blur(G.g,w,h,1); const th=o.th==null||o.th<0?otsu(g):o.th;
+  const R=400, G=grayOf(im,[0,0,im.width,im.height],R), w=G.w,h=G.h, g=blur(G.g,w,h,1); const th=o.th==null||o.th<0?autoTh(g):o.th;
   const B=new Uint8Array(w*h); for(let i=0;i<w*h;i++){ let v=g[i]<th?1:0; if(o.inv)v^=1; B[i]=v; }
   const lab=new Int32Array(w*h).fill(-1); let best=null; const st=[];
   for(let i=0;i<w*h;i++){ if(!B[i]||lab[i]>=0)continue; let n=0,x0=w,y0=h,x1=0,y1=0,edge=0; st.push(i); lab[i]=i;
@@ -1452,33 +1460,42 @@ function mainCrop(im,o){ // eng katta qora shakl (chetlarga tegmaydigan) atrofin
 }
 function traceImage(im,o){
   const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height];
-  const G=grayOf(im,cr,o.res||900), w=G.w, h=G.h; const sm=o.smooth==null?2:o.smooth;
-  const gray=sm>0?blur(G.g,w,h,sm):G.g;
-  const th=o.th==null||o.th<0?otsu(gray):o.th;
-  const W=w+2,H=h+2, B=new Uint8Array(W*H); for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=gray[y*w+x]<th?1:0; if(o.inv)v^=1; B[(y+1)*W+x+1]=v; }
-  // marching squares
-  const segs=[]; const P=(x,y)=>x+","+y;
+  const G=grayOf(im,cr,o.res||1400), w=G.w, h=G.h; const sm=o.smooth==null?1:o.smooth;
+  const gray=sm>1?blur(G.g,w,h,sm-1):G.g;
+  const th=o.th==null||o.th<0?autoTh(gray):o.th;
+  // qiymat maydoni: v<th = metall. Chetlar fon bilan to'ldiriladi
+  const W=w+2,H=h+2, V=new Float32Array(W*H).fill(255);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=gray[y*w+x]; if(o.inv)v=255-v; V[(y+1)*W+x+1]=v; }
+  const tt=(o.inv?255-th:th)+0.5;
+  // marching squares — chiziq piksellar orasidan aniq (interpolyatsiya) o'tadi, zinapoya bo'lmaydi
+  const pt=new Map(); const segs=[];
+  const ip=(va,vb)=>{ const d=vb-va; return Math.abs(d)<1e-6?0.5:Math.min(1,Math.max(0,(tt-va)/d)); };
+  const hk=(x,y)=>{ const k="h"+(y*W+x); if(!pt.has(k)){ const t=ip(V[y*W+x],V[y*W+x+1]); pt.set(k,[x+t,y]); } return k; };
+  const vk=(x,y)=>{ const k="v"+(y*W+x); if(!pt.has(k)){ const t=ip(V[y*W+x],V[(y+1)*W+x]); pt.set(k,[x,y+t]); } return k; };
   for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){
-    const a=B[y*W+x],b=B[y*W+x+1],c=B[(y+1)*W+x+1],e=B[(y+1)*W+x]; const cs=a*8+b*4+c*2+e; if(cs===0||cs===15)continue;
-    const T=[x+.5,y],Rr=[x+1,y+.5],Bo=[x+.5,y+1],L=[x,y+.5];
-    const add=(p,q)=>segs.push([p,q]);
+    const va=V[y*W+x],vb=V[y*W+x+1],vc=V[(y+1)*W+x+1],ve=V[(y+1)*W+x];
+    const a2=va<tt?1:0,b2=vb<tt?1:0,c2=vc<tt?1:0,e2=ve<tt?1:0; const cs=a2*8+b2*4+c2*2+e2; if(cs===0||cs===15)continue;
+    const T=()=>hk(x,y),Rr=()=>vk(x+1,y),Bo=()=>hk(x,y+1),L=()=>vk(x,y);
+    const add=(p,q)=>segs.push([p(),q()]); const mid=(va+vb+vc+ve)/4<tt;
     switch(cs){case 1:case 14:add(L,Bo);break;case 2:case 13:add(Bo,Rr);break;case 3:case 12:add(L,Rr);break;case 4:case 11:add(T,Rr);break;
-      case 5:add(L,T);add(Bo,Rr);break;case 6:case 9:add(T,Bo);break;case 7:case 8:add(L,T);break;case 10:add(T,Rr);add(L,Bo);break;}
+      case 5: if(mid){add(L,Bo);add(T,Rr);} else {add(L,T);add(Bo,Rr);} break;
+      case 6:case 9:add(T,Bo);break;case 7:case 8:add(L,T);break;
+      case 10: if(mid){add(L,T);add(Bo,Rr);} else {add(T,Rr);add(L,Bo);} break;}
   }
-  const adj=new Map(); const put=(k,v)=>{ if(!adj.has(k))adj.set(k,[]); adj.get(k).push(v); };
-  segs.forEach((s2,i)=>{ put(P(...s2[0]),i); put(P(...s2[1]),i); });
+  const adj=new Map(); const put=(k,v)=>{ const l=adj.get(k); if(l)l.push(v); else adj.set(k,[v]); };
+  segs.forEach((s2,i)=>{ put(s2[0],i); put(s2[1],i); });
   const used=new Uint8Array(segs.length), loops=[];
-  for(let i=0;i<segs.length;i++){ if(used[i])continue; used[i]=1; const pts=[segs[i][0],segs[i][1]]; let cur=segs[i][1];
-    for(let g=0;g<200000;g++){ const lst=adj.get(P(...cur))||[]; const j=lst.find(n=>!used[n]); if(j==null)break; used[j]=1; const s2=segs[j]; const nx=P(...s2[0])===P(...cur)?s2[1]:s2[0]; pts.push(nx); cur=nx; }
-    loops.push(pts); }
+  for(let i=0;i<segs.length;i++){ if(used[i])continue; used[i]=1; const ks=[segs[i][0],segs[i][1]]; let cur=segs[i][1];
+    for(let g=0;g<400000;g++){ const lst=adj.get(cur)||[]; const j=lst.find(n=>!used[n]); if(j==null)break; used[j]=1; const s2=segs[j]; const nx=s2[0]===cur?s2[1]:s2[0]; ks.push(nx); cur=nx; }
+    loops.push(ks.map(k=>pt.get(k))); }
   const area=p=>{ let A=0; for(let i=0;i<p.length;i++){const q=p[(i+1)%p.length];A+=p[i][0]*q[1]-q[0]*p[i][1]} return Math.abs(A/2); };
   const dp=(pts,eps)=>{ if(pts.length<3)return pts; let mx=0,ix=0; const [x1,y1]=pts[0],[x2,y2]=pts[pts.length-1]; const L2=Math.hypot(x2-x1,y2-y1)||1;
     for(let i=1;i<pts.length-1;i++){ const dd=Math.abs((y2-y1)*pts[i][0]-(x2-x1)*pts[i][1]+x2*y1-y2*x1)/L2; if(dd>mx){mx=dd;ix=i} }
     return mx>eps?[...dp(pts.slice(0,ix+1),eps).slice(0,-1),...dp(pts.slice(ix),eps)]:[pts[0],pts[pts.length-1]]; };
-  const minA=Math.max(4,(o.minArea||0.0002)*w*h);
+  const minA=Math.max(6,(o.minArea||0.00002)*w*h);
   const smoothLoop=(p,n)=>{ let a=p; for(let t=0;t<n;t++){ const L=a.length; a=a.map((q,i)=>{ const pr=a[(i-1+L)%L], nx=a[(i+1)%L]; return [(pr[0]+2*q[0]+nx[0])/4,(pr[1]+2*q[1]+nx[1])/4]; }); } return a; };
-  const eps=o.eps||(0.35+0.15*sm);
-  const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ p=smoothLoop(p.slice(0,-1).length>3?p.slice(0,-1):p,1+sm); const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),eps).slice(0,-1),...dp(p.slice(half),eps).slice(0,-1)]; }).filter(p=>p.length>=3);
+  const eps=o.eps||(0.25+0.12*sm);
+  const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ p=smoothLoop(p.slice(0,-1).length>3?p.slice(0,-1):p,sm); const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),eps).slice(0,-1),...dp(p.slice(half),eps).slice(0,-1)]; }).filter(p=>p.length>=3);
   return {loops:out,w,h,th};
 }
 function traceDxf(tr,o){
@@ -1501,7 +1518,7 @@ function traceDxf(tr,o){
 }
 async function traceUI(b64){
   const im=await loadImg(b64); if(!im){ say("Rasmni ochib bo'lmadi."); return; }
-  const o={th:-1,inv:false,main:true,smooth:2,thin:true,W:600,H:600,frame:0,thick:2,res:900,minArea:0.0003};
+  const o={th:-1,inv:false,main:true,smooth:1,thin:true,W:600,H:600,frame:0,thick:2,res:1400};
   { const cr=mainCrop(im,o); o.H=Math.round(600*cr[3]/cr[2]); }
   $("sheet").innerHTML=`<h2>✏️ Rasmdan DXF</h2><p class="mut">Oq fonda qora shakl eng yaxshi chiqadi (naqsh, logo, siluet). Chegarani surib, chiziqlar to'g'ri chiqqanini ko'ring.</p>
   <div id="trPv" style="margin:8px 0"></div><div class="mut" id="trInfo"></div>
@@ -1509,8 +1526,8 @@ async function traceUI(b64){
   <div class="tog"><span>Faqat asosiy shakl (fondagi narsalarsiz)</span><div class="sw on" id="trMain"></div></div>
   <div class="tog"><span>Qalinlikdan ingichka bo'laklarni olib tashlash</span><div class="sw on" id="trThin"></div></div>
   <div class="tog" style="border:0"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div>
-  <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="600">Tez</option><option value="900" selected>Yaxshi</option><option value="1400">Juda yuqori</option></select></div>
-  <div><label>Silliqlik</label><select id="trSm"><option value="0">Yo'q</option><option value="1">Kam</option><option value="2" selected>O'rtacha</option><option value="3">Ko'p</option></select></div></div>
+  <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="800">Tez</option><option value="1400" selected>Yaxshi</option><option value="2000">Juda yuqori</option></select></div>
+  <div><label>Silliqlik</label><select id="trSm"><option value="0">Yo'q</option><option value="1" selected>Kam</option><option value="2">O'rtacha</option><option value="3">Ko'p</option></select></div></div>
   <div class="row"><div><label>Eni (mm)</label><input id="trW" inputmode="decimal" value="${o.W}"></div><div><label>Bo'yi (mm)</label><input id="trH" inputmode="decimal" value="${o.H}"></div></div>
   <div class="row"><div><label>Ramka (mm, 0 = yo'q)</label><input id="trF" inputmode="decimal" value="${o.frame}"></div><div><label>Qalinlik (mm)</label><input id="trT" inputmode="decimal" value="${o.thick}"></div></div>
   <div class="row" style="margin-top:14px"><button class="btn g" id="trX">Bekor</button><button class="btn" id="trOk">DXF yasash</button></div>`;
@@ -1519,7 +1536,7 @@ async function traceUI(b64){
     const r=traceDxf(tr,{W:o.W,H:o.H,frame:o.frame,minW:o.thin?o.thick:0}); $("trPv").innerHTML=r?r.pv:'<div class="empty">Kontur topilmadi — chegarani yoki ranglarni almashtiring</div>';
     $("trInfo").textContent=r?`${r.n} ta kontur · kesish ${r.len.toFixed(2)} m${r.dropped?` · ${r.dropped} ta ingichka bo'lak olib tashlandi`:""}`:""; };
   const num=id=>parseFloat(String($(id).value).replace(",","."))||0;
-  $("trTh").oninput=()=>{o.th=+$("trTh").value;redraw()};
+  let thT=null; $("trTh").oninput=()=>{o.th=+$("trTh").value;$("trThV").textContent=o.th;clearTimeout(thT);thT=setTimeout(redraw,150)};
   $("trInv").onclick=()=>{o.inv=!o.inv;$("trInv").classList.toggle("on",o.inv);redraw()};
   $("trMain").onclick=()=>{o.main=!o.main;$("trMain").classList.toggle("on",o.main); const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height]; o.H=Math.round(o.W*cr[3]/cr[2]); $("trH").value=o.H; redraw()};
   $("trSm").onchange=()=>{o.smooth=+$("trSm").value;redraw()};
