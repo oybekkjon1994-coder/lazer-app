@@ -1428,10 +1428,32 @@ function pcBackup(force){ if(!pcOn()) return; if(!force&&Date.now()-(S.pcLastBak
 function loadImg(b64){ return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src="data:image/jpeg;base64,"+b64; }); }
 function otsu(gray){ const h=new Array(256).fill(0); for(const g of gray)h[g]++; const tot=gray.length; let sum=0; for(let i=0;i<256;i++)sum+=i*h[i];
   let sB=0,wB=0,best=0,th=128; for(let i=0;i<256;i++){ wB+=h[i]; if(!wB)continue; const wF=tot-wB; if(!wF)break; sB+=i*h[i]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){best=v;th=i} } return th; }
+function grayOf(im,cr,R){ // cr = [x,y,w,h] asl rasmda
+  const k=Math.min(4,R/Math.max(cr[2],cr[3])), w=Math.max(2,Math.round(cr[2]*k)), h=Math.max(2,Math.round(cr[3]*k));
+  const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,w,h);
+  cx.imageSmoothingQuality="high"; cx.drawImage(im,cr[0],cr[1],cr[2],cr[3],0,0,w,h);
+  const d=cx.getImageData(0,0,w,h).data, g=new Uint8Array(w*h); for(let i=0;i<w*h;i++) g[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
+  return {g,w,h};
+}
+function blur(g,w,h,n){ let a=g; for(let t=0;t<n;t++){ const b=new Uint8Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let s2=0,c=0; for(let dy=-1;dy<=1;dy++){const yy=y+dy; if(yy<0||yy>=h)continue; for(let dx=-1;dx<=1;dx++){const xx=x+dx; if(xx<0||xx>=w)continue; s2+=a[yy*w+xx];c++}} b[y*w+x]=s2/c|0; } a=b; } return a; }
+function mainCrop(im,o){ // eng katta qora shakl (chetlarga tegmaydigan) atrofini topish
+  const R=400, G=grayOf(im,[0,0,im.width,im.height],R), w=G.w,h=G.h, g=blur(G.g,w,h,1); const th=o.th==null||o.th<0?otsu(g):o.th;
+  const B=new Uint8Array(w*h); for(let i=0;i<w*h;i++){ let v=g[i]<th?1:0; if(o.inv)v^=1; B[i]=v; }
+  const lab=new Int32Array(w*h).fill(-1); let best=null; const st=[];
+  for(let i=0;i<w*h;i++){ if(!B[i]||lab[i]>=0)continue; let n=0,x0=w,y0=h,x1=0,y1=0,edge=0; st.push(i); lab[i]=i;
+    while(st.length){ const j=st.pop(), x=j%w, y=(j/w)|0; n++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; if(x===0||y===0||x===w-1||y===h-1)edge++;
+      for(const k of [j-1,j+1,j-w,j+w]){ if(k<0||k>=w*h||!B[k]||lab[k]>=0)continue; if((k===j-1&&x===0)||(k===j+1&&x===w-1))continue; lab[k]=i; st.push(k); } }
+    const sc=n*(edge>0?0.15:1); if(!best||sc>best.sc) best={sc,x0,y0,x1,y1}; }
+  if(!best) return [0,0,im.width,im.height];
+  const k=im.width/w, mx=(best.x1-best.x0)*0.04+2, my=(best.y1-best.y0)*0.04+2;
+  const x=Math.max(0,(best.x0-mx)*k), y=Math.max(0,(best.y0-my)*k);
+  return [x,y,Math.min(im.width-x,(best.x1-best.x0+2*mx)*k),Math.min(im.height-y,(best.y1-best.y0+2*my)*k)];
+}
 function traceImage(im,o){
-  const R=o.res||500, k=Math.min(1,R/Math.max(im.width,im.height)), w=Math.max(2,Math.round(im.width*k)), h=Math.max(2,Math.round(im.height*k));
-  const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,w,h); cx.drawImage(im,0,0,w,h);
-  const d=cx.getImageData(0,0,w,h).data, gray=new Uint8Array(w*h); for(let i=0;i<w*h;i++) gray[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
+  const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height];
+  const G=grayOf(im,cr,o.res||900), w=G.w, h=G.h; const sm=o.smooth==null?2:o.smooth;
+  const gray=sm>0?blur(G.g,w,h,sm):G.g;
   const th=o.th==null||o.th<0?otsu(gray):o.th;
   const W=w+2,H=h+2, B=new Uint8Array(W*H); for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=gray[y*w+x]<th?1:0; if(o.inv)v^=1; B[(y+1)*W+x+1]=v; }
   // marching squares
@@ -1454,7 +1476,9 @@ function traceImage(im,o){
     for(let i=1;i<pts.length-1;i++){ const dd=Math.abs((y2-y1)*pts[i][0]-(x2-x1)*pts[i][1]+x2*y1-y2*x1)/L2; if(dd>mx){mx=dd;ix=i} }
     return mx>eps?[...dp(pts.slice(0,ix+1),eps).slice(0,-1),...dp(pts.slice(ix),eps)]:[pts[0],pts[pts.length-1]]; };
   const minA=Math.max(4,(o.minArea||0.0002)*w*h);
-  const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),o.eps||0.7).slice(0,-1),...dp(p.slice(half),o.eps||0.7).slice(0,-1)]; }).filter(p=>p.length>=3);
+  const smoothLoop=(p,n)=>{ let a=p; for(let t=0;t<n;t++){ const L=a.length; a=a.map((q,i)=>{ const pr=a[(i-1+L)%L], nx=a[(i+1)%L]; return [(pr[0]+2*q[0]+nx[0])/4,(pr[1]+2*q[1]+nx[1])/4]; }); } return a; };
+  const eps=o.eps||(0.35+0.15*sm);
+  const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ p=smoothLoop(p.slice(0,-1).length>3?p.slice(0,-1):p,1+sm); const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),eps).slice(0,-1),...dp(p.slice(half),eps).slice(0,-1)]; }).filter(p=>p.length>=3);
   return {loops:out,w,h,th};
 }
 function traceDxf(tr,o){
@@ -1462,40 +1486,51 @@ function traceDxf(tr,o){
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; tr.loops.forEach(p=>p.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}));
   if(!tr.loops.length) return null;
   const k=Math.min(iw/(x1-x0||1),ih/(y1-y0||1)), ox=fr+(iw-(x1-x0)*k)/2, oy=fr+(ih-(y1-y0)*k)/2;
+  const minW=Math.max(0,+o.minW||0); // mm: bundan ingichka bo'laklar lazerda kesilmaydi
+  const thick=p=>{ let A=0,P=0; for(let i=0;i<p.length;i++){const q=p[(i+1)%p.length];A+=p[i][0]*q[1]-q[0]*p[i][1];P+=Math.hypot(q[0]-p[i][0],q[1]-p[i][1])} return P?2*Math.abs(A/2)/P*k:0; };
+  const loops=minW?tr.loops.filter(p=>thick(p)>=minW*0.5):tr.loops; let dropped=tr.loops.length-loops.length;
   const T=(x,y)=>[ox+(x-x0)*k, oy+(y1-y)*k]; const f=n=>(+n).toFixed(3); const L=[]; let len=0; const svg=[];
   const poly=(pts,ly)=>{ L.push("0","POLYLINE","8",ly,"66","1","10","0","20","0","30","0","70","1"); for(const q of pts)L.push("0","VERTEX","8",ly,"10",f(q[0]),"20",f(q[1]),"30","0"); L.push("0","SEQEND","8",ly);
     for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length];len+=Math.hypot(q[0]-pts[i][0],q[1]-pts[i][1])} };
   if(fr>0){ poly([[0,0],[W,0],[W,H],[0,H]],"KONTUR"); svg.push(`<rect x="0" y="0" width="${W}" height="${H}"/>`); }
-  for(const p of tr.loops){ const q=p.map(([x,y])=>T(x,y)); poly(q,"NAQSH"); svg.push(`<polygon points="${q.map(z=>z[0].toFixed(1)+","+z[1].toFixed(1)).join(" ")}"/>`); }
+  for(const p of loops){ const q=p.map(([x,y])=>T(x,y)); poly(q,"NAQSH"); svg.push(`<polygon points="${q.map(z=>z[0].toFixed(1)+","+z[1].toFixed(1)).join(" ")}"/>`); }
   const dxf=["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n");
   const mg=Math.max(W,H)*0.03;
   const pv=`<svg viewBox="${-mg} ${-(H+mg)} ${W+2*mg} ${H+2*mg}" style="width:100%;max-height:280px;background:#06131d;border-radius:8px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(W,H)/300}">${svg.join("")}</g></svg>`;
-  return {dxf,len:len/1000,pv,n:tr.loops.length};
+  return {dxf,len:len/1000,pv,n:loops.length,dropped};
 }
 async function traceUI(b64){
   const im=await loadImg(b64); if(!im){ say("Rasmni ochib bo'lmadi."); return; }
-  const o={th:-1,inv:false,W:600,H:Math.round(600*im.height/im.width),frame:3,thick:2,res:500,eps:0.7,minArea:0.0002};
+  const o={th:-1,inv:false,main:true,smooth:2,thin:true,W:600,H:600,frame:0,thick:2,res:900,minArea:0.0003};
+  { const cr=mainCrop(im,o); o.H=Math.round(600*cr[3]/cr[2]); }
   $("sheet").innerHTML=`<h2>✏️ Rasmdan DXF</h2><p class="mut">Oq fonda qora shakl eng yaxshi chiqadi (naqsh, logo, siluet). Chegarani surib, chiziqlar to'g'ri chiqqanini ko'ring.</p>
   <div id="trPv" style="margin:8px 0"></div><div class="mut" id="trInfo"></div>
   <label>Chegara (yorug'lik): <span id="trThV">avto</span></label><input id="trTh" type="range" min="10" max="245" style="padding:0">
-  <div class="row"><div class="tog" style="border:0;flex:1"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div></div>
-  <label>Aniqlik</label><select id="trRes"><option value="350">Tez (oddiy shakl)</option><option value="500" selected>O'rtacha</option><option value="800">Yuqori (mayda naqsh)</option></select>
+  <div class="tog"><span>Faqat asosiy shakl (fondagi narsalarsiz)</span><div class="sw on" id="trMain"></div></div>
+  <div class="tog"><span>Qalinlikdan ingichka bo'laklarni olib tashlash</span><div class="sw on" id="trThin"></div></div>
+  <div class="tog" style="border:0"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div>
+  <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="600">Tez</option><option value="900" selected>Yaxshi</option><option value="1400">Juda yuqori</option></select></div>
+  <div><label>Silliqlik</label><select id="trSm"><option value="0">Yo'q</option><option value="1">Kam</option><option value="2" selected>O'rtacha</option><option value="3">Ko'p</option></select></div></div>
   <div class="row"><div><label>Eni (mm)</label><input id="trW" inputmode="decimal" value="${o.W}"></div><div><label>Bo'yi (mm)</label><input id="trH" inputmode="decimal" value="${o.H}"></div></div>
-  <div class="row"><div><label>Ramka (mm)</label><input id="trF" inputmode="decimal" value="${o.frame}"></div><div><label>Qalinlik (mm)</label><input id="trT" inputmode="decimal" value="${o.thick}"></div></div>
+  <div class="row"><div><label>Ramka (mm, 0 = yo'q)</label><input id="trF" inputmode="decimal" value="${o.frame}"></div><div><label>Qalinlik (mm)</label><input id="trT" inputmode="decimal" value="${o.thick}"></div></div>
   <div class="row" style="margin-top:14px"><button class="btn g" id="trX">Bekor</button><button class="btn" id="trOk">DXF yasash</button></div>`;
   openModal(); let tr=null;
   const redraw=()=>{ tr=traceImage(im,o); if(o.th<0){ $("trTh").value=tr.th; } $("trThV").textContent=o.th<0?`avto (${tr.th})`:o.th;
-    const r=traceDxf(tr,{W:o.W,H:o.H,frame:o.frame}); $("trPv").innerHTML=r?r.pv:'<div class="empty">Kontur topilmadi — chegarani yoki ranglarni almashtiring</div>';
-    $("trInfo").textContent=r?`${r.n} ta kontur · kesish ${r.len.toFixed(2)} m`:""; };
+    const r=traceDxf(tr,{W:o.W,H:o.H,frame:o.frame,minW:o.thin?o.thick:0}); $("trPv").innerHTML=r?r.pv:'<div class="empty">Kontur topilmadi — chegarani yoki ranglarni almashtiring</div>';
+    $("trInfo").textContent=r?`${r.n} ta kontur · kesish ${r.len.toFixed(2)} m${r.dropped?` · ${r.dropped} ta ingichka bo'lak olib tashlandi`:""}`:""; };
   const num=id=>parseFloat(String($(id).value).replace(",","."))||0;
   $("trTh").oninput=()=>{o.th=+$("trTh").value;redraw()};
   $("trInv").onclick=()=>{o.inv=!o.inv;$("trInv").classList.toggle("on",o.inv);redraw()};
+  $("trMain").onclick=()=>{o.main=!o.main;$("trMain").classList.toggle("on",o.main); const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height]; o.H=Math.round(o.W*cr[3]/cr[2]); $("trH").value=o.H; redraw()};
+  $("trSm").onchange=()=>{o.smooth=+$("trSm").value;redraw()};
+  $("trThin").onclick=()=>{o.thin=!o.thin;$("trThin").classList.toggle("on",o.thin);redraw()};
+  $("trT").onchange=()=>{o.thick=num("trT")||2;redraw()};
   $("trRes").onchange=()=>{o.res=+$("trRes").value;redraw()};
   $("trW").onchange=()=>{const nw=num("trW"); if(nw>0){o.H=Math.round(o.H*nw/o.W);o.W=nw;$("trH").value=o.H;redraw()}};
   $("trH").onchange=()=>{const nh=num("trH"); if(nh>0){o.H=nh;redraw()}};
   $("trF").onchange=()=>{o.frame=num("trF");redraw()};
   $("trX").onclick=closeModal;
-  $("trOk").onclick=()=>{ o.thick=num("trT")||2; const r=tr&&traceDxf(tr,{W:o.W,H:o.H,frame:o.frame}); if(!r){box("Xato","Kontur topilmadi.");return}
+  $("trOk").onclick=()=>{ o.thick=num("trT")||2; const r=tr&&traceDxf(tr,{W:o.W,H:o.H,frame:o.frame,minW:o.thin?o.thick:0}); if(!r){box("Xato","Kontur topilmadi.");return}
     closeModal(); const nm=`rasm_${o.W}x${o.H}_${Date.now().toString().slice(-5)}.dxf`; const uri=saveF(nm,"application/dxf",r.dxf); const lp=laserPrice(r.len,o.thick,1);
     const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${r.pv}</div><div class="mut">${r.n} ta kontur · kesish ${r.len.toFixed(2)} m${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
     const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
