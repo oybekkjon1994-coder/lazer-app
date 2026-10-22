@@ -115,6 +115,7 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipCar">🚗 Mashina</button>
     <button class="chip" id="chipRep">Hisobot</button>
     <button class="chip" id="chipImg">📷 Rasm</button>
+    <button class="chip" id="chipDxf">📐 Chizmadan DXF</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
     <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
     <button class="chip" data-q="Ochiq buyurtmalar qaysilar?">Buyurtmalar</button>
@@ -402,6 +403,12 @@ const J = window.J = {
   async onImage(b64){ if(!b64){ setState("idle"); sys("Rasm olinmadi."); return; }
     addHtml(`<img src="data:image/jpeg;base64,${b64}" style="width:100%;border-radius:8px">`);
     setState("think","rasmni ko'ryapman"); busy=true;
+    if(imgMode==="dxf"){ try{ const a=await visionAsk(b64,"",PARTS_PROMPT); setState("idle"); imgMode="ask";
+        let j=null; try{ j=JSON.parse(String(a).replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/,"$1")) }catch(e){}
+        const parts=(j&&Array.isArray(j.parts)?j.parts:[]).map(p=>({w:+p.w||0,h:+p.h||0,d:+p.d||0,qty:+p.qty||1,unsure:!!p.unsure}));
+        if(!parts.length){ say(a?"Chizmadan o'lchamlarni o'qiy olmadim. Qo'lda kiriting.":"Rasmni tahlil qilib bo'lmadi. Pastda sababi yozilgan."); partsForm([{w:0,h:0,d:0,qty:1}],""); return; }
+        say(`${parts.length} ta detal topdim. O'lchamlarni tekshirib, "DXF yasash"ni bosing.`); partsForm(parts,j.note||"");
+      } finally{ busy=false; } return; }
     try{ const a=await visionAsk(b64,imgQ); setState("idle");
       say(a||"Rasmni tahlil qilib bo'lmadi. Pastda sababi yozilgan."); }
     finally{ busy=false; } },
@@ -593,6 +600,7 @@ function quick(t){
   if(/(hazil(kash)? rejim|hazillash)/.test(g)&&!/(o'chir|bas)/.test(g)){ S.persona="hazil"; saveAll(); loadSet(); return "Hazil rejimi yoqildi, xo'jayin. Endi ishlar qiziqroq bo'ladi."; }
   if(/(jiddiy rejim|hazil(ni)? (o'chir|bas))/.test(g)){ S.persona="jiddiy"; saveAll(); loadSet(); return "Jiddiy rejimga qaytdim."; }
   if(/(qachon (qo'y|joyla|chiqar)|eng yaxshi vaqt|qaysi vaqtda (qo'y|joyla))/.test(s)) return BEST_TIME;
+  if(/(chizma(dan)?|rasm(dan)?|surat(dan)?).*dxf|dxf.*(chizma|rasm|surat)/.test(g)){ setTimeout(()=>askImage("","dxf"),50); return "Chizmani suratga oling."; }
   if(/(rasm(ga)? (qara|ko'r|tahlil)|rasmni (ko'r|tahlil)|surat(ga)? qara|rasm(ga)? ol)/.test(s)){ setTimeout(()=>askImage(""),50); return "Rasmni tanlang yoki suratga oling."; }
   if(/(ertalabki hisobot|kunlik hisobot|bugungi hisobot|hisobotni ber|hisobot ber)/.test(s)){ setTimeout(morningReport,30); return ""; }
   if(/(tinglash|eshitish|mikrofon|quloq)/.test(s) && /(o'chir|to'xtat|bas qil|kerak emas|yop|uchir|ochir)/.test(s)){
@@ -662,7 +670,7 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"reply_draft","to":"kimga (bo'sh = oxirgi xabar)","text":"javob matni"}  // mijozga javob TAKLIFI — yuborishdan oldin egang tasdiqlaydi
 {"type":"reply","to":"...","text":"..."}                      // faqat egang aniq matnni aytib "yubor" desa
 {"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1}  // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm
-{"type":"photo","question":"..."}                               // rasmni ko'rib berish (kamera/galereya ochiladi)
+{"type":"photo","question":"...","dxf":false}                 // dxf:true — chizma suratidan o'lchamlarni o'qib DXF yasash                               // rasmni ko'rib berish (kamera/galereya ochiladi)
 {"type":"show","text":"uzun matn"}                              // post, OLX e'lon, ssenariy — ekranga chiqarish (ovoz chiqarib o'qilmaydi)
 {"type":"copy","text":"..."}                                    // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
 {"type":"listen","on":false}                                  // doimiy tinglashni o'chirish/yoqish
@@ -867,7 +875,7 @@ async function run(a){
     case "navigate":{ let q=String(a.query||"").trim(); const k=norm(q).replace(/(ga|imga|mga)$/,"");
       if(k==="uy"||k==="uyim"||k==="ustaxona"){ q=S.places[k.startsWith("uy")?"uy":"ustaxona"]; if(!q)return"Bu manzil kiritilmagan. Sozlamalarda kiriting."; }
       const r=N.navigate(q,S.nav); return r==="none"?"Navigator ilovasi topilmadi.":""; }
-    case "photo": setTimeout(()=>askImage(a.question||""),50); return "";
+    case "photo": setTimeout(()=>askImage(a.question||"",a.dxf?"dxf":"ask"),50); return "";
     case "dxf":{ const sp=a; if(!(+sp.w&&+sp.h)&&!+sp.d) return "O'lchamlar to'liq emas.";
       const r=dxfFrom(sp); const nm=(String(sp.name||"detal").replace(/[^\w\-]+/g,"_")||"detal")+"_"+Date.now().toString().slice(-5)+".dxf";
       const uri=N.saveFile(nm,"application/dxf",r.dxf);
@@ -938,6 +946,7 @@ document.querySelectorAll(".chip[data-q]").forEach(c=>c.onclick=()=>handle(c.dat
 $("chipRep").onclick=()=>morningReport();
 $("chipImg").onclick=()=>askImage("");
 $("chipRead").onclick=()=>openReader();
+$("chipDxf").onclick=()=>askImage("","dxf");
 $("chipHunt").onclick=()=>huntOrders(true);
 $("chipCar").onclick=()=>setCar(!S.car);
 $("chipLoop").onclick=()=>setBg(!S.bg);
@@ -1082,14 +1091,95 @@ $("bClr").onclick=()=>{hist=[];sv("hist",hist);$("chat").innerHTML="";sys("Suhba
 
 /* ================= Rasm tahlili (9) ================= */
 let imgQ=null;
-function askImage(q){ imgQ=q||"";
+let imgMode="ask";
+function askImage(q,mode){ imgQ=q||""; imgMode=mode||"ask";
+  if(imgMode==="dxf"){
+    $("sheet").innerHTML=`<h2>📐 Chizmadan DXF</h2><p class="mut">Qog'ozdagi chizmani suratga oling: har bir detal yonida eni va bo'yi yozilgan bo'lsin (mm). Raqamlarni o'qib, aniq o'lchamli DXF yasayman.</p>
+    <div class="row" style="margin-top:14px"><button class="btn" id="imgCam">📷 Kamera</button><button class="btn g" id="imgGal">🖼 Galereya</button></div>`;
+    openModal(); const go=c=>{closeModal();setState("think","rasm kutilmoqda");N.pickImage(c)};
+    $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); return; }
   $("sheet").innerHTML=`<h2>Rasm</h2><p class="mut">Chizma, detal, hujjat yoki mahsulot rasmini yuboring — nima ekanini, qanday yasash va taxminiy narxini aytaman.</p>
   <label>Savol (ixtiyoriy)</label><input id="imgQ" value="${esc(imgQ)}" placeholder="Masalan: buni lazerda kesish qancha bo'ladi?">
+  <button class="btn g" id="imgDxf" style="width:100%;margin-top:10px">📐 O'lchamli chizmadan DXF yasash</button>
   <div class="row" style="margin-top:14px"><button class="btn" id="imgCam">📷 Kamera</button><button class="btn g" id="imgGal">🖼 Galereya</button></div>`;
   openModal(); const go=c=>{imgQ=$("imgQ").value.trim();closeModal();setState("think","rasm kutilmoqda");N.pickImage(c)};
-  $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); }
-async function visionAsk(b64,q){
-  const prompt=`Sen lazer kesish va metall ishlari ustasi yordamchisisan. Rasmni ko'rib, O'ZBEK tilida (lotin) 2–5 qisqa gap bilan javob ber: bu nima, qanday material va qalinlik mos, qanday yasaladi (lazer, egish, payvand), mumkin bo'lsa taxminiy kesish uzunligi. Lazer narxi so'm/metr: 1–2mm ${S.rates.r1}, 3–4mm ${S.rates.r2}, 5–6mm ${S.rates.r3}, 8–10mm ${S.rates.r4}. Hujjat yoki matn bo'lsa — mazmunini qisqa ayt. ${q?"Savol: "+q:""}`;
+  $("imgCam").onclick=()=>go(true); $("imgGal").onclick=()=>go(false); $("imgDxf").onclick=()=>askImage("","dxf"); }
+
+/* ================= Chizma suratidan DXF ================= */
+const PARTS_PROMPT=`Bu qo'lda yoki kompyuterda chizilgan lazer kesish chizmasi. Har bir to'rtburchak/doira detal yonida o'lchamlar (mm) yozilgan.
+Har bir detal uchun: tepasida yoki ostida yozilgan raqam = ENI (w), yonida (ko'pincha vertikal yozilgan) raqam = BO'YI (h). Doira bo'lsa "d" (diametr).
+Agar detal ichida yoki yonida "x2", "2 ta", "2шт" kabi son yozilgan bo'lsa — qty. Chala ko'ringan yoki o'qib bo'lmaydigan detalni ham qo'sh, lekin "unsure":true qil.
+FAQAT JSON qaytar: {"parts":[{"w":125,"h":99,"d":0,"qty":1,"unsure":false}],"note":"o'zbekcha qisqa izoh (nimasi aniq emas)"}`;
+let dxfParts=[];
+function partsForm(parts,note){
+  dxfParts=parts;
+  const rows=parts.map((p,i)=>`<tr><td>${i+1}</td><td><input data-k="w" data-i="${i}" value="${p.d?"":p.w||""}" inputmode="decimal" style="padding:6px;${p.unsure?"border-color:var(--warn)":""}"></td><td><input data-k="h" data-i="${i}" value="${p.d?"":p.h||""}" inputmode="decimal" style="padding:6px;${p.unsure?"border-color:var(--warn)":""}"></td><td><input data-k="d" data-i="${i}" value="${p.d||""}" inputmode="decimal" style="padding:6px"></td><td><input data-k="qty" data-i="${i}" value="${p.qty||1}" inputmode="numeric" style="padding:6px"></td></tr>`).join("");
+  $("sheet").innerHTML=`<h2>📐 O'lchamlarni tekshiring</h2>
+  <p class="mut">${note?esc(note)+" ":""}Sariq — aniq o'qilmagan. Xato bo'lsa, tuzating. Doira bo'lsa — faqat D.</p>
+  <table style="width:100%;border-spacing:4px"><tr class="mut"><td>#</td><td>Eni mm</td><td>Bo'yi mm</td><td>D mm</td><td>Soni</td></tr>${rows}</table>
+  <button class="btn sm g" id="pAdd" style="margin-top:6px">+ Detal qo'shish</button>
+  <div class="row"><div><label>Qalinlik (mm)</label><input id="pTh" inputmode="decimal" value="2"></div>
+  <div><label>Naqsh</label><select id="pPat"><option value="none">Yo'q — faqat kontur</option><option value="cube">Kub naqsh (3D kublar)</option></select></div></div>
+  <div class="row"><div><label>Naqsh katakchasi (mm)</label><input id="pCell" inputmode="decimal" value="30"></div><div><label>Chetidan bo'sh joy (mm)</label><input id="pMg" inputmode="decimal" value="10"></div></div>
+  <label>Fayl nomi</label><input id="pNm" value="chizma">
+  <div class="row" style="margin-top:14px"><button class="btn g" id="pX">Bekor</button><button class="btn" id="pOk">DXF yasash</button></div>`;
+  openModal();
+  const sync=()=>$("sheet").querySelectorAll("input[data-k]").forEach(e=>{dxfParts[+e.dataset.i][e.dataset.k]=parseFloat(String(e.value).replace(",","."))||0});
+  $("pAdd").onclick=()=>{sync();dxfParts.push({w:0,h:0,d:0,qty:1});partsForm(dxfParts,note)};
+  $("pX").onclick=closeModal;
+  $("pOk").onclick=()=>{ sync(); const ok=dxfParts.filter(p=>(p.w>0&&p.h>0)||p.d>0);
+    if(!ok.length){box("Xato","Kamida bitta detalning o'lchami kerak.");return}
+    closeModal(); buildPartsDxf(ok,{th:parseFloat($("pTh").value)||2,pat:$("pPat").value,cell:Math.max(5,parseFloat($("pCell").value)||30),mg:Math.max(0,parseFloat($("pMg").value)||0),name:$("pNm").value}); };
+}
+function clipSeg(x1,y1,x2,y2,xmin,ymin,xmax,ymax){ // Liang–Barsky
+  let t0=0,t1=1;const dx=x2-x1,dy=y2-y1;
+  for(const [p,q] of [[-dx,x1-xmin],[dx,xmax-x1],[-dy,y1-ymin],[dy,ymax-y1]]){
+    if(p===0){ if(q<0)return null; } else { const r=q/p; if(p<0){ if(r>t1)return null; if(r>t0)t0=r; } else { if(r<t0)return null; if(r<t1)t1=r; } } }
+  if(t1-t0<1e-9)return null; return [x1+t0*dx,y1+t0*dy,x1+t1*dx,y1+t1*dy];
+}
+function cubeLines(W,H,s,mg){ // olti burchakli katak + ichida "Y" = 3D kub ko'rinishi
+  const out=[], hx=Math.sqrt(3)*s, seen=new Set();
+  const xmin=mg,ymin=mg,xmax=W-mg,ymax=H-mg; if(xmax-xmin<s||ymax-ymin<s) return out;
+  const add=(a,b,c,d)=>{ const k=[a,b,c,d].map(v=>v.toFixed(2)); const key=k[0]<k[2]||(k[0]===k[2]&&k[1]<k[3])?k.join():[k[2],k[3],k[0],k[1]].join();
+    if(seen.has(key))return; seen.add(key); const c2=clipSeg(a,b,c,d,xmin,ymin,xmax,ymax); if(c2)out.push(c2); };
+  for(let row=-1; row*1.5*s<=H+2*s; row++){
+    for(let col=-1; col*hx<=W+2*hx; col++){
+      const cx=col*hx+(row%2?hx/2:0), cy=row*1.5*s;
+      const v=[]; for(let k=0;k<6;k++){ const a=Math.PI/180*(60*k+30); v.push([cx+s*Math.cos(a),cy+s*Math.sin(a)]); }
+      for(let k=0;k<6;k++){ const a=v[k],b=v[(k+1)%6]; add(a[0],a[1],b[0],b[1]); }
+      for(const k of [1,3,5]) add(cx,cy,v[k][0],v[k][1]);
+    }
+  }
+  return out;
+}
+function buildPartsDxf(parts,o){
+  const L=[];const f=n=>(+n).toFixed(3);
+  const line=(x1,y1,x2,y2,ly)=>L.push("0","LINE","8",ly||"KONTUR","10",f(x1),"20",f(y1),"30","0","11",f(x2),"21",f(y2),"31","0");
+  const circ=(cx,cy,r,ly)=>L.push("0","CIRCLE","8",ly||"KONTUR","10",f(cx),"20",f(cy),"30","0","40",f(r));
+  let x=0, maxH=0, contour=0, pattern=0, svg=[], count=0; const gap=20;
+  for(const p of parts){ const q=Math.max(1,Math.round(p.qty||1));
+    for(let k=0;k<q;k++){
+      if(p.d>0){ const r=p.d/2; circ(x+r,r,r); contour+=Math.PI*p.d; svg.push(`<circle cx="${x+r}" cy="${r}" r="${r}"/>`); x+=p.d+gap; maxH=Math.max(maxH,p.d); }
+      else { const W=p.w,H=p.h; line(x,0,x+W,0);line(x+W,0,x+W,H);line(x+W,H,x,H);line(x,H,x,0); contour+=2*(W+H);
+        svg.push(`<rect x="${x}" y="0" width="${W}" height="${H}"/>`);
+        if(o.pat==="cube"){ for(const sg of cubeLines(W,H,o.cell,o.mg)){ line(x+sg[0],sg[1],x+sg[2],sg[3],"NAQSH"); pattern+=Math.hypot(sg[2]-sg[0],sg[3]-sg[1]);
+          svg.push(`<line x1="${x+sg[0]}" y1="${sg[1]}" x2="${x+sg[2]}" y2="${sg[3]}" stroke="#3ee08f"/>`); } }
+        x+=W+gap; maxH=Math.max(maxH,H); }
+      count++;
+    }
+  }
+  const TW=Math.max(1,x-gap), TH=Math.max(1,maxH), mg=Math.max(TW,TH)*0.04;
+  const dxf=["0","SECTION","2","HEADER","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n");
+  const pv=`<svg viewBox="${-mg} ${-(TH+mg)} ${TW+2*mg} ${TH+2*mg}" style="width:100%;max-height:260px;background:#06131d;border-radius:8px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(TW,TH)/250}">${svg.join("")}</g></svg>`;
+  const nm=(String(o.name||"chizma").replace(/[^\w\-]+/g,"_")||"chizma")+"_"+Date.now().toString().slice(-5)+".dxf";
+  const uri=N.saveFile(nm,"application/dxf",dxf);
+  const lenM=(contour+pattern)/1000, lp=laserPrice(lenM,o.th,1);
+  const el=addHtml(`<b>${esc(nm)}</b><div style="margin:8px 0">${pv}</div><div class="mut">${count} ta detal · kontur ${(contour/1000).toFixed(2)} m${pattern?` · naqsh ${(pattern/1000).toFixed(2)} m`:""} · jami ${lenM.toFixed(2)} m${lp.rate?` · ${lp.name}: <b>${fmt(lp.total)} so'm</b>`:""}</div>${uri?`<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>`:""}`);
+  const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
+  say(uri?`DXF tayyor: ${count} ta detal, kesish ${lenM.toFixed(1)} metr${lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}. Yuklamalar, Jarvis papkasida.`:"DXF tayyor, lekin faylni saqlab bo'lmadi.");
+}
+async function visionAsk(b64,q,custom){
+  const prompt=custom||`Sen lazer kesish va metall ishlari ustasi yordamchisisan. Rasmni ko'rib, O'ZBEK tilida (lotin) 2–5 qisqa gap bilan javob ber: bu nima, qanday material va qalinlik mos, qanday yasaladi (lazer, egish, payvand), mumkin bo'lsa taxminiy kesish uzunligi. Lazer narxi so'm/metr: 1–2mm ${S.rates.r1}, 3–4mm ${S.rates.r2}, 5–6mm ${S.rates.r3}, 8–10mm ${S.rates.r4}. Hujjat yoki matn bo'lsa — mazmunini qisqa ayt. ${q?"Savol: "+q:""}`;
   let why=[];
   const tryGroq=async()=>{ const key=S.keys.groq||(S.prov==="groq"?S.key:""); if(!key){why.push("Groq kaliti yo'q");return null;}
     const H={"Content-Type":"application/json","Authorization":"Bearer "+key};
