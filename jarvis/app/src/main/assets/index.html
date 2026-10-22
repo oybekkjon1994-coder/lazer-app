@@ -209,7 +209,7 @@ body.car #mic{width:76px;height:76px}
     <div id="msgPerm" class="tog"></div>
     <label>Kelgan xabarlarni ovoz chiqarib o'qish</label>
     <select id="sRead"><option value="always">Har doim</option><option value="car">Faqat mashina rejimida</option><option value="off">O'qimasin</option></select>
-    <label>Lazer bot nomi (Telegram'dagi ko'rinishi)</label><input id="sBot" placeholder="lazer">
+    <label>Lazer bot kanali (botdagi bilan bir xil bo'lishi kerak)</label><input id="sTopic">
     <div class="tog"><span>Ertalabki hisobot</span><div class="sw" id="swRep"></div></div>
     <label>Hisobot vaqti</label><input id="sRepT" type="time">
     <div class="tog" style="border:0"><span>Dollar kursi keskin o'zgarsa xabar berish</span><div class="sw" id="swRate"></div></div>
@@ -270,7 +270,7 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 function ld(k,def){try{const v=N.load(k);return v?JSON.parse(v):def}catch(e){return def}}
 function sv(k,v){N.save(k,JSON.stringify(v))}
 const DEF = {prov:"gemini",key:"",model:"gemini-3.5-flash-lite",groqModel:"llama-3.3-70b-versatile",name:"xo'jayin",
-  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},readMsg:"always",botName:"lazer",botSeen:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
+  stt:"uz-UZ",tts:"uz-UZ,tr-TR,ru-RU",rate:1.0,pitch:0.85,voice:true,wake:true,awake:true,bg:false,car:false,city:"Toshkent",people:{},readMsg:"always",botName:"lazer",botSeen:0,botTopic:"jarvis-buyurtma-4ed9ca010a0a034b",botSince:0,report:true,reportTime:"07:30",rateWatch:true,rateLast:null,nav:"auto",places:{uy:"",ustaxona:""},
   rates:{r1:3500,r2:5000,r3:8000,r4:15000}};
 let S = Object.assign({},DEF,ld("set",{}));
 S.rates = Object.assign({},DEF.rates,S.rates||{});
@@ -388,7 +388,7 @@ const J = window.J = {
     N.stopListen(); if(state==="listen")setState("idle");
     if(!String(cmd||"").trim()){ labbay=true; addMsg("u","Jarvis"); say(`Labbay, ${S.name}?`); }
     else handle(cmd,false); },
-  onShown(){ refreshBg(); try{syncBot()}catch(e){} if(S.bg && !loop) startLoop(true); },
+  onShown(){ refreshBg(); try{syncBot()}catch(e){} pollBot(false); if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
@@ -536,7 +536,7 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
 - Rasm: "📷 Rasm" tugmasi yoki "Jarvis, rasmga qara" — chizma/detalni ko'rib tushuntiradi.
 - DXF: "Jarvis, 500 ga 300 to'rtburchak, burchaklarda 10 millik 4 ta teshik, 3 mm" — DXF fayl yasaydi va narxini aytadi.
-- Lazer bot (${S.botName}) Telegram'da yozgan xabarlar avtomatik buyurtma bo'ladi.
+- Lazer bot (@lazer_uz77_bot) hisoblagan har bir buyurtma Jarvis'ga avtomatik tushadi (xabar o'qish ruxsatisiz).
 - Xabarlar alohida "Jarvis Xabar" ilovasi orqali ishlaydi (Xiaomi uni Jarvis ichida bloklaydi). U o'rnatilmagan bo'lsa shuni ayt.
 - Xabarlar: kelgan Telegram/WhatsApp/Instagram/SMS xabarlarini o'qiysan va ovoz bilan javob yuborasan ("Jarvis, javob ber: ..."). Buning uchun Sozlamalar → Xabarlar va hisobot → "Ruxsat". Ertalabki hisobot vaqti ham shu yerda.
 - Qila olasan: qo'ng'iroq, SMS oynasini ochish, ilovalarni ochish, budilnik, taymer, eslatma, fonar, ovoz balandligi, musiqa, navigator, buyurtmalar, lazer narxi, valyuta kursi, ob-havo, internetdan qidirish.
@@ -920,7 +920,7 @@ function loadSet(){
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
-  $("sRead").value=S.readMsg||"always";$("sBot").value=S.botName||"";$("sRepT").value=S.reportTime||"07:30";
+  $("sRead").value=S.readMsg||"always";$("sTopic").value=S.botTopic||"";$("sRepT").value=S.reportTime||"07:30";
   $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);
   $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";$("sCity").value=S.city||"";
   $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
@@ -938,7 +938,7 @@ bind("sPitch",v=>{S.pitch=+v;$("sPitchV").textContent=v},"input");
 ["r1","r2","r3","r4"].forEach(k=>bind(k,v=>S.rates[k]=+String(v).replace(/[^\d]/g,"")||0));
 function sw(id,key,after){$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle("on",S[key]);saveAll();after&&after()}}
 $("swBg").onclick=()=>setBg(!S.bg,true);
-bind("sRead",v=>S.readMsg=v);bind("sBot",v=>S.botName=v.trim());
+bind("sRead",v=>S.readMsg=v);bind("sTopic",v=>{S.botTopic=v.trim();S.botSince=0});
 bind("sRepT",v=>{S.reportTime=v||"07:30";schedReport()});
 sw("swRep","report",()=>schedReport());sw("swRate","rateWatch");
 bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
@@ -1034,6 +1034,26 @@ function botOrderFrom(m){
   const ph=t.match(/\+?998[\d\s\-]{9,}/);
   return {id:nid(),client:cm?cm[1].trim():"Botdan mijoz",phone:ph?ph[0].replace(/[^\d+]/g,""):"",item:((t.match(/Detal:\s*([^\n]+)/i)||[])[1]||t.slice(0,120)).trim(),price,paid:0,due:"",note:"Lazer botdan",status:"yangi",created:Date.now()};
 }
+async function pollBot(quiet){
+  if(!S.botTopic) return 0;
+  const since=S.botSince?String(S.botSince):"24h";
+  const r=await http(`https://ntfy.sh/${encodeURIComponent(S.botTopic)}/json?poll=1&since=${since}`,"GET",{},null,15000);
+  if(r.code!==200) return 0;
+  let added=0, newest=S.botSince||0, last=null;
+  for(const line of String(r.body).split("\n")){
+    if(!line.trim())continue; let ev; try{ev=JSON.parse(line)}catch(e){continue}
+    if(ev.event!=="message")continue; newest=Math.max(newest,(ev.time||0)+1);
+    let d; try{d=JSON.parse(ev.message)}catch(e){continue}
+    const key="bot#"+(d.n||ev.id); if(orders.some(o=>o.botKey===key))continue;
+    const o={id:nid(),botKey:key,client:(d.client||"Botdan mijoz")+(d.username?` (@${d.username})`:""),phone:d.phone||"",item:d.item||"",
+      price:+d.price||0,paid:0,due:"",note:"Lazer botdan",status:"yangi",created:d.at||Date.now()};
+    orders.push(o); added++; last=o;
+  }
+  S.botSince=newest; saveAll();
+  if(added){ renderOrders(); sys(`Lazer botdan ${added} ta yangi buyurtma qo'shildi.`);
+    if(!quiet) say(added===1?`Lazer botdan yangi buyurtma: ${last.client}${last.price?`, ${fmt(last.price)} so'm`:""}.`:`Lazer botdan ${added} ta yangi buyurtma keldi.`); }
+  return added;
+}
 function syncBot(){
   let l=[];try{l=JSON.parse(N.recentMsgs(30))}catch(e){} let added=0;
   for(const m of l){ if((m.time||0)<=(S.botSeen||0))continue; const o=botOrderFrom(m); if(o){orders.push(o);added++} }
@@ -1064,6 +1084,7 @@ async function morningReport(){
     parts.push(`${h<12?"Xayrli tong":h<18?"Xayrli kun":"Xayrli kech"}, ${S.name}. Bugun ${new Date().getDate()}-${OY[new Date().getMonth()]}, ${HAFTA[new Date().getDay()]}.`);
     const w=await weatherAnswer("bugun ob-havo"); if(w) parts.push(w);
     const rc=await rateCheck(true); if(rc) parts.push(rc.note||`Dollar ${fmt(Math.round(rc.v))} so'm.`);
+    try{ await pollBot(true) }catch(e){}
     const _d=new Date(), today=`${_d.getFullYear()}-${pad(_d.getMonth()+1)}-${pad(_d.getDate())}`;
     const open=openOrders(), due=open.filter(o=>o.due&&o.due<=today&&o.status!=="tayyor");
     if(open.length) parts.push(`Ochiq buyurtmalar ${open.length} ta${due.length?`, shundan ${due.length} tasining muddati bugun yoki o'tib ketgan: ${due.slice(0,3).map(o=>o.client).join(", ")}`:""}.`);
@@ -1074,6 +1095,9 @@ async function morningReport(){
     setState("idle"); say(parts.join(" "));
   } finally { busy=false; }
 }
+
+setInterval(()=>{ if(state==="idle"&&!busy) pollBot(false) },120000);
+setTimeout(()=>pollBot(false),2500);
 
 /* ================= Nazoratchi: doimiy tinglash to'xtab qolmasin ================= */
 setInterval(()=>{
