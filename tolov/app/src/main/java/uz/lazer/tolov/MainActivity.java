@@ -44,8 +44,6 @@ public class MainActivity extends Activity {
         l.addView(text("2. Bildirishnomalarni o'qishga ruxsat (Click, Payme, bank ilovalari uchun):", 14, "#FFFFFF"));
         Button nb = btn("Ruxsat berish → «Lazer To'lov»ni yoqing"); nb.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))); l.addView(nb);
 
-        l.addView(text("3. SMS orqali xabar keladigan bo'lsa:", 14, "#FFFFFF"));
-        Button sb = btn("SMSga ruxsat"); sb.setOnClickListener(v -> { if (Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{"android.permission.RECEIVE_SMS"}, 1); }); l.addView(sb);
 
         l.addView(text("4. Tekshirish:", 14, "#FFFFFF"));
         Button tb = btn("Sinov xabari yuborish"); tb.setOnClickListener(v -> {
@@ -64,10 +62,10 @@ public class MainActivity extends Activity {
     private void refresh() {
         String en = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
         boolean notif = en != null && en.contains(getPackageName());
-        boolean sms = Build.VERSION.SDK_INT < 23 || checkSelfPermission("android.permission.RECEIVE_SMS") == 0;
+        boolean sms = false;
         status.setText((Core.ready(this) ? "✅ Sozlangan" : "❗ Sozlash kodi kiritilmagan") + "\n" +
             (notif ? "✅ Bildirishnomalar o'qiladi" : "❗ Bildirishnomaga ruxsat yo'q") + "\n" +
-            (sms ? "✅ SMS o'qiladi" : "— SMS ruxsati yo'q (shart emas)"));
+            "");
         log.setText("Oxirgi yuborilganlar:\n" + Core.prefs(this).getString("log", "hali yo'q"));
     }
 
