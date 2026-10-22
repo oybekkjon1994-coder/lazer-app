@@ -3,7 +3,7 @@ android {
     namespace 'uz.lazer.tolov'
     compileSdk 34
     defaultConfig {
-        applicationId 'uz.lazer.tolov'
+        applicationId 'uz.lazer.tolovchi'
         minSdk 24
         targetSdk 34
         versionCode Integer.parseInt(System.getenv('RUN') ?: '1')
