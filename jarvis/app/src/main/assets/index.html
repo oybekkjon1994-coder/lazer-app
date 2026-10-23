@@ -2188,12 +2188,15 @@ async function stoveAnalyze(b64,hint){ hint=hint||""; stvPhoto=b64||""; stvInfo=
     j=stvJson(raw);
     if((!j||!Array.isArray(j.qismlar)||!j.qismlar.length)&&b64){ setState("think","qayta urinyapman"); raw=await visionAsk(b64,"",GEN_PROMPT+hp+"\nENG ODDIY model: 3–6 ta qism (quti/plastina/silindr), teshiksiz. Faqat JSON.",4000); const j3=stvJson(raw); if(j3&&Array.isArray(j3.qismlar)&&j3.qismlar.length) j=j3; }
     if(!raw) stvInfo="AI javob bermadi (API kalit yoki limit). Sozlamalarda kalitni tekshiring.";
-    if(j&&/pech/i.test(j.tur||"")){ busy=false; await stoveFlow(b64); return; }
-    if(!j||!Array.isArray(j.qismlar)||j.qismlar.length<1){ stvInfo=stvInfo||"AI javobini tushunib bo'lmadi. Izoh yozib qayta urining yoki qism qo'shing."; gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; busy=false; setState("idle"); genUI(); return; }
+    if(j&&(/pech/i.test(j.tur||"")||/pech/i.test(j.shablon||""))){ busy=false; await stoveFlow(b64); return; }
+    let tg=j?genTemplate(j):null;
+    if(!tg&&(!j||!Array.isArray(j.qismlar)||j.qismlar.length<1)){ stvInfo=stvInfo||"AI javobini tushunib bo'lmadi. Izoh yozib qayta urining yoki qism qo'shing."; gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; busy=false; setState("idle"); genUI(); return; }
     setState("think","internetdan qidiryapman");
     try{ const w=await webAnswer(`${j.qidir||j.nom}: typical real dimensions in mm (height, width, depth, material thickness, hole size). Raqamlar bilan javob ber.`); web=(w&&w.text)||""; if(/(topib bo.lmadi|topilmadi|aniq ma.lumot)/i.test(web)) web=""; }catch(e){}
-    if(web){ const m=await askRaw(`Buyum rasmidan olingan model JSON: ${JSON.stringify(j)}\nInternetdan topilgan o'lchamlar: ${web}\nShu o'lchamlarga mos qilib modelni tuzat (qismlar tuzilishi va koordinata sxemasi o'zgarmasin) va FAQAT to'liq JSON qaytar.`); const j2=stvJson(m); if(j2&&Array.isArray(j2.qismlar)&&j2.qismlar.length>=Math.max(1,j.qismlar.length-2)) j=Object.assign({},j,j2); }
-    gen=genFix(j); stvInfo=web?("Internetdan: "+web.slice(0,220)):"Rasm tahlil qilindi, internet ma'lumoti topilmadi — o'lchamlar taxminiy.";
+    if(tg){ if(web){ const m=await askRaw(`Buyum: ${JSON.stringify({shablon:j.shablon,L:j.L,W:j.W,H:j.H,legH:j.legH,n:j.n,t:j.t})}\nInternetdan topilgan o'lchamlar: ${web}\nShu o'lchamlarga mos qilib FAQAT JSON qaytar: {"L":..,"W":..,"H":..,"legH":..,"n":..,"t":..} (mm). Rasmdagi yozuvli o'lchamlarni o'zgartirma.`); const j2=stvJson(m); if(j2){ const keep={};  for(const k of ["L","W","H","legH","n","t"]) if(j2[k]>0&&!(hint&&new RegExp("\\b"+Math.round(j[k]||0)+"\\b").test(hint))) keep[k]=j2[k]; j=Object.assign({},j,keep); tg=genTemplate(j)||tg; } }
+      gen=tg; stvInfo=(web?("Internetdan: "+web.slice(0,200)+" — "):"")+`Shablon: ${j.shablon}. O'lchamlar taxminiy, qismlarni tuzatishingiz mumkin.`; }
+    else{ if(web){ const m=await askRaw(`Buyum rasmidan olingan model JSON: ${JSON.stringify(j)}\nInternetdan topilgan o'lchamlar: ${web}\nShu o'lchamlarga mos qilib modelni tuzat (qismlar tuzilishi va koordinata sxemasi o'zgarmasin) va FAQAT to'liq JSON qaytar.`); const j2=stvJson(m); if(j2&&Array.isArray(j2.qismlar)&&j2.qismlar.length>=Math.max(1,j.qismlar.length-2)) j=Object.assign({},j,j2); }
+      gen=genFix(j); stvInfo=web?("Internetdan: "+web.slice(0,220)):"Rasm tahlil qilindi, internet ma'lumoti topilmadi — o'lchamlar taxminiy."; }
   }catch(e){ stvInfo="Xatolik: "+String(e).slice(0,80); if(!gen) gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; }
   finally{ busy=false; setState("idle"); }
   genUI(); }
@@ -2349,11 +2352,31 @@ Koordinata: X=eni (chapdan o'ngga), Y=yuqoriga, Z=chuqurlik (old tomondan orqaga
 {"n":"qism nomi","k":"box","x":0,"y":0,"z":0,"sx":eni,"sy":balandligi,"sz":chuqurligi,"ochiq":"tepa yoki yoq","rang":"#rrggbb","teshik":{"f":"dumaloq yoki kvadrat","d":teshik_olchami,"dx":qadam_x,"dy":qadam_y,"m":chet_masofasi}},
 {"n":"qism nomi","k":"cyl","x":asos_markazi_x,"y":asos_y,"z":asos_markazi_z,"r":radius,"h":balandligi,"o":"y yoki x yoki z (o'q yo'nalishi)","arc":360 yoki yoy_gradusi,"a0":boshlanish_gradusi,"qopqoq":"ikki yoki yoq yoki past yoki tepa","rang":"#rrggbb","teshik":{...}},
 {"n":"qism nomi","k":"plate","p":"xz yoki xy yoki zy","x":0,"y":0,"z":0,"a":birinchi_olcham,"b":ikkinchi_olcham,"rang":"#rrggbb","teshik":{...}}]}
-Qoidalar: 4–14 ta qism. Bir xil qismlar (oyoq, tayanch) uchun "dona":N yozing yoki har birini alohida joylashtiring. Ko'rinmagan tomonlarini simmetriya va shu turdagi buyumning odatiy tuzilishidan taxmin qil. "teshik" faqat haqiqatan teshikli (perforatsiya) sirtlar uchun. Teshik bo'lmasa "teshik" ni yozma.`;
+Qoidalar: 4–14 ta qism. Bir xil qismlar (oyoq, tayanch) uchun "dona":N yozing yoki har birini alohida joylashtiring. Ko'rinmagan tomonlarini simmetriya va shu turdagi buyumning odatiy tuzilishidan taxmin qil. "teshik" faqat haqiqatan teshikli (perforatsiya) sirtlar uchun. Teshik bo'lmasa "teshik" ni yozma.
+MUHIM: avval buyum turini aniqla va JSON'ga "shablon" qo'sh: "mangal" (shashlik mangali), "stol", "javon", "skameyka", "pech" yoki "boshqa". Shablon "boshqa" bo'lmasa "qismlar" YOZMA, faqat umumiy o'lchamlarni ber: "L" (eni/uzunligi), "W" (chuqurligi), "H" (umumiy balandligi), "legH" (oyoq balandligi, mangal uchun), "n" (javon tokchalari soni), "t" (list qalinligi). Faqat "boshqa" bo'lsa qismlar bilan ifodala.`;
 const GEN_K={box:["sx","sy","sz"],cyl:["r","h"],plate:["a","b"]};
+function genLight(h){ if(!/^#[0-9a-f]{6}$/i.test(h||"")) return ""; const v=[1,3,5].map(i=>parseInt(h.substr(i,2),16)); const lum=0.3*v[0]+0.59*v[1]+0.11*v[2]; if(lum>=95) return h; const m=[138,148,157], k=Math.min(0.75,(95-lum)/95+0.35); return "#"+v.map((c,i)=>Math.round(c*(1-k)+m[i]*k).toString(16).padStart(2,"0")).join(""); }
 function genNum(v,d){ v=+v; return isFinite(v)?v:d; }
+
+/* --- tayyor andozalar (AI koordinata o'rniga faqat o'lcham beradi) --- */
+function P_(n,x,y,z,a,b,p,extra){ return Object.assign({n,k:"plate",p,x,y,z,a,b,dona:1,rang:""},extra||{}); }
+function B_(n,x,y,z,sx,sy,sz,extra){ return Object.assign({n,k:"box",x,y,z,sx,sy,sz,dona:1,rang:"",ochiq:false},extra||{}); }
+function genTemplate(j){ const sh=String(j.shablon||"").toLowerCase(); const t=Math.min(6,Math.max(1,genNum(j.t,sh==="mangal"?3:2))); const g={nom:String(j.nom||sh).slice(0,40),t,comps:[]};
+  const num=(k,d,lo,hi)=>Math.min(hi,Math.max(lo,genNum(j[k],d)));
+  if(sh==="mangal"){ const L=num("L",700,300,1500), W=num("W",300,150,600), H=num("H",450,200,900), legH=Math.min(num("legH",200,60,500),H*0.7), tr=H-legH; const hh=(d,dx,dy)=>({tf:"dumaloq",td:d,tdx:dx,tdy:dy,tm:25});
+    g.comps=[P_("Old devor",0,legH,0,L,tr,"xy",hh(14,50,50)),P_("Orqa devor",0,legH,W-t,L,tr,"xy",hh(14,50,50)),P_("Yon devor (oyoq bilan) 1",0,0,0,W,H,"zy"),P_("Yon devor (oyoq bilan) 2",L-t,0,0,W,H,"zy"),
+      P_("Tub (kul tushadigan)",t,legH+30,t,L-2*t,W-2*t,"xz",hh(12,40,40)),P_("Panjara (shashlik tagi)",t,legH+tr-60,t,L-2*t,W-2*t,"xz",{tf:"kvadrat",td:8,tdx:24,tdy:24,tm:20})]; }
+  else if(sh==="stol"){ const L=num("L",1200,300,3000), W=num("W",600,300,1500), H=num("H",750,300,1200), lg=num("leg",40,20,100);
+    g.comps=[P_("Stol usti",0,H-t,0,L,W,"xz"),B_("Oyoq 1",20,0,20,lg,H-t,lg),B_("Oyoq 2",L-20-lg,0,20,lg,H-t,lg),B_("Oyoq 3",20,0,W-20-lg,lg,H-t,lg),B_("Oyoq 4",L-20-lg,0,W-20-lg,lg,H-t,lg),
+      P_("Old-orqa tortqi 1",20+lg,H-t-60,20,L-40-2*lg,60,"xy"),P_("Old-orqa tortqi 2",20+lg,H-t-60,W-20-t,L-40-2*lg,60,"xy")]; }
+  else if(sh==="javon"){ const L=num("L",800,200,2500), W=num("W",300,100,800), H=num("H",1800,300,3000), n=Math.round(num("n",5,2,12));
+    g.comps=[P_("Yon devor 1",0,0,0,W,H,"zy"),P_("Yon devor 2",L-t,0,0,W,H,"zy")]; for(let i=0;i<n;i++) g.comps.push(P_("Tokcha "+(i+1),t,i*(H-t)/(n-1),0,L-2*t,W,"xz")); g.comps.push(P_("Orqa devor",t,0,W-t,L-2*t,H,"xy")); }
+  else if(sh==="skameyka"){ const L=num("L",1200,400,2500), W=num("W",350,200,600), H=num("H",450,250,700);
+    g.comps=[P_("O'rindiq",0,H-t,0,L,W,"xz"),P_("Yon oyoq 1",40,0,0,W,H-t,"zy"),P_("Yon oyoq 2",L-40-t,0,0,W,H-t,"zy"),P_("Tortqi",40+t,H*0.35,W/2-t/2,L-80-2*t,60,"xy")]; }
+  else return null;
+  return g; }
 function genFix(j){ const g={nom:String(j.nom||"Buyum").slice(0,40),t:Math.min(6,Math.max(0.5,genNum(j.t,2))),comps:[]};
-  for(const c of (Array.isArray(j.qismlar)?j.qismlar:[]).slice(0,16)){ const k=c.k==="cyl"||c.k==="plate"?c.k:"box"; const o={n:String(c.n||k).slice(0,30),k,x:genNum(c.x,0),y:genNum(c.y,0),z:genNum(c.z,0),dona:Math.max(1,Math.min(20,Math.round(genNum(c.dona,1)))),rang:/^#[0-9a-f]{6}$/i.test(c.rang||"")?c.rang:""};
+  for(const c of (Array.isArray(j.qismlar)?j.qismlar:[]).slice(0,16)){ const k=c.k==="cyl"||c.k==="plate"?c.k:"box"; const o={n:String(c.n||k).slice(0,30),k,x:genNum(c.x,0),y:genNum(c.y,0),z:genNum(c.z,0),dona:Math.max(1,Math.min(20,Math.round(genNum(c.dona,1)))),rang:genLight(c.rang)};
     if(k==="box"){ o.sx=Math.max(1,genNum(c.sx,100)); o.sy=Math.max(1,genNum(c.sy,100)); o.sz=Math.max(1,genNum(c.sz,100)); o.ochiq=/tepa/.test(c.ochiq||""); }
     if(k==="cyl"){ o.r=Math.max(1,genNum(c.r,50)); o.h=Math.max(1,genNum(c.h,100)); o.o=/^[xz]$/.test(c.o)?c.o:"y"; o.arc=Math.min(360,Math.max(30,genNum(c.arc,360))); o.a0=genNum(c.a0,0); o.qopqoq=/yoq|past|tepa|ikki/.test(c.qopqoq||"")?c.qopqoq:"ikki"; }
     if(k==="plate"){ o.p=/^(xy|zy)$/.test(c.p)?c.p:"xz"; o.a=Math.max(1,genNum(c.a,100)); o.b=Math.max(1,genNum(c.b,100)); }
