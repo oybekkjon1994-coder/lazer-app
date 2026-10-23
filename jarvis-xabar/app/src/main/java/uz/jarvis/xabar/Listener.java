@@ -88,7 +88,7 @@ public class Listener extends NotificationListenerService {
             Intent i = new Intent("uz.jarvis.MESSAGE").setPackage(JARVIS)
                     .putExtra("app", app).putExtra("from", from).putExtra("text", text)
                     .putExtra("time", m.time).putExtra("canReply", m.reply != null);
-            final String line = app + ", " + from + " dan xabar: " + text;
+            final String line = app + "da " + from + "dan shaxsiy xabar keldi.";
             // Jarvis ochiq bo'lsa o'zi o'qiydi (natija = 1); aks holda shu yerda o'qiymiz
             sendOrderedBroadcast(i, PERM, new BroadcastReceiver() {
                 @Override public void onReceive(Context c, Intent r) {

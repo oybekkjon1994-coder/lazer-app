@@ -412,13 +412,13 @@ const J = window.J = {
   onCloudFail(code){ sys(code===401||code===403?"Azure kaliti yoki hududi xato — oddiy ovozga o'tdim.":"Bulut ovozi ishlamadi — oddiy ovoz bilan aytaman.");
     if(code===401||code===403){S.cloud=false;saveAll();loadSet()} N.speak(forTTS(lastSpoken),S.rate,S.pitch); },
   onSpeakDone(){if(reading){ setTimeout(readNext,150); return; } if(labbay){followUntil=Date.now()+8000;labbay=false}
-    if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgLine(m),true); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
+    if(msgQueue.length){ const m=msgQueue.shift(); setState("idle"); say(msgShort(m),true); return; }if(state==="speak"||state==="think")setState("idle");afterTurn()},
   onMessage(js){ let m; try{m=JSON.parse(js)}catch(e){return}
     lastMsg=m; sys(`📩 ${m.app} · ${m.from}: ${m.text}`);
     { const bo=botOrderFrom(m); if(bo){ orders.push(bo); S.botSeen=Math.max(S.botSeen||0,m.time||Date.now()); saveAll(); renderOrders();
         say(`Lazer botdan yangi buyurtma${bo.price?`, ${fmt(bo.price)} so'm`:""}. Buyurtmalarga qo'shdim.`); return; } }
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
-    if(state==="idle"||state==="listen"){ say(msgLine(m)+(m.canReply?". Javob berish uchun: Jarvis, javob ber, deng.":""),true) } else msgQueue.push(m); },
+    if(state==="idle"||state==="listen"){ say(msgShort(m),true) } else msgQueue.push(m); },
   morning(){ go("pJarvis"); voiceIn=true; morningReport(); },
   onShared(b64){ go("pJarvis"); if(!b64){ sys("Rasmni olib bo'lmadi."); return; }
     $("sheet").innerHTML=`<h2>📥 Rasm keldi</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px">
@@ -483,8 +483,9 @@ function startLoop(quiet){if(loop)return;loop=true;errStreak=0;if(S.awake)N.keep
 function stopLoop(){loop=false;setTimeout(chipText,0);N.keepAwake(false);N.stopListen();if(state==="listen")setState("idle")}
 
 let followUntil=0, labbay=false, pausedRead=null;
-let msgQueue=[], pendingReply=null, lastMsg=null;
+let msgQueue=[], pendingReply=null, lastMsg=null, askRead=0, askList=[];
 function msgLine(m){ return `${m.app}, ${m.from}dan xabar: ${m.text}` }
+function msgShort(m){ return `${m.app}da ${m.from}dan shaxsiy xabar keldi.` }
 function setCar(on,quiet){
   S.car=!!on; saveAll(); document.body.classList.toggle("car",S.car); $("chipCar").classList.toggle("on",S.car);
   if(S.car){ S.voice=true; S.wake=true; saveAll(); loadSet(); N.keepAwake(true); if(!loop)startLoop(true);
@@ -623,10 +624,21 @@ function quick(t){
   { const m1=g.match(/^(?:(.+?)(?:ga|ka|qa) )?javob (?:ber|yoz|yubor|qaytar)[:,]?\s+(.+)$/);
     if(m1 && !/(tayyorla|o'yla|nima deb)/.test(g)){ const to=m1[1]||"", txt=m1[2];
       return replyMsg(N.reply(to,txt)); } }
-  if(/(xabarlar|xabarni o'qi|xabarlarni o'qi|kim yozdi|yangi xabar|kim yozgan|xabar kel|xabar bormi|sms kel)/.test(s)){
+  if(/(xabarlar|xabarni o'qi|xabarini o'qi|xabarlarini o'qi|xabarlarni o'qi|kim yozdi|yangi xabar|kim yozgan|xabar kel|xabar bormi|sms kel|nima deb yozdi|nima yozdi|nima yozibdi)/.test(s)){
     if(!N.xabarInstalled()) return NOAPP; if(!N.hasNotifAccess()) return "Jarvis Xabar ilovasini ochib, ruxsat bering.";
-    let l=[];try{l=JSON.parse(N.recentMsgs(5))}catch(e){} if(!l.length) return "Yangi xabar yo'q.";
-    return l.map(m=>`${m.from}: ${m.text}`).join(". "); }
+    let l=[];try{l=JSON.parse(N.recentMsgs(10))}catch(e){} if(!l.length) return "Yangi shaxsiy xabar yo'q.";
+    const app=/telegram/.test(s)?"Telegram":/whatsapp|vatsap/.test(s)?"WhatsApp":/instagram|insta/.test(s)?"Instagram":/sms/.test(s)?"SMS":"";
+    if(app) l=l.filter(m=>m.app===app); if(!l.length) return `${app}da yangi shaxsiy xabar yo'q.`;
+    // matnni faqat so'ralsa o'qiymiz
+    if(/(o'qi|nima deb|nima yoz|matn)/.test(s)){
+      const who=l.filter(m=>s.includes(String(m.from).toLowerCase().split(" ")[0]));
+      const pick=(who.length?who:l).slice(-3); lastMsg=pick[pick.length-1];
+      return pick.map(m=>`${m.from}: ${m.text}`).join(". "); }
+    const cnt={}; l.forEach(m=>{ const k=m.from+"|"+m.app; cnt[k]=(cnt[k]||0)+1; });
+    const names=Object.keys(cnt).map(k=>{ const [f,a]=k.split("|"); return `${f}${app?"":` (${a})`}${cnt[k]>1?`, ${cnt[k]} ta`:""}`; });
+    lastMsg=l[l.length-1]; askRead=Date.now(); askList=l.slice(-3);
+    return `Sizga ${names.length===1?"":names.length+" kishi "}yozgan: ${names.join("; ")}. O'qib beraymi?`; }
+  if(/^(ha|ha o'qi|o'qi|o'qib ber|mayli)$/.test(g) && lastMsg && Date.now()-askRead<120000){ askRead=0; return (askList.length?askList:[lastMsg]).map(m=>`${m.from}: ${m.text}`).join(". "); }
   if(reading && /^(to'xta|stop|pauza|bas|jim)/.test(g)){ const r=reading; reading=null; N.stopSpeak(); pausedRead=r; return "To'xtatdim. Davom ettirish uchun: Jarvis, davom et."; }
   if(/^(davom et|davom ettir|o'qishda davom)/.test(g) && pausedRead){ reading=pausedRead; pausedRead=null; setTimeout(readNext,50); return ""; }
   if(/(maqola|kitob|matn).*(o'qi|o'qib ber)|o'qib ber$/.test(g)){ setTimeout(openReader,50); return "Havola yoki matnni qo'ying."; }
