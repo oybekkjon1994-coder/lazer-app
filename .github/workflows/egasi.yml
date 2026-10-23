@@ -41,7 +41,7 @@ jobs:
 
       - name: Versiya raqami
         run: |
-          sed -i "s/versionCode [0-9]*/versionCode $((1000 + ${{ github.run_number }}))/" android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode $((3000 + ${{ github.run_number }}))/" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"egasi-${{ github.run_number }}\"/" android/app/build.gradle
 
       - name: Egasi versiyasi (aktivatsiyasiz)
