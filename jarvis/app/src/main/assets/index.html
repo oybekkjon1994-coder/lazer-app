@@ -176,6 +176,10 @@ body.car #mic{width:76px;height:76px}
     <label>API kalit</label>
     <input id="sKey" type="password" placeholder="Kalitni shu yerga qo'ying">
     <p class="mut" style="margin:6px 0 0">Ikkala kalitni ham saqlab qo'yish mumkin: xizmatni almashtirsangiz, o'sha kalit chiqadi. Rasmlarni tahlil qilishda zaxira sifatida Gemini kaliti ham ishlatiladi.</p>
+    <label id="sKey2L">Zaxira kalit</label>
+    <input id="sKey2" type="password" placeholder="Ikkinchi xizmat kaliti (limit tugasa shu ishlaydi)">
+    <p class="mut" style="margin:6px 0 0">Asosiy xizmat limiti tugasa, Jarvis o'zi zaxira kalitga o'tadi. Ikkala kalit — deyarli limitsiz ishlash.</p>
+    <button class="btn g" id="sKey2Btn" style="width:100%;margin-top:6px">Zaxira kalit olish sahifasi</button>
     <label>Model</label>
     <input id="sModel">
     <div class="row" style="margin-top:10px">
@@ -663,24 +667,22 @@ function quick(t){
 }
 
 /* ================= AI ================= */
-function sysPrompt(){
-  const r=S.rates;
-  return `Sen "Jarvis"san — Temir odamdagi Jarvis kabi aqlli, xushmuomala va qisqa gapiradigan shaxsiy yordamchi.
-Salomatlik/oila savollarida javob 2–4 gap bo'lishi mumkin.
+function sysPrompt(q){
+  const r=S.rates; q=String(q||"").toLowerCase(); const has=re=>re.test(q); const all=!q;
+  const P=[];
+  P.push(`Sen "Jarvis"san — Temir odamdagi Jarvis kabi aqlli, xushmuomala va qisqa gapiradigan shaxsiy yordamchi.
 Egang lazer kesish, CNC va metall ishlari ustaxonasini yuritadi (Metartshop, Instagram @metart_shop). Unga "${S.name}" deb murojaat qil.
-${S.persona==="hazil"?"Xarakteringiz: Toni Starkning Jarvisi kabi — juda odobli, lekin nozik kinoya va yengil hazil bilan gapir (har javobda emas, o'rni kelganda). Hazil hech qachon haqoratli yoki qo'pol bo'lmasin; jiddiy mavzularda (salomatlik, pul, oila muammosi) hazil qilma.\n":""}Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Har qanday savolga — ish, oila, bola tarbiyasi, salomatlik, hayotiy maslahat — mazmunli, amaliy javob ber; hech qachon savolni chetlab o'tma.
-Salomatlik savollarida (ayniqsa bolalar): avval eng muhim amaliy maslahatni ber, keyin xavfli belgilarni (yuqori harorat, nafas qiyinlashuvi, hushsizlik, to'xtamaydigan yig'i, qayt qilish va h.k.) ayt va bunday holatda darhol shifokorga yoki 103 ga murojaat qilishni maslahat ber. Dori dozasini aytma — shifokor yoki dorixonachiga yo'naltir. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.
-Pul summalarini "150 ming so'm" kabi yoz.
-
-Hozirgi vaqt: ${nowStr()}.${S.car?"\nEgang hozir mashinada bo'lishi mumkin: javoblarni qisqa qil, ekranga qarashni talab qilma. Lekin savolning O'ZIGA javob ber — mavzuni haydashga burma.":""}
-Oxirgi kelgan xabarlar: ${(()=>{try{return N.recentMsgs(5)}catch(e){return "[]"}})()}
-Saqlangan raqamlar (ism: raqam): ${JSON.stringify(S.people)}
-Saqlangan manzillar: uy — ${S.places.uy||"kiritilmagan"}; ustaxona — ${S.places.ustaxona||"kiritilmagan"}.
-Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.
-Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}
-Qaydlar/eslatmalar (JSON): ${JSON.stringify(notes.slice(-30).map(n=>({id:n.id,matn:n.text,vaqt:n.at?new Date(n.at).toLocaleString("ru-RU"):null,bajarildi:!!n.done})))}
-
-O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
+${S.persona==="hazil"?"Toni Starkning Jarvisi kabi odobli, o'rni kelganda nozik hazil bilan gapir; jiddiy mavzularda hazil qilma.\n":""}Har doim O'ZBEK tilida (lotin yozuvida) javob ber. Har qanday savolga mazmunli, amaliy javob ber; savolni chetlab o'tma. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va emoji ishlatma. Pul summalarini "150 ming so'm" kabi yoz.
+Hozirgi vaqt: ${nowStr()}.${S.car?"\nEgang mashinada bo'lishi mumkin: javob qisqa, ekranga qarashni talab qilma.":""}`);
+  if(all||has(/(kasal|isitma|harorat|dori|shifokor|vrach|og'ri|salomat|yo'tal|qusi|qayt qil|tish|bola|chaqaloq|bosim|allergi)/)) P.push(`Salomatlik savollarida (ayniqsa bolalar): avval eng muhim amaliy maslahatni ber, keyin xavfli belgilarni (yuqori harorat, nafas qiyinlashuvi, hushsizlik, to'xtamaydigan yig'i, qayt qilish va h.k.) ayt va bunday holatda darhol shifokorga yoki 103 ga murojaat qilishni maslahat ber. Dori dozasini aytma — shifokor yoki dorixonachiga yo'naltir. Javob ovoz chiqarib o'qiladi: 1–3 qisqa gap, ro'yxat va belgilar ishlatma, emoji ishlatma.`);
+  if(all||has(/(xabar|javob|yozdi|telegram|whatsapp|instagram|direct|sms|mijoz)/)) P.push(`Oxirgi kelgan xabarlar: ${(()=>{try{return N.recentMsgs(5)}catch(e){return "[]"}})()}`);
+  if(all||has(/(qo'ng'iroq|qongiroq|tel qil|telefon qil|sms|raqam|xotin|ona|ota|aka|uka|opa|singil|do'st)/)) P.push(`Saqlangan raqamlar (ism: raqam): ${JSON.stringify(S.people)}`);
+  if(all||has(/(uy|ustaxona|yo'l|navigat|manzil|bor(ish|aman))/)) P.push(`Saqlangan manzillar: uy — ${S.places.uy||"kiritilmagan"}; ustaxona — ${S.places.ustaxona||"kiritilmagan"}.`);
+  if(all||has(/(narx|lazer|kes|metr|mm|dxf|qancha|necha pul|chizma|naqsh|darvoza|panjara|zakaz|buyurtma|mijoz)/)) P.push(`Lazer kesish narxi (so'm/metr): 1–2mm ${r.r1}, 3–4mm ${r.r2}, 5–6mm ${r.r3}, 8–10mm ${r.r4}.`);
+  if(all||has(/(buyurtma|zakaz|mijoz|hisobot|to'la|qarz|tayyor|topshir|muddat|navbat|ish(lar)? bormi|bugun nima)/)) P.push(`Buyurtmalar (JSON): ${JSON.stringify(ordersBrief())}`);
+  if(all||has(/(eslat|qayd|yozib qo'y|yozib qoy|bajarildi|reja|nima qilishim|bugun nima|esla)/)) P.push(`Qaydlar/eslatmalar (JSON): ${JSON.stringify(notes.slice(-30).map(n=>({id:n.id,matn:n.text,vaqt:n.at?new Date(n.at).toLocaleString("ru-RU"):null,bajarildi:!!n.done})))}`);
+  if(all||has(/(qanday|qanaqa|nima qila|nimalar|sozla|yoqish|ishlat|funksiya|qila olasan|imkon|ruxsat|tinglash|fonda|mashina rejim|kompyuter|pinterest|katalog|naqsh|xabar|o'qib ber|ovchi|olx|bilim|hazil|azure|ovoz)/))
+    P.push(`O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Tugmasiz/doimiy tinglash: Jarvis ekranidagi "Doimiy tinglash" tugmasi yoki Sozlamalar → "Fonda ham tinglash". Yoqilgach ilovadan chiqsa ham "Jarvis" so'zini eshitadi. Buning uchun "Boshqa ilovalar ustida ko'rsatish" va "Batareya cheklovisiz" ruxsatlari kerak (Sozlamalar → Tugmasiz boshqarish → "Ruxsat" tugmalari). Xiaomi/Redmi'da Sozlamalar → Ilovalar → Jarvis → "Avtozapusk" va "Fonda oyna ochish"ni yoqish kerak. Bildirishnomada "Jarvis tinglayapti" turishi kerak.
 - Hozir fon rejimi: ${S.bg?"YOQILGAN":"O'CHIQ"}${S.bg?"":" (shuning uchun ilovadan chiqqanda eshitmaydi — yoqishni taklif qil)"}.
 - Mashina rejimi: 🚗 Mashina tugmasi. Uy/ustaxona manzili va shahar: Sozlamalar → Mashina.
@@ -698,7 +700,17 @@ O'zing haqingda (foydalanuvchi so'rasa, aniq yo'l-yo'riq ber):
 - Xabarlar alohida "Jarvis Xabar" ilovasi orqali ishlaydi (Xiaomi uni Jarvis ichida bloklaydi). U o'rnatilmagan bo'lsa shuni ayt.
 - Xabarlar: kelgan Telegram/WhatsApp/Instagram/SMS xabarlarini o'qiysan va ovoz bilan javob yuborasan ("Jarvis, javob ber: ..."). Buning uchun Sozlamalar → Xabarlar va hisobot → "Ruxsat". Ertalabki hisobot vaqti ham shu yerda.
 - Qila olasan: qo'ng'iroq, SMS oynasini ochish, ilovalarni ochish, budilnik, taymer, eslatma, fonar, ovoz balandligi, musiqa, navigator, buyurtmalar, lazer narxi, valyuta kursi, ob-havo, internetdan qidirish.
-- Qila olmaysan: boshqa ilovalar ICHIDA ishlash (masalan Telegram'da xabar o'qish/yozish — faqat Telegram'ni ochasan yoki "share" orqali matn yuborish oynasini ochasan), mashinaning o'zini boshqarish.
+- Qila olmaysan: boshqa ilovalar ICHIDA ishlash (masalan Telegram'da xabar o'qish/yozish — faqat Telegram'ni ochasan yoki "share" orqali matn yuborish oynasini ochasan), mashinaning o'zini boshqarish.`);
+  else P.push(`Sen qila olasan: qo'ng'iroq, SMS oynasi, ilovalar, budilnik, taymer, eslatma, fonar, ovoz, musiqa, navigator, buyurtmalar, lazer narxi, DXF yasash, ${LIB().length} ta tayyor naqsh katalogi ("pattern"), kompyuter ("pc"), Pinterest, kurs, ob-havo, internet. Boshqa ilovalar ichida ishlay olmaysan. Hozir fon rejimi: ${S.bg?"yoqilgan":"o'chiq"}.`);
+  if(all||has(/(instagram|insta|post|reels|rils|trend|olx|e'lon|elon|ssenariy|stsenariy|reklama|joyla|statistika|obunachi)/)) P.push(`Instagram post, Reels ssenariy, trend moslash yoki OLX e'lon so'ralsa: to'liq matnni "show" va "copy" bilan ber (o'zbekcha va ruscha, heshteglar bilan), "say"da faqat 1 gap: "Matn tayyor, nusxalab qo'ydim". Trendlar so'ralsa avval "web" bilan hozirgi Instagram Reels trendlarini qidir.
+Instagram'ga qachon joylash so'ralsa: ${BEST_TIME} Kerak bo'lsa 20:45 ga "remind" qo'y.
+Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi Jarvis Instagram statistikasiga ulana olmasligini ayt; bu tahlilni Claude ilovasida Metricool orqali qilish mumkin.`);
+  const A={ORD:all||has(/(buyurtma|zakaz|mijoz|to'la|qarz|tayyor|topshir|muddat|navbat|hisobot|o'chir)/),
+    LAS:all||has(/(narx|lazer|kes|metr|mm\b|dxf|chizma|naqsh|darvoza|panjara|teshik|to'rtburchak|doira|katalog|qancha)/),
+    PC:all||has(/(kompyuter|komp|pc|bot|zaxira|navbat|fayl)/), PIN:all||has(/(pinterest|g'oya|goya|ilhom|dizayn)/),
+    MSG:all||has(/(xabar|javob|yoz|yubor|telegram|whatsapp|instagram|direct|mijoz)/), SAVE:all||has(/(saqla|esla|manzil|raqam|kontakt|o'chir)/),
+    PHO:all||has(/(rasm|surat|foto|kamera|chizma)/), NOTE:all||has(/(eslat|qayd|bajarildi|reja)/)};
+  return P.join("\n")+`
 
 FAQAT JSON qaytar: {"say":"aytiladigan matn","actions":[...]}
 Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
@@ -706,42 +718,24 @@ Mumkin bo'lgan actions (kerak bo'lmasa bo'sh ro'yxat):
 {"type":"sms","name":"...","number":"...","text":"..."}
 {"type":"alarm","hour":7,"minute":30,"label":"..."}
 {"type":"timer","seconds":300,"label":"..."}
-{"type":"remind","text":"...","at":"YYYY-MM-DD HH:MM"}   // aniq vaqtda bildirishnoma
-{"type":"note","text":"..."}                             // vaqtsiz qayd
-{"type":"note_done","id":123}
-{"type":"open_app","name":"telegram"}
-{"type":"search","query":"..."}  {"type":"youtube","query":"..."}  {"type":"map","query":"..."}
-{"type":"torch","on":true}  {"type":"volume","percent":70}
-{"type":"add_order","client":"...","phone":"...","item":"...","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}
-{"type":"update_order","id":123,"status":"yangi|jarayonda|tayyor|topshirildi","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}
-{"type":"delete_order","id":123}
-{"type":"laser_price","meters":12.5,"thickness":3,"qty":1}   // narxni ilova o'zi hisoblab aytadi
-{"type":"share","text":"..."}                                 // matnni Telegram va h.k. orqali yuborish oynasi
-{"type":"navigate","query":"manzil yoki joy nomi"}           // navigatorda yo'l ochish ("uy"/"ustaxona" — saqlangan manzil)
-{"type":"media","cmd":"play|pause|next|prev"}                 // musiqani boshqarish
-{"type":"place_save","name":"uy|ustaxona","address":"..."}    // manzilni eslab qolish
-{"type":"contact_save","name":"xotinim","number":"+998..."}   // raqamni eslab qolish (keyin "xotinimga qo'ng'iroq qil" ishlaydi)
-{"type":"contact_delete","name":"..."}
-{"type":"reply_draft","to":"kimga (bo'sh = oxirgi xabar)","text":"javob matni"}  // mijozga javob TAKLIFI — yuborishdan oldin egang tasdiqlaydi
-{"type":"reply","to":"...","text":"..."}                      // faqat egang aniq matnni aytib "yubor" desa
-{"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1}  // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm
-{"type":"pattern","query":"naqsh nomi/turi: masalan 'panjara 12 qirrali'","w":600,"h":400,"frame":3,"fit":"fit|stretch","thickness":2,"qty":1}  // KATALOGDAGI tayyor naqshdan DXF (o'lchamga moslab, ramka bilan)
-{"type":"pc","cmd":"status|find|send_dxf|queue|backup|bot_start|open_folder","q":"fayl nomi (find uchun)"}  // KOMPYUTER bilan ishlash
-{"type":"pinterest","query":"..."}                             // Pinterest'da g'oya qidirish
-{"type":"ideas","tag":"darvoza|panjara|mangal|soat|polka|dekor|pech|boshqa"} // saqlangan g'oyalarni ko'rsatish
-{"type":"photo","question":"...","dxf":false}                 // dxf:true — chizma suratidan o'lchamlarni o'qib DXF yasash                               // rasmni ko'rib berish (kamera/galereya ochiladi)
-{"type":"show","text":"uzun matn"}                              // post, OLX e'lon, ssenariy — ekranga chiqarish (ovoz chiqarib o'qilmaydi)
-{"type":"copy","text":"..."}                                    // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
-{"type":"listen","on":false}                                  // doimiy tinglashni o'chirish/yoqish
-{"type":"web","query":"aniq qidiruv so'rovi"}                // internetdan qidirib javob berish
+{"type":"remind","text":"...","at":"YYYY-MM-DD HH:MM" } // aniq vaqtda bildirishnoma
+{"type":"note","text":"..." } // vaqtsiz qayd
+${A.NOTE?`{"type":"note_done","id":123}\n`:""}{"type":"open_app","name":"telegram"}
+{"type":"search","query":"..."} {"type":"youtube","query":"..."} {"type":"map","query":"..."}
+{"type":"torch","on":true} {"type":"volume","percent":70}
+${A.ORD?`{"type":"add_order","client":"...","phone":"...","item":"...","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}\n`:""}${A.ORD?`{"type":"update_order","id":123,"status":"yangi|jarayonda|tayyor|topshirildi","price":0,"paid":0,"due":"YYYY-MM-DD","note":"..."}\n`:""}${A.ORD?`{"type":"delete_order","id":123}\n`:""}${A.LAS?`{"type":"laser_price","meters":12.5,"thickness":3,"qty":1 } // narxni ilova o'zi hisoblab aytadi\n`:""}{"type":"share","text":"..." } // matnni Telegram va h.k. orqali yuborish oynasi
+{"type":"navigate","query":"manzil yoki joy nomi" } // navigatorda yo'l ochish ("uy"/"ustaxona" — saqlangan manzil)
+{"type":"media","cmd":"play|pause|next|prev" } // musiqani boshqarish
+${A.SAVE?`{"type":"place_save","name":"uy|ustaxona","address":"..." } // manzilni eslab qolish\n`:""}${A.SAVE?`{"type":"contact_save","name":"xotinim","number":"+998..." } // raqamni eslab qolish (keyin "xotinimga qo'ng'iroq qil" ishlaydi)\n`:""}${A.SAVE?`{"type":"contact_delete","name":"..."}\n`:""}${A.MSG?`{"type":"reply_draft","to":"kimga (bo'sh = oxirgi xabar)","text":"javob matni" } // mijozga javob TAKLIFI — yuborishdan oldin egang tasdiqlaydi\n`:""}${A.MSG?`{"type":"reply","to":"...","text":"..." } // faqat egang aniq matnni aytib "yubor" desa\n`:""}${A.LAS?`{"type":"dxf","name":"fayl nomi","w":500,"h":300,"r":0,"d":0,"holes":[{"x":30,"y":30,"d":10}],"thickness":3,"qty":1 } // DXF yasash: to'rtburchak (w×h, r — burchak radiusi) yoki doira (d); teshiklar markazi chap-pastki burchakdan mm\n`:""}${A.LAS?`{"type":"pattern","query":"naqsh nomi/turi: masalan 'panjara 12 qirrali'","w":600,"h":400,"frame":3,"fit":"fit|stretch","thickness":2,"qty":1 } // KATALOGDAGI tayyor naqshdan DXF (o'lchamga moslab, ramka bilan)\n`:""}${A.PC?`{"type":"pc","cmd":"status|find|send_dxf|queue|backup|bot_start|open_folder","q":"fayl nomi (find uchun)" } // KOMPYUTER bilan ishlash\n`:""}${A.PIN?`{"type":"pinterest","query":"..." } // Pinterest'da g'oya qidirish\n`:""}${A.PIN?`{"type":"ideas","tag":"darvoza|panjara|mangal|soat|polka|dekor|pech|boshqa"} // saqlangan g'oyalarni ko'rsatish\n`:""}${A.PHO?`{"type":"photo","question":"...","dxf":false } // dxf:true — chizma suratidan o'lchamlarni o'qib DXF yasash                               // rasmni ko'rib berish (kamera/galereya ochiladi)\n`:""}{"type":"show","text":"uzun matn" } // post, OLX e'lon, ssenariy — ekranga chiqarish (ovoz chiqarib o'qilmaydi)
+{"type":"copy","text":"..." } // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
+{"type":"listen","on":false } // doimiy tinglashni o'chirish/yoqish
+{"type":"web","query":"aniq qidiruv so'rovi" } // internetdan qidirib javob berish
+
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
 BILIM: Sen juda ko'p narsani bilasan (tarix, fan, texnika, mashinalar, filmlar, seriallar, kitoblar, sport, din, tibbiyot, retseptlar, biznes...). Umumiy bilimga oid savolga O'ZING darhol javob ber — "web" kerak emas.
 "web" amalini FAQAT yangi/o'zgaruvchan ma'lumot uchun ishlat: bugungi yangiliklar, narxlar, kurs, ob-havo, sport natijalari, kimningdir hozirgi lavozimi, aniq manzil/telefon. Bunda "say"ga o'zing bilgan qisqa javobni ham yoz (qidiruv natija bermasa, shu aytiladi).
 TOPIB BERISH: film, serial, multfilm, qo'shiq, video, darslik so'ralsa — "youtube" amalini ishlat (rasmiy/qonuniy manbalar), "say"da u haqida 1–2 gap ayt (nima ekan, nechta qism/yil). Qaroqchi saytlarni taklif qilma. Sayt, do'kon yoki joy so'ralsa — "search" yoki "map".
 "Bilmayman" yoki "topilmadi" deyishdan oldin o'z bilimingdan eng yaxshi javobni ber; aniq bo'lmasang "taxminan" de. Mijoz narx so'rasa (Instagram Direct, Telegram): lazer narxlari, metall turi va qalinligini hisobga olib, xushmuomala qisqa javob TAKLIFI tuzib "reply_draft" bilan ber; aniq narx uchun o'lcham yoki chizma so'rashni qo'sh. "say"da: "Shunday javob yozay: ... Yuboraymi?"
-Instagram post, Reels ssenariy, trend moslash yoki OLX e'lon so'ralsa: to'liq matnni "show" va "copy" bilan ber (o'zbekcha va ruscha, heshteglar bilan), "say"da faqat 1 gap: "Matn tayyor, nusxalab qo'ydim". Trendlar so'ralsa avval "web" bilan hozirgi Instagram Reels trendlarini qidir.
-Instagram'ga qachon joylash so'ralsa: ${BEST_TIME} Kerak bo'lsa 20:45 ga "remind" qo'y.
-Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi Jarvis Instagram statistikasiga ulana olmasligini ayt; bu tahlilni Claude ilovasida Metricool orqali qilish mumkin.
 Hech qachon bajarmagan amalni "qildim" dema — faqat actions ro'yxatidagi amallar haqiqatan bajariladi. Xavfli yoki noqonuniy ishga yordam berma.`;
 }
 
@@ -935,17 +929,18 @@ ${ctxt}`);
 
 async function askAI(userText){
   if(!S.key) return {say:"Men hali to'liq aqlga ega emasman. Sozlamalarga bepul API kalitni kiriting — shunda hamma narsaga javob bera olaman.",actions:[]};
-  const h=hist.slice(-12);
+  const h=hist.slice(-6).map(m=>({r:m.r,t:String(m.t).length>500?String(m.t).slice(0,500)+"…":m.t}));
+  const spQ=[userText,...h.slice(-2).map(m=>m.t)].join(" "); const SP=sysPrompt(spQ);
   let url,headers,body,pick;
   if(S.prov==="groq"){
     url="https://api.groq.com/openai/v1/chat/completions";
     headers={"Content-Type":"application/json","Authorization":"Bearer "+S.key};
     body={model:S.groqModel||DEF.groqModel,temperature:0.5,response_format:{type:"json_object"},
-      messages:[{role:"system",content:sysPrompt()},...h.map(m=>({role:m.r==="u"?"user":"assistant",content:m.t})),{role:"user",content:userText}]};
+      messages:[{role:"system",content:SP},...h.map(m=>({role:m.r==="u"?"user":"assistant",content:m.t})),{role:"user",content:userText}]};
     pick=d=>d.choices[0].message.content;
   }else{
     headers={"Content-Type":"application/json","x-goog-api-key":S.key};
-    body={systemInstruction:{parts:[{text:sysPrompt()}]},
+    body={systemInstruction:{parts:[{text:SP}]},
       contents:[...h.map(m=>({role:m.r==="u"?"user":"model",parts:[{text:m.t}]})),{role:"user",parts:[{text:userText}]}],
       generationConfig:{temperature:0.5,responseMimeType:"application/json",maxOutputTokens:1500}};
     pick=d=>(d.candidates[0].content.parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("");
@@ -965,7 +960,7 @@ async function askAI(userText){
   }
   // Limit (429): boshqa bepul modellarga, keyin ikkinchi provayderga o'tamiz — har birining limiti alohida
   if(r.code===429||r.code>=500){
-    const sys0=sysPrompt(), hh=h.slice(-4);
+    const sys0=SP, hh=h.slice(-4);
     const gq=S.keys.groq||(S.prov==="groq"?S.key:""), gk=S.keys.gemini||(S.prov!=="groq"?S.key:"");
     const tries=[];
     if(gq) for(const m of ["openai/gpt-oss-120b","llama-3.3-70b-versatile","qwen/qwen3-32b","meta-llama/llama-4-scout-17b-16e-instruct","openai/gpt-oss-20b","llama-3.1-8b-instant"]) tries.push({p:"groq",m});
@@ -1227,7 +1222,7 @@ $("nAdd").onclick=()=>{const t=$("nTx").value.trim();if(!t)return;const at=$("nA
 
 /* ================= Sozlamalar ================= */
 function loadSet(){
-  $("sProv").value=S.prov;$("sKey").value=S.key;$("sModel").value=S.prov==="groq"?S.groqModel:S.model;
+  $("sProv").value=S.prov;$("sKey").value=S.key; try{showKey2()}catch(e){}$("sModel").value=S.prov==="groq"?S.groqModel:S.model;
   $("sName").value=S.name;$("sStt").value=S.stt;$("sTts").value=S.tts;
   $("sRate").value=S.rate;$("sRateV").textContent=S.rate;$("sPitch").value=S.pitch;$("sPitchV").textContent=S.pitch;
   $("swBg").classList.toggle("on",!!S.bg);
@@ -1243,6 +1238,11 @@ function loadSet(){
 function bind(id,fn,ev){$(id).addEventListener(ev||"change",()=>{fn($(id).value);saveAll()})}
 bind("sProv",v=>{S.prov=v;S.key=S.keys[v]||"";$("sKey").value=S.key;$("sModel").value=v==="groq"?S.groqModel:S.model});
 bind("sKey",v=>{S.key=v.trim();S.keys[S.prov]=S.key});
+const other=()=>S.prov==="groq"?"gemini":"groq";
+function showKey2(){ $("sKey2").value=S.keys[other()]||""; $("sKey2L").textContent="Zaxira kalit — "+(other()==="groq"?"Groq":"Gemini"); }
+$("sKey2").onchange=()=>{ S.keys[other()]=$("sKey2").value.trim(); saveAll(); };
+$("sKey2Btn").onclick=()=>N.openUrl(other()==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");
+$("sProv").addEventListener("change",()=>setTimeout(showKey2,0)); showKey2();
 bind("sModel",v=>{if(S.prov==="groq")S.groqModel=v.trim()||DEF.groqModel;else S.model=v.trim()||DEF.model});
 bind("sName",v=>S.name=v.trim()||DEF.name);
 bind("sStt",v=>S.stt=v);
