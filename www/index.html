@@ -1324,13 +1324,29 @@ try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.k
 
 /* rasm: yuklash, namuna, kontur */
 let lzImg=null,lzSample=null;
-function imgToGrid(src,name){const MAX=500,s=Math.min(1,MAX/Math.max(src.width,src.height)),w=Math.max(2,Math.round(src.width*s)),h=Math.max(2,Math.round(src.height*s));
-  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(src,0,0,w,h);
+function imgToGrid(src,name){const MAX=1600,s=Math.min(1,MAX/Math.max(src.width,src.height)),w=Math.max(2,Math.round(src.width*s)),h=Math.max(2,Math.round(src.height*s));
+  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(src,0,0,w,h);
   const d=x.getImageData(0,0,w,h).data,g=new Uint8Array(w*h);for(let i=0;i<w*h;i++)g[i]=(d[4*i]*299+d[4*i+1]*587+d[4*i+2]*114)/1000;return {w,h,g,name}}
 function lzSampleImg(){if(lzSample)return lzSample;const c=document.createElement("canvas");c.width=c.height=300;const x=c.getContext("2d");
   x.fillStyle="#fff";x.fillRect(0,0,300,300);x.fillStyle="#000";x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?62:140;x.lineTo(150+r*Math.cos(a),155+r*Math.sin(a))}x.closePath();x.fill();
   x.fillStyle="#fff";x.beginPath();x.arc(150,155,34,0,7);x.fill();return lzSample=imgToGrid(c,"namuna")}
-function traceImage(im,thr,inv,sm){const {w,h,g}=im,bin=new Uint8Array(w*h);for(let i=0;i<w*h;i++)bin[i]=(g[i]<thr)!==inv?1:0;return traceBin(bin,w,h,sm)}
+function traceImage(im,thr,inv,sm){const {w,h}=im;let g=im.g;
+  /* JPG shovqinini yo'qotish: yengil 3x3 blur */
+  const b=new Float32Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){let a=0,n=0;for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w)continue;const k=dy===0&&dx===0?2:1;a+=g[yy*w+xx]*k;n+=k}}b[y*w+x]=a/n}
+  const S=(x,y)=>x<0||y<0||x>=w||y>=h?-1:(inv?b[y*w+x]-thr:thr-b[y*w+x]);
+  const W3=w+3,PT=new Map(),adj=new Map(),segs=[];
+  const eh=(x,y)=>(y+1)*W3+(x+1), ev=(x,y)=>1e7+(y+1)*W3+(x+1);
+  const pt=(k,x1,y1,s1,x2,y2,s2)=>{if(!PT.has(k)){const t=s1/(s1-s2);PT.set(k,[x1+(x2-x1)*t,y1+(y2-y1)*t])}return k};
+  const add=(a,c)=>{const i=segs.length;segs.push([a,c]);(adj.get(a)||adj.set(a,[]).get(a)).push(i);(adj.get(c)||adj.set(c,[]).get(c)).push(i)};
+  for(let y=-1;y<h;y++)for(let x=-1;x<w;x++){const a=S(x,y),c=S(x+1,y),d=S(x+1,y+1),e=S(x,y+1),m=(a>0?8:0)|(c>0?4:0)|(d>0?2:0)|(e>0?1:0);if(m===0||m===15)continue;
+    const T=()=>pt(eh(x,y),x,y,a,x+1,y,c),R=()=>pt(ev(x+1,y),x+1,y,c,x+1,y+1,d),D=()=>pt(eh(x,y+1),x,y+1,e,x+1,y+1,d),L=()=>pt(ev(x,y),x,y,a,x,y+1,e);
+    if(m===5||m===10){const ctr=(a+c+d+e)/4>0;if(m===5){if(ctr){add(T(),L());add(R(),D())}else{add(T(),R());add(D(),L())}}else{if(ctr){add(T(),R());add(D(),L())}else{add(T(),L());add(R(),D())}}continue}
+    const q=[];if((a>0)!==(c>0))q.push(T());if((c>0)!==(d>0))q.push(R());if((d>0)!==(e>0))q.push(D());if((e>0)!==(a>0))q.push(L());add(q[0],q[1])}
+  const used=new Uint8Array(segs.length),loops=[];
+  for(let s0=0;s0<segs.length;s0++){if(used[s0])continue;used[s0]=1;const start=segs[s0][0];let cur=segs[s0][1];const pts=[PT.get(start)];
+    for(let gd=0;gd<segs.length;gd++){if(cur===start)break;pts.push(PT.get(cur));const nx=(adj.get(cur)||[]).find(i=>!used[i]);if(nx===undefined)break;used[nx]=1;const sg=segs[nx];cur=sg[0]===cur?sg[1]:sg[0]}
+    if(pts.length>=4){let Lp=rdpClosed(pts,0.3);for(let k=0;k<sm;k++)Lp=chaikin(Lp);if(Lp.length>=3)loops.push(Lp)}}
+  return loops}
 function traceBin(bin,w,h,sm){const B=(x,y)=>x<0||y<0||x>=w||y>=h?0:bin[y*w+x];
   const segs=[],adj=new Map(),K=(a,b)=>a*100003+b;
   const add=(p,q)=>{const i=segs.length;segs.push([p,q]);for(const e of[p,q]){const k=K(e[0],e[1]);(adj.get(k)||adj.set(k,[]).get(k)).push(i)}};
