@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
     Uri camUri = null;
     MediaPlayer player = null;
     static final int REQ_IMG = 41;
+    int imgMax = 1280;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -215,8 +216,8 @@ public class MainActivity extends Activity {
         if (res != RESULT_OK) { js("J.onImage('')"); return; }
         Uri u = (data != null && data.getData() != null) ? data.getData() : camUri;
         if (u == null) { js("J.onImage('')"); return; }
-        final Uri fu = u;
-        new Thread(() -> js("J.onImage(" + q(loadB64(fu, 1280)) + ")")).start();
+        final Uri fu = u; final int mx = imgMax; imgMax = 1280;
+        new Thread(() -> js("J.onImage(" + q(loadB64(fu, mx)) + ")")).start();
     }
 
     String loadB64(Uri fu, int maxPx) {
@@ -242,7 +243,7 @@ public class MainActivity extends Activity {
             Matrix mx = new Matrix(); mx.postScale(sc, sc); if (rot != 0) mx.postRotate(rot);
             Bitmap b2 = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), mx, true);
             ByteArrayOutputStream bo = new ByteArrayOutputStream();
-            b2.compress(Bitmap.CompressFormat.JPEG, 85, bo);
+            b2.compress(Bitmap.CompressFormat.JPEG, maxPx > 1500 ? 92 : 85, bo);
             out = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
         } catch (Exception e) { out = ""; }
         return out;
@@ -257,7 +258,7 @@ public class MainActivity extends Activity {
             i.setAction(null);
             if (u == null) return;
             new Thread(() -> {
-                String b = loadB64(u, 1280);
+                String b = loadB64(u, 2400);
                 if (pageReady) js("J.onShared(" + q(b) + ")"); else pendingShare = b;
             }).start();
         } else if (type != null && type.startsWith("text/")) {
@@ -602,6 +603,9 @@ public class MainActivity extends Activity {
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
         }
+
+        /** Rasmdan DXF uchun: katta o'lchamda (aniqroq kontur) */
+        @JavascriptInterface public void pickImageHi(boolean camera) { imgMax = 2400; pickImage(camera); }
 
         @JavascriptInterface public void pickImage(boolean camera) {
             runOnUiThread(() -> {
