@@ -111,6 +111,7 @@ body.car #mic{width:76px;height:76px}
   <div class="orbWrap"><div id="orb"><div class="r1"></div><div class="r2"></div><div class="r3" id="core"></div></div></div>
   <div id="live"></div>
   <div id="chat"></div>
+  <div id="favRow" style="display:flex;gap:10px;overflow-x:auto;padding:4px 14px 6px;scrollbar-width:none"></div>
   <div class="chips">
     <button class="chip" id="chipCar">🚗 Mashina</button>
     <button class="chip" id="chipRep">Hisobot</button>
@@ -120,7 +121,8 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipIdea">💡 G'oyalar</button>
     <button class="chip" id="chipPc">💻 Kompyuter</button>
     <button class="chip" id="chipTr">✏️ Rasmdan DXF</button>
-    <button class="chip" id="chipIdea">💡 Yangi g'oya</button>
+    <button class="chip" id="chipNewIdea">💡 Yangi g'oya</button>
+    <button class="chip" id="chipApps">📱 Ilovalar</button>
     <button class="chip" id="chipStove">🧩 Buyum 3D + DXF</button>
     <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
@@ -303,7 +305,7 @@ const N = window.Native || {
   http(id,url,m,h,b){fetch(url,{method:m,headers:JSON.parse(h||"{}"),body:b||undefined}).then(async r=>J._http(id,r.status,await r.text())).catch(e=>J._http(id,0,"ERR: "+e))},
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
-  torch(){return "ok"}, battery(){return 77}, charging(){return false}, freeMb(){return 20000}, scheduleEvening(){}, saveFile(){return ""}, saveFileB64(){return "mock://pdf"}, shareFile(){}, volume(){}, keepAwake(){}, share(t){console.log(t)},
+  torch(){return "ok"}, listApps(){return JSON.stringify([{l:"Telegram",p:"org.telegram.messenger"},{l:"Instagram",p:"com.instagram.android"},{l:"WhatsApp",p:"com.whatsapp"},{l:"YouTube",p:"com.google.android.youtube"},{l:"Chrome",p:"com.android.chrome"},{l:"Kamera",p:"com.android.camera"},{l:"Click",p:"uz.click.evo"},{l:"Payme",p:"uz.dida.payme"},{l:"Boshqa",p:"x.y"}])}, appIcon(){return ""}, launchPkg(){return "ok"}, battery(){return 77}, charging(){return false}, freeMb(){return 20000}, scheduleEvening(){}, saveFile(){return ""}, saveFileB64(){return "mock://pdf"}, shareFile(){}, volume(){}, keepAwake(){}, share(t){console.log(t)},
   bgListen(){return "ok"}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
@@ -1065,7 +1067,7 @@ async function run(a,ctx){
       if(at&&at>Date.now())N.remind(at,n.text,n.id);saveAll();renderNotes();return""}
     case "note":{notes.push({id:nid(),text:a.text||"",at:null,done:false,created:Date.now()});saveAll();renderNotes();return""}
     case "note_done":{const n=notes.find(x=>x.id==a.id);if(n){n.done=true;N.cancelRemind(n.id);saveAll();renderNotes()}return""}
-    case "open_app":{const r=N.openApp(a.name||"");return r==="notfound"?`${a.name} ilovasi topilmadi.`:""}
+    case "open_app":{const r=appLaunch(a.name||"");return r==="notfound"?`${a.name} ilovasi topilmadi.`:""}
     case "search":N.openUrl("https://www.google.com/search?q="+encodeURIComponent(a.query||""));return"";
     case "youtube":N.openUrl("https://www.youtube.com/results?search_query="+encodeURIComponent(a.query||""));return"";
     case "map":N.openUrl("geo:0,0?q="+encodeURIComponent(a.query||""));return"";
@@ -1187,7 +1189,7 @@ $("chipPc").onclick=()=>{ $("sheet").innerHTML=`<h2>💻 Kompyuter</h2>
   $("c3").onclick=async()=>{const q=$("cq").value.trim(); if(!q)return; closeModal(); say(await pcFind(q))};
   $("c4").onclick=()=>{closeModal();pcQueue(true);sys("💻 Navbat yuborildi")};
   $("c5").onclick=async()=>{closeModal(); const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text)}; };
-$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart(); $("chipIdea").onclick=()=>ideaGen("");
+$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart(); $("chipNewIdea").onclick=()=>ideaGen(""); $("chipApps").onclick=()=>appsOpen();
 $("chipPin").onclick=()=>pinOpen(); window._oldPin=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
   openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
@@ -2511,6 +2513,26 @@ ${topic?`Yo'nalish: ${topic}.\n`:""}Ustaxonada lazer kesish, egish va payvand bo
     el.querySelectorAll("button").forEach(b=>b.onclick=()=>{ const x=arr[+b.dataset.i]; if(b.dataset.a==="p"){ stoveAnalyze("",x.izoh||x.nom); } else if(b.dataset.a==="r"){ pinOpenQ(x.qidir||x.nom); } else { notes.push({id:nid(),text:"G'oya: "+x.nom+" — "+(x.narx||""),at:null,done:false,created:Date.now()}); saveAll(); renderNotes(); b.textContent="✓ Saqlandi"; } });
     say(`${arr.length} ta yangi mahsulot g'oyasi tayyor. Birinchisi: ${arr[0].nom}. ${arr[0].nega||""}`);
   }finally{ busy=false; setState("idle"); } }
+
+/* ================= Telefon ilovalari: asosiylari tez ochiladi ================= */
+const APP_DEF=[[/^org\.telegram\.messenger/],[/^com\.instagram\.android$/],[/^com\.whatsapp$/],[/^com\.whatsapp\.w4b$/],[/^com\.google\.android\.youtube$/],[/^com\.android\.chrome$/,/^org\.mozilla/],[/^com\.google\.android\.apps\.maps$/],[/^com\.pinterest$/],[/^com\.zhiliaoapp\.musically$/,/^com\.ss\.android\.ugc\.trill$/],[/^com\.facebook\.katana$/],[/^com\.facebook\.pages\.app$/],[/click/i,/uz\.click/],[/payme|dida\.payme/i],[/olx/i],[/camera|kamera/i],[/gallery|galereya|photos/i],[/calculator|kalkulyator/i],[/dialer|telefon|phone/i]];
+const APP_ALIAS={insta:"instagram",instagramm:"instagram",telegramm:"telegram",tg:"telegram",yutub:"youtube","youtub":"youtube",vatsap:"whatsapp",vatsapp:"whatsapp",xarita:"maps",kamera:"camera",galereya:"gallery",kalkulyator:"calculator",brauzer:"chrome",tiktok:"tiktok",pinterest:"pinterest"};
+let appsAll=null; const appIc={};
+function appsLoad(){ if(appsAll) return appsAll; try{ appsAll=JSON.parse(N.listApps()||"[]"); }catch(e){ appsAll=[]; } return appsAll; }
+function appsAuto(){ const all=appsLoad(), out=[], seen=new Set(); for(const pats of APP_DEF){ for(const r of pats){ const x=all.find(a=>!seen.has(a.p)&&(r.test(a.p)||r.test(a.l))); if(x){ seen.add(x.p); out.push({l:x.l,p:x.p}); break; } } } return out.slice(0,14); }
+function favRender(){ const row=$("favRow"); if(!row) return; const fav=S.favApps||[]; row.innerHTML=fav.map((a,i)=>`<div data-i="${i}" style="flex:0 0 auto;width:54px;text-align:center;cursor:pointer"><div style="width:44px;height:44px;margin:0 auto;border-radius:12px;background:#0f2433;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:#7fdcff">${appIc[a.p]?`<img src="data:image/png;base64,${appIc[a.p]}" style="width:44px;height:44px">`:esc((a.l||"?")[0])}</div><div style="font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9db4c4">${esc(a.l)}</div></div>`).join("");
+  row.querySelectorAll("[data-i]").forEach(d=>d.onclick=()=>{ const a=fav[+d.dataset.i]; N.launchPkg(a.p); });
+  fav.forEach(a=>{ if(appIc[a.p]===undefined){ appIc[a.p]=""; try{ const ic=N.appIcon(a.p); if(ic){ appIc[a.p]=ic; favRender(); } }catch(e){} } }); }
+function appLaunch(name){ const n0=norm(name).replace(/(ni|ga|dan)?\s*(ochib ber|och|yoq)$/,"").trim(); const n=APP_ALIAS[n0]||n0; const all=appsLoad();
+  const fav=(S.favApps||[]).find(a=>norm(a.l)===n||norm(a.l).includes(n)); const x=fav||all.find(a=>norm(a.l)===n)||all.find(a=>norm(a.l).includes(n)||a.p.toLowerCase().includes(n));
+  if(x){ const r=N.launchPkg(x.p); if(r==="ok") return x.l; } return N.openApp(name); }
+function appsOpen(){ const all=appsLoad(); let fav=(S.favApps||[]).slice();
+  $("sheet").innerHTML=`<h2>📱 Ilovalar</h2><p class="mut">Belgilanganlar bosh ekranda tez ochish tugmasi bo'ladi. "Jarvis, Telegramni och" deb ham aytsangiz bo'ladi.</p><div class="row"><button class="btn sm" id="apA">Asosiylarini avto tanlash</button><button class="btn sm g" id="apC">Tozalash</button></div>
+  <input id="apQ" placeholder="Qidirish…" style="margin-top:8px"><div id="apL" style="max-height:48vh;overflow:auto;margin-top:8px"></div><button class="btn" id="apX" style="width:100%;margin-top:10px">Tayyor</button>`; openModal();
+  const draw=()=>{ const q=norm($("apQ").value); $("apL").innerHTML=all.filter(a=>!q||norm(a.l).includes(q)).map(a=>`<label class="tog" style="cursor:pointer"><span>${esc(a.l)}</span><input type="checkbox" data-p="${esc(a.p)}" ${fav.some(f=>f.p===a.p)?"checked":""} style="width:22px;height:22px"></label>`).join("")||'<div class="mut">Ilova topilmadi.</div>';
+    $("apL").querySelectorAll("input").forEach(c=>c.onchange=()=>{ const a=all.find(x=>x.p===c.dataset.p); if(c.checked){ if(!fav.some(f=>f.p===a.p)) fav.push({l:a.l,p:a.p}); } else fav=fav.filter(f=>f.p!==a.p); S.favApps=fav; saveAll(); favRender(); }); };
+  $("apQ").oninput=draw; $("apA").onclick=()=>{ fav=appsAuto(); S.favApps=fav; saveAll(); favRender(); draw(); }; $("apC").onclick=()=>{ fav=[]; S.favApps=fav; saveAll(); favRender(); draw(); }; $("apX").onclick=closeModal; draw(); }
+setTimeout(()=>{ try{ if(S.favApps===undefined){ const a=appsAuto(); if(a.length){ S.favApps=a; saveAll(); } } favRender(); }catch(e){} },900);
 
 /* ================= Ishga tushirish ================= */
 loadSet();renderOrders();renderNotes();refreshBg();chipText();schedReport();

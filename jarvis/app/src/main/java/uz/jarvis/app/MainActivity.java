@@ -21,6 +21,8 @@ import android.os.Bundle;
 import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.provider.MediaStore;
@@ -575,6 +577,41 @@ public class MainActivity extends Activity {
             li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(li);
             return String.valueOf(best.loadLabel(pm));
+        }
+
+        @JavascriptInterface public String listApps() {
+            try {
+                PackageManager pm = getPackageManager();
+                Intent m = new Intent(Intent.ACTION_MAIN); m.addCategory(Intent.CATEGORY_LAUNCHER);
+                List<ResolveInfo> apps = pm.queryIntentActivities(m, 0);
+                java.util.TreeMap<String, String> map = new java.util.TreeMap<>();
+                for (ResolveInfo r : apps) {
+                    String pkg = r.activityInfo.packageName; if (pkg.equals(getPackageName())) continue;
+                    String label = String.valueOf(r.loadLabel(pm));
+                    map.put(label.toLowerCase(Locale.ROOT) + "|" + pkg, label + "\u0001" + pkg);
+                }
+                JSONArray arr = new JSONArray();
+                for (String v : map.values()) { String[] x = v.split("\u0001"); JSONObject o = new JSONObject(); o.put("l", x[0]); o.put("p", x[1]); arr.put(o); }
+                return arr.toString();
+            } catch (Exception e) { return "[]"; }
+        }
+
+        @JavascriptInterface public String appIcon(String pkg) {
+            try {
+                Drawable d = getPackageManager().getApplicationIcon(pkg);
+                Bitmap b = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(b); d.setBounds(0, 0, 96, 96); d.draw(c);
+                ByteArrayOutputStream bo = new ByteArrayOutputStream(); b.compress(Bitmap.CompressFormat.PNG, 100, bo);
+                return Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface public String launchPkg(String pkg) {
+            try {
+                Intent li = getPackageManager().getLaunchIntentForPackage(pkg);
+                if (li == null) return "notfound";
+                li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(li); return "ok";
+            } catch (Exception e) { return "err"; }
         }
 
         @JavascriptInterface public String openUrl(String url) {
