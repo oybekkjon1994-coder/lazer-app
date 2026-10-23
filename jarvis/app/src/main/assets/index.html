@@ -2360,7 +2360,7 @@ function genParts(g){ const P=[]; const t=g.t;
     if(c.k==="box"){ const {sx,sy,sz}=c, pan=(nm,w,h,qty)=>P.push({name:`${c.n}: ${nm}`,qty:qty*q,w,h,sh:[sRect(0,0,w,h),...genHoles(c,w,h,1500)]});
       pan("old/orqa",sx,sy,2); pan("yon",sz,sy,2); P.push({name:`${c.n}: tub`,qty:q,w:sx,h:sz,sh:[sRect(0,0,sx,sz)]}); if(!c.ochiq) P.push({name:`${c.n}: tepa`,qty:q,w:sx,h:sz,sh:[sRect(0,0,sx,sz)]}); }
     else if(c.k==="plate"){ P.push({name:c.n,qty:q,w:c.a,h:c.b,sh:[sRect(0,0,c.a,c.b),...genHoles(c,c.a,c.b,1500)]}); }
-    else if(c.h<=Math.max(4*t,10)&&c.arc>=359){ P.push({name:`${c.n} (disk)`,qty:q,w:2*c.r,h:2*c.r,sh:[sC(c.r,c.r,c.r),...genHoles(c,2*c.r,2*c.r,1500)]}); }
+    else if(c.h<=Math.max(6*t,20)&&c.arc>=359){ P.push({name:`${c.n} (disk)`,qty:q,w:2*c.r,h:2*c.r,sh:[sC(c.r,c.r,c.r),...genHoles(c,2*c.r,2*c.r,1500)]}); }
     else{ const W=c.r*c.arc*Math.PI/180; P.push({name:`${c.n} (yoyilgan${c.arc<360?", "+Math.round(c.arc)+"°":""})`,qty:q,w:W,h:c.h,sh:[sRect(0,0,W,c.h),...genHoles(c,W,c.h,1500)]});
       const caps=c.qopqoq==="ikki"?2:c.qopqoq==="yoq"?0:1; if(caps){ const full=c.arc>=359; P.push({name:`${c.n}: ${full?"qopqoq":"qopqoq (sektor)"}`,qty:caps*q,w:2*c.r,h:2*c.r,sh:[full?sC(c.r,c.r,c.r):{k:"p",pts:[[c.r,c.r],...Array.from({length:13},(_,i)=>{ const a=(c.a0+c.arc*i/12)*Math.PI/180; return [c.r+c.r*Math.cos(a),c.r+c.r*Math.sin(a)]; })]}]}); } } }
   return P; }
