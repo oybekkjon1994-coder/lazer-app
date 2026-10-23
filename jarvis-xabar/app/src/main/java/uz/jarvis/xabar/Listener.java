@@ -68,6 +68,7 @@ public class Listener extends NotificationListenerService {
             Notification n = sbn.getNotification();
             if ((n.flags & Notification.FLAG_GROUP_SUMMARY) != 0 || (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) return;
             Bundle e = n.extras;
+            if (isGroup(n, e)) return; // faqat shaxsiy xabarlar: guruh va kanallar o'tkazib yuboriladi
             CharSequence t = e.getCharSequence(Notification.EXTRA_TITLE), x = e.getCharSequence(Notification.EXTRA_TEXT);
             if (t == null || x == null) return;
             String from = t.toString().trim(), text = x.toString().trim();
@@ -99,6 +100,20 @@ public class Listener extends NotificationListenerService {
                 }
             }, null, Activity.RESULT_CANCELED, null, null);
         } catch (Exception ignored) {}
+    }
+
+    /** Guruh, kanal yoki ommaviy tarqatma xabarimi? */
+    static boolean isGroup(Notification n, Bundle e) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 28 && e.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION, false)) return true;
+            CharSequence ct = e.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
+            if (ct != null && ct.length() > 0) return true;
+            String ch = android.os.Build.VERSION.SDK_INT >= 26 && n.getChannelId() != null ? n.getChannelId().toLowerCase(Locale.ROOT) : "";
+            if (ch.contains("group") || ch.contains("channel") || ch.contains("kanal") || ch.contains("broadcast")) return true;
+            String sid = android.os.Build.VERSION.SDK_INT >= 29 && n.getShortcutId() != null ? n.getShortcutId() : "";
+            if (sid.contains("@g.us") || sid.contains("@newsletter") || sid.contains("@broadcast") || sid.startsWith("ndid_-")) return true;
+        } catch (Exception ignored) {}
+        return false;
     }
 
     void say(String text) {
