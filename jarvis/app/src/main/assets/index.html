@@ -120,7 +120,7 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipIdea">💡 G'oyalar</button>
     <button class="chip" id="chipPc">💻 Kompyuter</button>
     <button class="chip" id="chipTr">✏️ Rasmdan DXF</button>
-    <button class="chip" id="chipStove">🔥 Pech loyihasi</button>
+    <button class="chip" id="chipStove">🧩 Buyum 3D + DXF</button>
     <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
     <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
@@ -431,8 +431,9 @@ const J = window.J = {
   onShared(b64){ go("pJarvis"); if(!b64){ sys("Rasmni olib bo'lmadi."); return; }
     $("sheet").innerHTML=`<h2>📥 Rasm keldi</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px">
     <div class="row" style="margin-top:12px"><button class="btn" id="shI">💡 G'oyaga saqlash</button><button class="btn g" id="shD">✏️ DXF yasash</button></div>
-    <button class="btn g" id="shA" style="width:100%;margin-top:8px">🔍 Tahlil qilish</button>`;
-    openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)};
+    <button class="btn g" id="shA" style="width:100%;margin-top:8px">🔍 Tahlil qilish</button>
+    <button class="btn" id="shG" style="width:100%;margin-top:8px">🧩 Buyum loyihasi (3D + DXF + PDF)</button>`;
+    openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)}; $("shG").onclick=()=>{closeModal();stoveAnalyze(b64,"")};
     $("shA").onclick=()=>{ closeModal(); imgMode="ask"; imgQ="Bu naqsh/buyumni lazerda qanday yasash mumkin va taxminiy narxi?"; J.onImage(b64); }; },
   onSharedText(t){ go("pJarvis"); t=String(t||"").trim(); if(!t)return;
     const link=(t.match(/https?:\/\/\S+/)||[])[0];
@@ -445,7 +446,7 @@ const J = window.J = {
     setState("think","rasmni ko'ryapman"); busy=true;
     if(imgMode==="idea"){ imgMode="ask"; setState("idle"); busy=false; saveIdeaUI(b64,()=>openIdeas("")); return; }
     if(imgMode==="trace"){ imgMode="ask"; setState("idle"); busy=false; if(!b64){ sys("Rasm olinmadi."); return; } traceUI(b64,{cam:traceCam}); return; }
-    if(imgMode==="stove"){ imgMode="ask"; setState("idle"); busy=false; stoveAnalyze(b64); return; }
+    if(imgMode==="stove"){ imgMode="ask"; setState("idle"); busy=false; stoveAnalyze(b64,stvHint); return; }
     if(imgMode==="dxf"){ try{ const a=await visionAsk(b64,"",PARTS_PROMPT); setState("idle"); imgMode="ask";
         let j=null; try{ j=JSON.parse(String(a).replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/,"$1")) }catch(e){}
         const parts=(j&&Array.isArray(j.parts)?j.parts:[]).map(p=>({w:+p.w||0,h:+p.h||0,d:+p.d||0,qty:+p.qty||1,unsure:!!p.unsure}));
@@ -767,7 +768,7 @@ ${A.LED?`Hisob-kitob amallari:
 {"type":"invoice","client":"ism","item":"...","price":0,"paid":0} // PDF hisob-faktura; client buyurtmalardagi mijoz bo'lsa ma'lumot o'zi olinadi
 {"type":"price_watch","query":"3 mm list","action":"add|remove|check"} // OLX narxini kuzatish, tushsa xabar beradi
 {"type":"evening"} // kun yakuni xulosasi
-{"type":"stove"} // pech loyihasi: pech surati bo'yicha 3D ko'rinish, detal DXF va bir sahifali PDF (o'rmon/chodir/yig'ma pech so'ralsa)
+{"type":"stove"} // buyum loyihasi: har qanday buyum (pech, urna, javon, stol...) surati bo'yicha 3D ko'rinish, detal DXF va bir sahifali PDF; Pinterest rasm/video ham shu yerdan
 `:""}
 
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
@@ -1185,7 +1186,7 @@ $("chipPc").onclick=()=>{ $("sheet").innerHTML=`<h2>💻 Kompyuter</h2>
   $("c4").onclick=()=>{closeModal();pcQueue(true);sys("💻 Navbat yuborildi")};
   $("c5").onclick=async()=>{closeModal(); const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text)}; };
 $("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart();
-$("chipPin").onclick=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
+$("chipPin").onclick=()=>pinOpen(); window._oldPin=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
   openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
 $("chipCar").onclick=()=>setCar(!S.car);
@@ -1720,7 +1721,7 @@ async function pinImage(link){
   if(!img) img=(html.match(/https:\/\/i\.pinimg\.com\/(?:originals|736x|564x)\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/i)||[])[0];
   if(!img) return "";
   img=img.replace(/&amp;/g,"&");
-  return await fetchImg(img.replace(/\/(236x|474x|564x)\//,"/736x/"));
+  let fb=await fetchImg(img.replace(/\/(236x|474x|564x|736x)\//,"/originals/")); if(!fb||fb.length<2000) fb=await fetchImg(img.replace(/\/(236x|474x|564x)\//,"/736x/")); return fb;
 }
 async function pinterestSearch(q){
   let qq=String(q||"").trim(); if(!qq){ N.openUrl("https://www.pinterest.com/"); return "Pinterest'ni ochdim."; }
@@ -2165,12 +2166,28 @@ function stvJson(t){ try{ return JSON.parse(String(t||"").replace(/^[\s\S]*?(\{[
 function stvClean(j){ const o={}; if(!j||typeof j!=="object") return o; const rg={L:[100,2000],W:[60,1200],H:[60,1200],D:[60,800],t:[0.5,6],doorW:[30,600],doorH:[30,600],swN:[0,5],swW:[20,400],swH:[20,400],chD:[20,200],chH:[0,2000],ventN:[0,20],ventD:[3,40],legH:[0,300]};
   for(const k in rg){ const v=+j[k]; if(isFinite(v)&&v>=rg[k][0]&&v<=rg[k][1]) o[k]=v; }
   if(j.tur==="silindr"||j.tur==="quti") o.tur=j.tur; if(j.nom) o.nom=String(j.nom).slice(0,40); if(j.glass!==undefined) o.glass=!!j.glass&&j.glass!=="false"; return o; }
-function stoveStart(){ $("sheet").innerHTML=`<h2>🔥 Pech loyihasi</h2><p class="mut">Pechning bitta tomondan suratini bering. Qolgan tomonlarini AI taxmin qiladi va internetdan shu tur pechning o'lchamlarini qidiradi. Natijada 3D ko'rinish, detal DXF fayllar va bir sahifali PDF chiqadi. Keyin o'lchamlarni o'zingiz tuzatasiz.</p>
-  <div class="row" style="margin-top:14px"><button class="btn" id="stC">📷 Kamera</button><button class="btn g" id="stG">🖼 Galereya</button></div>
-  <button class="btn g" id="stN" style="width:100%;margin-top:10px">Rasmsiz, tayyor andozadan boshlash</button>`;
-  openModal(); const go=c=>{closeModal();imgMode="stove";setState("think","rasm kutilmoqda");N.pickImage(c)};
-  $("stC").onclick=()=>go(true); $("stG").onclick=()=>go(false); $("stN").onclick=()=>{closeModal();stoveAnalyze("")}; }
-async function stoveAnalyze(b64){ stvPhoto=b64||""; stvInfo=""; busy=true; let j=null, web="";
+let stvHint="";
+function stoveStart(){ $("sheet").innerHTML=`<h2>🧩 Buyum loyihasi</h2><p class="mut">Har qanday buyum (pech, axlat urnasi, javon, stol, darvoza…) suratini bering. AI uni qismlarga ajratadi, internetdan o'lchamini qidiradi va aylanadigan 3D ko'rinish, detal DXF va bir sahifali PDF tayyorlaydi. Keyin o'lchamlarni o'zingiz tuzatasiz.</p>
+  <label>Buyum haqida (ixtiyoriy, aniqroq chiqadi)</label><input id="stH" placeholder="Masalan: axlat urnasi, balandligi 900 mm">
+  <div class="row" style="margin-top:12px"><button class="btn" id="stC">📷 Kamera</button><button class="btn g" id="stG">🖼 Galereya</button></div>
+  <button class="btn g" id="stPn" style="width:100%;margin-top:8px">📌 Pinterest'dan olish (rasm / video)</button>
+  <button class="btn g" id="stN" style="width:100%;margin-top:8px">Rasmsiz boshlash (matn yoki pech andozasi)</button>`;
+  openModal(); const go=c=>{ stvHint=$("stH").value.trim(); closeModal(); imgMode="stove"; setState("think","rasm kutilmoqda"); N.pickImage(c); };
+  $("stC").onclick=()=>go(true); $("stG").onclick=()=>go(false); $("stPn").onclick=()=>{ stvHint=$("stH").value.trim(); closeModal(); pinOpen(); }; $("stN").onclick=()=>{ const h=$("stH").value.trim(); closeModal(); if(h) stoveAnalyze("",h); else stoveFlow(""); }; }
+async function stoveAnalyze(b64,hint){ hint=hint||""; stvPhoto=b64||""; stvInfo=""; busy=true; let j=null, web=""; 
+  try{ setState("think","buyumni o'rganyapman");
+    const hp=hint?`\nFoydalanuvchi izohi (ishon): ${hint}`:"";
+    j=b64?stvJson(await visionAsk(b64,"",GEN_PROMPT+hp)):stvJson(await askRaw(GEN_PROMPT+`\nRasm yo'q. Buyum: ${hint}. O'zing odatiy tuzilishini taxmin qil.`+hp));
+    if(j&&/pech/i.test(j.tur||"")){ busy=false; await stoveFlow(b64); return; }
+    if(!j||!Array.isArray(j.qismlar)||j.qismlar.length<1){ stvInfo="AI buyumni qismlarga ajrata olmadi. Qo'lda qism qo'shing yoki izoh yozib qayta urining."; gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; busy=false; setState("idle"); genUI(); return; }
+    setState("think","internetdan qidiryapman");
+    try{ const w=await webAnswer(`${j.qidir||j.nom}: typical real dimensions in mm (height, width, depth, material thickness, hole size). Raqamlar bilan javob ber.`); web=(w&&w.text)||""; if(/(topib bo.lmadi|topilmadi|aniq ma.lumot)/i.test(web)) web=""; }catch(e){}
+    if(web){ const m=await askRaw(`Buyum rasmidan olingan model JSON: ${JSON.stringify(j)}\nInternetdan topilgan o'lchamlar: ${web}\nShu o'lchamlarga mos qilib modelni tuzat (qismlar tuzilishi va koordinata sxemasi o'zgarmasin) va FAQAT to'liq JSON qaytar.`); const j2=stvJson(m); if(j2&&Array.isArray(j2.qismlar)&&j2.qismlar.length>=Math.max(1,j.qismlar.length-2)) j=Object.assign({},j,j2); }
+    gen=genFix(j); stvInfo=web?("Internetdan: "+web.slice(0,220)):"Rasm tahlil qilindi, internet ma'lumoti topilmadi — o'lchamlar taxminiy.";
+  }catch(e){ stvInfo="Xatolik: "+String(e).slice(0,80); if(!gen) gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; }
+  finally{ busy=false; setState("idle"); }
+  genUI(); }
+async function stoveFlow(b64){ stvPhoto=b64||""; stvInfo=""; busy=true; let j=null, web="";
   try{ if(b64){ setState("think","pechni o'rganyapman"); j=stvJson(await visionAsk(b64,"",STV_PROMPT)); }
     const q=(j&&(j.qidir||j.nom))||"folding wood burning camping tent stove";
     setState("think","internetdan qidiryapman");
@@ -2293,7 +2310,7 @@ function stoveUI(){ const p=stv; const fields=STV_F[p.tur]; const parts=stvParts
     say(u?"Bir sahifali PDF tayyor: rasm, 3D ko'rinish va detal chizmalari.":"PDF'ni saqlab bo'lmadi."); };
   $("stX").onclick=closeModal; }
 async function stvSheet(p,parts,tot,lp,faces){ const W=1684,H=1191, c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,W,H);
-  x.fillStyle="#111"; x.font="bold 40px sans-serif"; x.fillText("PECH LOYIHASI: "+p.nom+" ("+(p.tur==="silindr"?"silindr":"quti")+")",40,56); x.font="22px sans-serif"; x.fillStyle="#555";
+  x.fillStyle="#111"; x.font="bold 40px sans-serif"; x.fillText("LOYIHA: "+p.nom+(p.tur==="silindr"?" (silindr)":p.tur==="quti"?" (quti)":""),40,56); x.font="22px sans-serif"; x.fillStyle="#555";
   x.fillText(`Material: list ${p.t} mm · kesish ${tot.toFixed(2)} m${lp.rate?` · lazer ~${fmt(lp.total)} so'm`:""} · ${new Date().toLocaleDateString("ru-RU")}`,40,90);
   const box=(bx,by,bw,bh,t)=>{ x.strokeStyle="#bbb"; x.lineWidth=2; x.strokeRect(bx,by,bw,bh); x.fillStyle="#888"; x.font="20px sans-serif"; x.fillText(t,bx+10,by+26); };
   box(40,110,780,520,"Asl rasm"); box(860,110,780,520,"3D ko'rinish");
@@ -2313,6 +2330,129 @@ function pdfJpeg(b64,w,h){ const bin=atob(b64), jpg=new Uint8Array(bin.length); 
   const cs="q 842 0 0 595 0 0 cm /Im0 Do Q"; obj(5,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
   const xo=off; let xr="xref\n0 6\n0000000000 65535 f \n"; for(let i=1;i<=5;i++) xr+=String(offs[i]).padStart(10,"0")+" 00000 n \n"; xr+=`trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n${xo}\n%%EOF`; push(enc(xr));
   const out=new Uint8Array(off); let q=0; for(const c of chunks){ out.set(c,q); q+=c.length; } let s=""; for(let i=0;i<out.length;i+=0x8000) s+=String.fromCharCode.apply(null,out.subarray(i,i+0x8000)); return btoa(s); }
+
+/* ================= Umumiy buyum loyihasi (har qanday buyum) ================= */
+let gen=null;
+const GEN_PROMPT=`Rasmdagi buyumni (har qanday: axlat urnasi, javon, stol, darvoza, mangal, skameyka, pech, quti, stend va h.k.) ko'rib, uni lazer kesish va payvandlash bilan yasash uchun oddiy shakllardan (qutilar, silindrlar, plastinalar) yig'ilgan model sifatida FAQAT JSON qaytar.
+Koordinata: X=eni (chapdan o'ngga), Y=yuqoriga, Z=chuqurlik (old tomondan orqaga). Boshlanish nuqtasi buyumning pastki old-chap burchagi. Hamma o'lcham mm. Buyumning real o'lchamini baholab ber (rasmda ko'rsatilmasa shu turdagi buyumning odatiy o'lchami).
+{"nom":"buyum nomi","tur":"pech yoki boshqa","t":list_qalinligi_mm,"qidir":"shu buyumning o'lchamlarini topish uchun inglizcha qisqa qidiruv so'rovi","qismlar":[
+{"n":"qism nomi","k":"box","x":0,"y":0,"z":0,"sx":eni,"sy":balandligi,"sz":chuqurligi,"ochiq":"tepa yoki yoq","rang":"#rrggbb","teshik":{"f":"dumaloq yoki kvadrat","d":teshik_olchami,"dx":qadam_x,"dy":qadam_y,"m":chet_masofasi}},
+{"n":"qism nomi","k":"cyl","x":asos_markazi_x,"y":asos_y,"z":asos_markazi_z,"r":radius,"h":balandligi,"o":"y yoki x yoki z (o'q yo'nalishi)","arc":360 yoki yoy_gradusi,"a0":boshlanish_gradusi,"qopqoq":"ikki yoki yoq yoki past yoki tepa","rang":"#rrggbb","teshik":{...}},
+{"n":"qism nomi","k":"plate","p":"xz yoki xy yoki zy","x":0,"y":0,"z":0,"a":birinchi_olcham,"b":ikkinchi_olcham,"rang":"#rrggbb","teshik":{...}}]}
+Qoidalar: 4–14 ta qism. Bir xil qismlar (oyoq, tayanch) uchun "dona":N yozing yoki har birini alohida joylashtiring. Ko'rinmagan tomonlarini simmetriya va shu turdagi buyumning odatiy tuzilishidan taxmin qil. "teshik" faqat haqiqatan teshikli (perforatsiya) sirtlar uchun. Teshik bo'lmasa "teshik" ni yozma.`;
+const GEN_K={box:["sx","sy","sz"],cyl:["r","h"],plate:["a","b"]};
+function genNum(v,d){ v=+v; return isFinite(v)?v:d; }
+function genFix(j){ const g={nom:String(j.nom||"Buyum").slice(0,40),t:Math.min(6,Math.max(0.5,genNum(j.t,2))),comps:[]};
+  for(const c of (Array.isArray(j.qismlar)?j.qismlar:[]).slice(0,16)){ const k=c.k==="cyl"||c.k==="plate"?c.k:"box"; const o={n:String(c.n||k).slice(0,30),k,x:genNum(c.x,0),y:genNum(c.y,0),z:genNum(c.z,0),dona:Math.max(1,Math.min(20,Math.round(genNum(c.dona,1)))),rang:/^#[0-9a-f]{6}$/i.test(c.rang||"")?c.rang:""};
+    if(k==="box"){ o.sx=Math.max(1,genNum(c.sx,100)); o.sy=Math.max(1,genNum(c.sy,100)); o.sz=Math.max(1,genNum(c.sz,100)); o.ochiq=/tepa/.test(c.ochiq||""); }
+    if(k==="cyl"){ o.r=Math.max(1,genNum(c.r,50)); o.h=Math.max(1,genNum(c.h,100)); o.o=/^[xz]$/.test(c.o)?c.o:"y"; o.arc=Math.min(360,Math.max(30,genNum(c.arc,360))); o.a0=genNum(c.a0,0); o.qopqoq=/yoq|past|tepa|ikki/.test(c.qopqoq||"")?c.qopqoq:"ikki"; }
+    if(k==="plate"){ o.p=/^(xy|zy)$/.test(c.p)?c.p:"xz"; o.a=Math.max(1,genNum(c.a,100)); o.b=Math.max(1,genNum(c.b,100)); }
+    const t=c.teshik; if(t&&+t.d>0){ o.tf=/kvadrat|square/.test(t.f||"")?"kvadrat":"dumaloq"; o.td=Math.max(2,+t.d); o.tdx=Math.max(o.td*1.3,genNum(t.dx,o.td*2)); o.tdy=Math.max(o.td*1.3,genNum(t.dy,o.tdx)); o.tm=Math.max(0,genNum(t.m,o.td)); }
+    g.comps.push(o); }
+  return g; }
+function sSq(x,y,s,c){ return {k:"p",pts:[[x-s/2,y-s/2],[x+s/2,y-s/2],[x+s/2,y+s/2],[x-s/2,y+s/2]],c}; }
+function genHoles(c,w,h,cap){ if(!c.td) return []; const out=[]; let dx=c.tdx,dy=c.tdy; const m=c.tm+c.td/2; const cols=Math.floor((w-2*m)/dx)+1, rows=Math.floor((h-2*m)/dy)+1; if(cols<1||rows<1) return [];
+  const tot=cols*rows; if(cap&&tot>cap){ const k=Math.sqrt(tot/cap); dx*=k; dy*=k; }
+  const cx=(w-(Math.floor((w-2*m)/dx))*dx)/2; const cy=(h-(Math.floor((h-2*m)/dy))*dy)/2;
+  for(let y=cy;y<=h-m+0.01;y+=dy) for(let x=cx;x<=w-m+0.01;x+=dx) out.push(c.tf==="kvadrat"?sSq(x,y,c.td,"#111"):sC(x,y,c.td/2,"#111")); return out; }
+function genParts(g){ const P=[]; const t=g.t;
+  for(const c of g.comps){ const q=c.dona||1;
+    if(c.k==="box"){ const {sx,sy,sz}=c, pan=(nm,w,h,qty)=>P.push({name:`${c.n}: ${nm}`,qty:qty*q,w,h,sh:[sRect(0,0,w,h),...genHoles(c,w,h,1500)]});
+      pan("old/orqa",sx,sy,2); pan("yon",sz,sy,2); P.push({name:`${c.n}: tub`,qty:q,w:sx,h:sz,sh:[sRect(0,0,sx,sz)]}); if(!c.ochiq) P.push({name:`${c.n}: tepa`,qty:q,w:sx,h:sz,sh:[sRect(0,0,sx,sz)]}); }
+    else if(c.k==="plate"){ P.push({name:c.n,qty:q,w:c.a,h:c.b,sh:[sRect(0,0,c.a,c.b),...genHoles(c,c.a,c.b,1500)]}); }
+    else if(c.h<=Math.max(4*t,10)&&c.arc>=359){ P.push({name:`${c.n} (disk)`,qty:q,w:2*c.r,h:2*c.r,sh:[sC(c.r,c.r,c.r),...genHoles(c,2*c.r,2*c.r,1500)]}); }
+    else{ const W=c.r*c.arc*Math.PI/180; P.push({name:`${c.n} (yoyilgan${c.arc<360?", "+Math.round(c.arc)+"°":""})`,qty:q,w:W,h:c.h,sh:[sRect(0,0,W,c.h),...genHoles(c,W,c.h,1500)]});
+      const caps=c.qopqoq==="ikki"?2:c.qopqoq==="yoq"?0:1; if(caps){ const full=c.arc>=359; P.push({name:`${c.n}: ${full?"qopqoq":"qopqoq (sektor)"}`,qty:caps*q,w:2*c.r,h:2*c.r,sh:[full?sC(c.r,c.r,c.r):{k:"p",pts:[[c.r,c.r],...Array.from({length:13},(_,i)=>{ const a=(c.a0+c.arc*i/12)*Math.PI/180; return [c.r+c.r*Math.cos(a),c.r+c.r*Math.sin(a)]; })]}]}); } } }
+  return P; }
+function genFaces(g){ const F=[]; const quad=(pts,n,col,par)=>{ const o={pts,n,col,par:par||null}; F.push(o); return o; };
+  const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]], mul=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+  const shade=(hex,k)=>{ const v=[1,3,5].map(i=>Math.min(255,Math.round(parseInt(hex.substr(i,2),16)*k))); return "#"+v.map(n=>n.toString(16).padStart(2,"0")).join(""); };
+  const boxF=(x0,y0,z0,x1,y1,z1,col,noTop)=>{ const r=[quad([[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]],[-1,0,0],col), quad([[x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0]],[1,0,0],col),
+      quad([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]],[0,0,-1],col), quad([[x0,y0,z1],[x0,y1,z1],[x1,y1,z1],[x1,y0,z1]],[0,0,1],col)];
+    if(!noTop) r.push(quad([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],[0,1,0],col)); r.push(quad([[x0,y0,z0],[x0,y0,z1],[x1,y0,z1],[x1,y0,z0]],[0,-1,0],col)); return r; };
+  const insetS=(holes,O,U,V,N,par)=>{ for(const a of holes){ let pts; if(a.k==="c"){ pts=[]; for(let i=0;i<8;i++){ const g2=i/8*6.2832; pts.push([a.x+a.r*Math.cos(g2),a.y+a.r*Math.sin(g2)]); } } else pts=a.pts;
+      quad(pts.map(q=>add(add(O,mul(U,q[0])),add(mul(V,q[1]),mul(N,0.8)))),N,a.c||"#111",par); } };
+  const pal=["#9aa4ad","#8d98a2","#a7b0b8","#7f8a94"]; const T=g.t;
+  g.comps.forEach((c,ci)=>{ const col=c.rang||pal[ci%pal.length]; const reps=c.dona||1; // dona>1: yonma-yon emas, oddiy bitta; tafsilotda ko'rsatiladi
+    if(c.k==="box"){ const {x,y,z,sx,sy,sz}=c; const f=boxF(x,y,z,x+sx,y+sy,z+sz,col,c.ochiq);
+      if(c.td){ insetS(genHoles(c,sx,sy,500),[x,y,z],[1,0,0],[0,1,0],[0,0,-1],f[2]); insetS(genHoles(c,sx,sy,500),[x,y,z+sz],[1,0,0],[0,1,0],[0,0,1],f[3]); insetS(genHoles(c,sz,sy,500),[x,y,z],[0,0,1],[0,1,0],[-1,0,0],f[0]); insetS(genHoles(c,sz,sy,500),[x+sx,y,z],[0,0,1],[0,1,0],[1,0,0],f[1]); } }
+    else if(c.k==="plate"){ const {x,y,z,a,b}=c; if(c.p==="xz"){ const f=boxF(x,y,z,x+a,y+T,z+b,col); if(c.td) insetS(genHoles(c,a,b,500),[x,y+T,z],[1,0,0],[0,0,1],[0,1,0],f[4]); }
+      else if(c.p==="xy"){ const f=boxF(x,y,z,x+a,y+b,z+T,col); if(c.td) insetS(genHoles(c,a,b,500),[x,y,z],[1,0,0],[0,1,0],[0,0,-1],f[2]); }
+      else{ const f=boxF(x,y,z,x+T,y+b,z+a,col); if(c.td) insetS(genHoles(c,a,b,500),[x,y,z],[0,0,1],[0,1,0],[-1,0,0],f[0]); } }
+    else{ const {x,y,z,r,h,arc}=c, o=c.o, ar=arc*Math.PI/180, a0=c.a0*Math.PI/180, n=Math.max(10,Math.round(arc/360*36)); const P=(v)=>o==="x"?[v[1],v[0],v[2]]:o==="z"?[v[0],v[2],v[1]]:v; const W=(v)=>add(P(v),[x,y,z]);
+      const segs=[]; for(let i=0;i<n;i++){ const am=a0+ar*(i+0.5)/n, aa=a0+ar*i/n, ab=a0+ar*(i+1)/n; const p=(a2,yy)=>[r*Math.cos(a2),yy,r*Math.sin(a2)];
+        segs.push(quad([W(p(aa,0)),W(p(ab,0)),W(p(ab,h)),W(p(aa,h))],P([Math.cos(am),0,Math.sin(am)]),col));
+        if(arc<359) quad([W(p(aa,0)),W(p(ab,0)),W(p(ab,h)),W(p(aa,h))],P([-Math.cos(am),0,-Math.sin(am)]),shade(col.length===7?col:"#9aa4ad",0.7)); }
+      const cap=(yy,ny)=>{ const pts=[]; if(arc<359) pts.push([0,yy,0]); for(let i=0;i<=n;i++){ const a2=a0+ar*i/n; pts.push([r*Math.cos(a2),yy,r*Math.sin(a2)]); } quad(pts.map(W),P([0,ny,0]),shade(col.length===7?col:"#9aa4ad",1.1)); };
+      if(c.qopqoq==="ikki"||c.qopqoq==="tepa") cap(h,1); if(c.qopqoq==="ikki"||c.qopqoq==="past") cap(0,-1);
+      if(c.td){ const arcLen=r*ar, hs=genHoles(c,arcLen,h,700); for(const a of hs){ const ang=a0+a.x/r, i=Math.min(n-1,Math.max(0,Math.floor((ang-a0)/ar*n))), rr=r+0.8, d=(a.k==="c"?a.r:c.td/2); const pts=[]; const m=a.k==="c"?8:4;
+          for(let k=0;k<m;k++){ const th=(m===4?(k*Math.PI/2+Math.PI/4):k/8*6.2832), u=d*Math.cos(th)*(m===4?1.414:1), v=d*Math.sin(th)*(m===4?1.414:1); const aa=ang+u/r; pts.push(W([rr*Math.cos(aa),a.y+v,rr*Math.sin(aa)])); }
+          quad(pts,P([Math.cos(ang),0,Math.sin(ang)]),"#111",segs[i]); } } } });
+  let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9]; F.forEach(f=>f.pts.forEach(q=>{ for(let k=0;k<3;k++){ mn[k]=Math.min(mn[k],q[k]); mx[k]=Math.max(mx[k],q[k]); } }));
+  const ct=[0,1,2].map(k=>(mn[k]+mx[k])/2); F.forEach(f=>{ f.pts=f.pts.map(q=>[q[0]-ct[0],q[1]-ct[1],q[2]-ct[2]]); }); F.R=Math.max(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||100; F.size=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]]; return F; }
+function genScale(g,k){ for(const c of g.comps){ for(const f of ["x","y","z","sx","sy","sz","r","h","a","b","td","tdx","tdy","tm"]) if(c[f]!==undefined) c[f]=Math.round(c[f]*k*10)/10; } }
+function genUI(){ const g=gen; const parts=genParts(g), faces=genFaces(g); const sz=faces.size.map(v=>Math.round(v));
+  const tot=parts.reduce((a,x)=>a+stvLen(x.sh)*x.qty,0)/1000, area=parts.reduce((a,x)=>a+x.w*x.h*x.qty,0)/1e6, lp=laserPrice(tot,g.t,1);
+  const FL={sx:"Eni",sy:"Balandligi",sz:"Chuqurligi",r:"Radius",h:"Balandligi",a:"1-o'lcham",b:"2-o'lcham",x:"X",y:"Y",z:"Z",arc:"Yoy °",td:"Teshik Ø",tdx:"Qadam X",tdy:"Qadam Y"};
+  const flds=c=>[...(c.k==="box"?["sx","sy","sz"]:c.k==="cyl"?["r","h","arc"]:["a","b"]),"x","y","z",...(c.td?["td","tdx","tdy"]:[])];
+  $("sheet").innerHTML=`<h2>🧩 ${esc(g.nom)}</h2>${stvPhoto?`<img src="data:image/jpeg;base64,${stvPhoto}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#06131d">`:""}
+  <div class="mut" style="margin:6px 0;line-height:1.4">${esc(stvInfo)}</div>
+  <canvas id="stCv" width="640" height="420" style="width:100%;border-radius:10px;background:#0b1620;touch-action:none"></canvas><div class="mut" style="text-align:center">Barmoq bilan aylantiring · umumiy o'lcham: ${sz[0]}×${sz[1]}×${sz[2]} mm</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:6px"><div><label>Masshtab</label><input id="gsK" inputmode="decimal" value="100"></div><div style="grid-column:span 2"><label>Umumiy balandligi (mm) → mutanosib</label><input id="gsH" inputmode="decimal" value="${sz[1]}"></div><div><label>Qalinlik</label><input id="gsT" inputmode="decimal" value="${g.t}"></div></div>
+  <div style="margin-top:10px">${g.comps.map((c,i)=>`<details style="border:1px solid #1d3547;border-radius:10px;padding:6px 10px;margin-bottom:6px"><summary style="cursor:pointer"><b>${esc(c.n)}</b> <span class="mut">(${c.k==="box"?"quti":c.k==="cyl"?"silindr":"plastina"}${c.dona>1?" ×"+c.dona:""})</span></summary>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px"><div style="grid-column:span 3"><label>Nomi</label><input data-i="${i}" data-f="n" value="${esc(c.n)}"></div>${flds(c).map(f=>`<div><label>${FL[f]}</label><input data-i="${i}" data-f="${f}" inputmode="decimal" value="${c[f]}"></div>`).join("")}<div><label>Dona</label><input data-i="${i}" data-f="dona" inputmode="decimal" value="${c.dona||1}"></div></div>
+    <button class="btn sm g" data-del="${i}" style="margin-top:8px">🗑 O'chirish</button></details>`).join("")}</div>
+  <div class="row"><button class="btn sm g" data-add="box">➕ Quti</button><button class="btn sm g" data-add="cyl">➕ Silindr</button><button class="btn sm g" data-add="plate">➕ Plastina</button></div>
+  <div style="margin-top:10px;font-size:13px;line-height:1.5"><b>Detallar</b> (${g.t} mm):<br>${parts.map(x=>`• ${esc(x.name)} ×${x.qty}: ${Math.round(x.w)}×${Math.round(x.h)} mm`).join("<br>")}</div>
+  <div class="mut" style="margin:6px 0">Kesish ${tot.toFixed(2)} m · list ~${area.toFixed(2)} m²${lp.rate?` · lazer: <b>${fmt(lp.total)} so'm</b>`:""}<br>Bu AI taxmini: kesishdan oldin o'lchamlarni tekshiring. Egilish va payvand zaxirasi hisobga olinmagan.</div>
+  <button class="btn" id="stD" style="width:100%;margin-top:6px">📐 Barcha detal DXF (alohida fayllar)</button>
+  <div class="row" style="margin-top:8px"><button class="btn g" id="stD1">Hammasi bitta DXF</button><button class="btn g" id="stP">📄 Bir sahifa PDF</button></div>
+  <button class="btn g" id="stX" style="width:100%;margin-top:8px">Yopish</button>`;
+  openModal(); const cv=$("stCv"); let yaw=-0.7,pitch=0.35,drag=null,auto=true; const draw=()=>stvRender(cv,faces,yaw,pitch,"#0b1620"); draw();
+  cv.onpointerdown=e=>{ drag=[e.clientX,e.clientY]; auto=false; cv.setPointerCapture&&cv.setPointerCapture(e.pointerId); };
+  cv.onpointermove=e=>{ if(!drag) return; yaw+=(e.clientX-drag[0])*0.012; pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-drag[1])*0.01)); drag=[e.clientX,e.clientY]; draw(); };
+  cv.onpointerup=cv.onpointercancel=()=>{ drag=null; };
+  const iv=setInterval(()=>{ if(!document.body.contains(cv)){ clearInterval(iv); return; } if(auto&&$("modal").classList.contains("on")){ yaw+=0.02; draw(); } },60);
+  const keep=()=>{ const o=document.querySelectorAll("#sheet details"); const op=[...o].map(d=>d.open); genUI(); document.querySelectorAll("#sheet details").forEach((d,i)=>{ d.open=!!op[i]; }); };
+  document.querySelectorAll("#sheet input[data-f]").forEach(inp=>inp.onchange=()=>{ const c=g.comps[+inp.dataset.i], f=inp.dataset.f; if(f==="n") c.n=inp.value.slice(0,30)||c.n; else { const v=parseFloat(String(inp.value).replace(",",".")); if(isFinite(v)&&v>=0) c[f]=f==="dona"?Math.max(1,Math.round(v)):v; } keep(); });
+  document.querySelectorAll("#sheet [data-del]").forEach(b=>b.onclick=()=>{ g.comps.splice(+b.dataset.del,1); keep(); });
+  document.querySelectorAll("#sheet [data-add]").forEach(b=>b.onclick=()=>{ const k=b.dataset.add; g.comps.push(k==="box"?{n:"Yangi quti",k,x:0,y:0,z:0,dona:1,rang:"",sx:200,sy:200,sz:200,ochiq:false}:k==="cyl"?{n:"Yangi silindr",k,x:100,y:0,z:100,dona:1,rang:"",r:100,h:200,o:"y",arc:360,a0:0,qopqoq:"ikki"}:{n:"Yangi plastina",k,x:0,y:0,z:0,dona:1,rang:"",p:"xz",a:200,b:200}); keep(); });
+  $("gsK").onchange=()=>{ const v=parseFloat(String($("gsK").value).replace(",","."))/100; if(v>0&&v!==1){ genScale(g,v); } keep(); };
+  $("gsH").onchange=()=>{ const v=parseFloat(String($("gsH").value).replace(",",".")); if(v>0&&sz[1]>0){ genScale(g,v/sz[1]); } keep(); };
+  $("gsT").onchange=()=>{ const v=parseFloat(String($("gsT").value).replace(",",".")); if(v>0){ g.t=v; } keep(); };
+  const info={nom:g.nom,tur:"umumiy",t:g.t,L:sz[0]}; const stamp=()=>String(Date.now()).slice(-5), nmBase=()=>"buyum_"+g.nom.replace(/[^\w]+/g,"_").slice(0,14)+"_"+sz[1]+"mm";
+  $("stD").onclick=()=>{ let ok=0; const files=[]; for(const pt of parts){ const nm=`${nmBase()}_${pt.name.replace(/[^\w]+/g,"_").slice(0,18)}_x${pt.qty}_${stamp()}.dxf`; const u=saveF(nm,"application/dxf",stvDxf([pt],false)); if(u){ ok++; files.push([nm,u]); } }
+    const el=addHtml(`<b>🧩 ${esc(g.nom)}: ${ok} ta detal DXF</b><div class="mut">Yuklamalar, Jarvis papkasiga saqlandi. "×" dagi son — shuncha dona kesiladi.</div>${files.map(([n,u],i)=>`<button class="btn sm g" data-i="${i}" style="margin:4px 4px 0 0">${esc(n.replace(/^buyum_\w+?_\d+mm_/,"").slice(0,26))}</button>`).join("")}`);
+    el.querySelectorAll("button").forEach(b=>b.onclick=()=>N.shareFile(files[+b.dataset.i][1],"application/dxf")); closeModal(); say(ok?`${ok} ta detal DXF tayyor. Kesish ${tot.toFixed(1)} metr${lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}.`:"Fayllarni saqlab bo'lmadi."); };
+  $("stD1").onclick=()=>{ const nm=`${nmBase()}_hammasi_${stamp()}.dxf`; const u=saveF(nm,"application/dxf",stvDxf(parts,true)); closeModal();
+    const el=addHtml(`<b>${esc(nm)}</b><div class="mut">Barcha detallar (dona soni bilan) bitta listga joylashtirilgan.</div>${u?'<button class="btn sm" style="margin-top:8px">Yuborish (Telegram…)</button>':""}`); const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(u,"application/dxf"); say(u?"Bitta DXF tayyor.":"Saqlab bo'lmadi."); };
+  $("stP").onclick=async()=>{ const c=await stvSheet(info,parts,tot,lp,faces); const b64=c.toDataURL("image/jpeg",0.92).split(",")[1]; const pdf=pdfJpeg(b64,c.width,c.height); const nm=`${nmBase()}_sahifa_${stamp()}.pdf`;
+    const u=N.saveFileB64?N.saveFileB64(nm,"application/pdf",pdf):""; closeModal();
+    const el=addHtml(`<b>${esc(nm)}</b><div style="margin:6px 0"><img src="${c.toDataURL("image/jpeg",0.6)}" style="width:100%;border-radius:6px"></div>${u?'<button class="btn sm">Yuborish (PDF)</button>':""}`); const bb=el.querySelector("button"); if(bb) bb.onclick=()=>N.shareFile(u,"application/pdf");
+    say(u?"Bir sahifali PDF tayyor: rasm, 3D ko'rinish va detal chizmalari.":"PDF'ni saqlab bo'lmadi."); };
+  $("stX").onclick=closeModal; }
+/* ================= Pinterest galereya (rasm va video) ================= */
+const PIN_UA={"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36","Accept-Language":"en,ru;q=0.8"};
+async function pinSearchImgs(q){ const r=await http("https://www.pinterest.com/search/pins/?q="+encodeURIComponent(q),"GET",PIN_UA,null,25000); if(r.code!==200) return [];
+  const seen=new Set(), out=[]; const re=/https:\/\/i\.pinimg\.com\/(?:236x|474x|564x|736x)\/([0-9a-f]{2}\/[0-9a-f]{2}\/[0-9a-f]{2}\/[0-9a-f]+)\.(jpg|png|webp)/gi; let m; const body=String(r.body).replace(/\\\//g,"/");
+  while((m=re.exec(body))&&out.length<30){ if(seen.has(m[1])) continue; seen.add(m[1]); out.push({id:m[1],ext:m[2]}); } return out; }
+async function pinFull(it){ const base=`https://i.pinimg.com/%S/${it.id}.${it.ext}`; for(const sz of ["originals","736x","564x"]){ const b=await fetchImg(base.replace("%S",sz)); if(b&&b.length>2000) return b; } return ""; }
+async function pinMedia(link){ const r=await http(link,"GET",PIN_UA,null,20000); if(r.code!==200) return null; const html=String(r.body).replace(/\\\//g,"/").replace(/&amp;/g,"&");
+  const vid=(html.match(/<meta[^>]+property=["']og:video(?::url)?["'][^>]+content=["']([^"']+\.mp4[^"']*)/i)||html.match(/https:\/\/v1\.pinimg\.com\/videos\/[^"'\s\\]+\.mp4/i)||[])[1]||(html.match(/https:\/\/v1\.pinimg\.com\/videos\/[^"'\s\\]+\.mp4/i)||[])[0]||"";
+  return {video:vid}; }
+function pinOpen(){ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><label>Qidirish (rasm/g'oya)</label><div class="row"><input id="pgQ" placeholder="Masalan: axlat urnasi perforatsiya, loft javon, mangal"><button class="btn sm" id="pgS" style="max-width:90px">Qidir</button></div>
+  <label>Yoki pin havolasi (rasm yoki video)</label><div class="row"><input id="pgL" placeholder="https://pin.it/... yoki pinterest.com/pin/..."><button class="btn sm g" id="pgO" style="max-width:90px">Ol</button></div>
+  <div id="pgR" style="margin-top:10px"></div><button class="btn g" id="pgX" style="width:100%;margin-top:10px">Yopish</button>`; openModal(); $("pgX").onclick=closeModal;
+  const R=$("pgR");
+  $("pgS").onclick=async()=>{ const q0=$("pgQ").value.trim(); if(!q0) return; R.innerHTML='<div class="mut">Qidiryapman…</div>'; let q=q0; try{ const en=await askRaw(`Pinterest qidiruvi uchun 2–5 so'zli INGLIZCHA so'rovga aylantir, faqat so'rovni yoz: ${q0}`); if(en&&en.length<80) q=en.replace(/["\n]/g,"").trim(); }catch(e){}
+    const L=await pinSearchImgs(q); if(!L.length){ R.innerHTML=`<div class="mut">Pinterest natija bermadi (login talab qilishi mumkin). Pinterest'ni ochaman, yoqqan rasmni <b>Ulashish → Jarvis</b> qiling.</div>`; N.openUrl("https://www.pinterest.com/search/pins/?q="+encodeURIComponent(q)); return; }
+    R.innerHTML=`<div class="mut" style="margin-bottom:6px">"${esc(q)}" — ${L.length} ta. Bosing:</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">${L.map((it,i)=>`<img data-i="${i}" loading="lazy" src="https://i.pinimg.com/236x/${it.id}.${it.ext}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#06131d">`).join("")}</div>`;
+    R.querySelectorAll("img").forEach(im=>im.onclick=async()=>{ sys("📌 Rasm to'liq sifatda olinmoqda…"); const b=await pinFull(L[+im.dataset.i]); if(b) J.onShared(b); else sys("Rasmni olib bo'lmadi."); }); };
+  $("pgO").onclick=async()=>{ const l=($("pgL").value.match(/https?:\/\/\S+/)||[])[0]; if(!l) return; R.innerHTML='<div class="mut">Olinmoqda…</div>'; let m=null; try{ m=await pinMedia(l); }catch(e){}
+    const b=await pinImage(l);
+    R.innerHTML=(m&&m.video?`<video src="${esc(m.video)}" controls playsinline style="width:100%;border-radius:8px;background:#000"></video><div class="row" style="margin:6px 0"><button class="btn sm g" id="pgF">📸 Shu kadrni olish</button></div>`:"")+(b?`<img src="data:image/jpeg;base64,${b}" style="width:100%;border-radius:8px"><button class="btn" id="pgU" style="width:100%;margin-top:8px">Bu rasm bilan davom etish</button>`:'<div class="mut">Rasmni olib bo\'lmadi.</div>');
+    if($("pgU")) $("pgU").onclick=()=>J.onShared(b);
+    if($("pgF")) $("pgF").onclick=()=>{ try{ const v=R.querySelector("video"), c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext("2d").drawImage(v,0,0); const d=c.toDataURL("image/jpeg",0.92).split(",")[1]; if(d&&d.length>1000){ J.onShared(d); return; } }catch(e){} if(b) J.onShared(b); sys("Videodan kadr olib bo'lmadi, muqova rasmi ishlatildi."); }; }; }
 
 /* ================= Ishga tushirish ================= */
 loadSet();renderOrders();renderNotes();refreshBg();chipText();schedReport();
