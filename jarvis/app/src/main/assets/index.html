@@ -1804,7 +1804,7 @@ function buildPartsDxf(parts,o){
   const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/dxf");
   say(uri?`DXF tayyor: ${count} ta detal, kesish ${lenM.toFixed(1)} metr${lp.rate?`, narxi ${fmt(lp.total)} so'm`:""}. Yuklamalar, Jarvis papkasida.`:"DXF tayyor, lekin faylni saqlab bo'lmadi.");
 }
-async function visionAsk(b64,q,custom){
+async function visionAsk(b64,q,custom,maxTok){
   const prompt=custom||`Sen lazer kesish va metall ishlari ustasi yordamchisisan. Rasmni ko'rib, O'ZBEK tilida (lotin) 2–5 qisqa gap bilan javob ber: bu nima, qanday material va qalinlik mos, qanday yasaladi (lazer, egish, payvand), mumkin bo'lsa taxminiy kesish uzunligi. Lazer narxi so'm/metr: 1–2mm ${S.rates.r1}, 3–4mm ${S.rates.r2}, 5–6mm ${S.rates.r3}, 8–10mm ${S.rates.r4}. Hujjat yoki matn bo'lsa — mazmunini qisqa ayt. ${q?"Savol: "+q:""}`;
   let why=[];
   const tryGroq=async()=>{ const key=S.keys.groq||(S.prov==="groq"?S.key:""); if(!key){why.push("Groq kaliti yo'q");return null;}
@@ -1816,7 +1816,7 @@ async function visionAsk(b64,q,custom){
         cands=[...new Set([...cands.filter(c=>ids.includes(c)),...vis])]; } }catch(e){}
     for(const m of cands.slice(0,6)){
       const r=await http("https://api.groq.com/openai/v1/chat/completions","POST",H,
-        {model:m,temperature:0.3,max_tokens:700,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64}}]}]},45000);
+        {model:m,temperature:0.3,max_tokens:maxTok||700,messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64}}]}]},45000);
       if(r.code===200){try{const t=JSON.parse(r.body).choices[0].message.content.trim(); if(t){ if(S.visionModel!==m){S.visionModel=m;saveAll()} return t;}}catch(e){}}
       if(r.code===401||r.code===403){why.push("Groq kaliti xato");return null;}
       try{why.push(m.split("/").pop()+": "+(JSON.parse(r.body).error||{}).message)}catch(e){why.push(m+": "+r.code)}
@@ -1824,7 +1824,7 @@ async function visionAsk(b64,q,custom){
     return null; };
   const tryGem=async()=>{ if(!S.keys.gemini){why.push("Gemini kaliti yo'q");return null;}
     const r=await gemini({"Content-Type":"application/json","x-goog-api-key":S.keys.gemini},
-      {contents:[{role:"user",parts:[{inline_data:{mime_type:"image/jpeg",data:b64}},{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:900}},{keep:true,timeout:40000,limit:60000});
+      {contents:[{role:"user",parts:[{inline_data:{mime_type:"image/jpeg",data:b64}},{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:maxTok||900}},{keep:true,timeout:maxTok?70000:40000,limit:60000});
     if(r.code===200){try{return JSON.parse(r.body).candidates[0].content.parts.filter(p=>!p.thought).map(p=>p.text||"").join("").trim()}catch(e){}}
     return null; };
   const ans=(S.prov==="groq"?(await tryGroq())||(await tryGem()):(await tryGem())||(await tryGroq()));
@@ -2162,7 +2162,13 @@ let stv=null, stvPhoto="", stvInfo="";
 const STV_PROMPT=`Rasmdagi pechni (o'rmon / chodir / yig'ma / mangal turidagi) ko'rib, uni lazerda kesib yasash uchun o'lchamlarini baholab, FAQAT JSON qaytar:
 {"tur":"quti yoki silindr","nom":"pechning qisqa nomi","L":uzunlik_mm,"W":eni_mm,"H":balandligi_mm,"D":diametr_mm(silindr bo'lsa),"t":list_qalinligi_mm,"doorW":eshik_eni,"doorH":eshik_boyi,"glass":true/false(eshikda oyna bormi),"swN":yon_oyna_soni,"swW":oyna_eni,"swH":oyna_boyi,"chD":mori_diametri,"chH":mori_balandligi,"ventN":havo_tesh_soni,"ventD":teshik_diametri,"legH":oyoq_balandligi,"qidir":"shu pech turini internetdan qidirish uchun inglizcha qisqa so'rov"}
 Rasmda o'lcham ko'rsatilmagan bo'lsa, shu turdagi pechning odatdagi real o'lchamlarini ber. Rasmda ko'rinmagan tomonlarini shu tur uchun odatiy tuzilishdan taxmin qil.`;
-function stvJson(t){ try{ return JSON.parse(String(t||"").replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/,"$1")) }catch(e){ return null } }
+function stvJson(t){ t=String(t||""); const i=t.indexOf("{"); if(i<0) return null; let x=t.slice(i);
+  try{ return JSON.parse(x.replace(/^([\s\S]*\})[^}]*$/,"$1")) }catch(e){}
+  // kesilib qolgan JSON'ni tuzatish: oxiridan to'liq elementgacha qirqib, qavslarni yopish
+  for(let k=0;k<40;k++){ const stack=[]; let inS=false,esc2=false; for(const ch of x){ if(inS){ if(esc2) esc2=false; else if(ch==="\\") esc2=true; else if(ch==='"') inS=false; continue; } if(ch==='"') inS=true; else if(ch==="{"||ch==="[") stack.push(ch); else if(ch==="}"||ch==="]") stack.pop(); }
+    if(!inS){ const y=x.replace(/[,\s]+$/,"")+stack.reverse().map(c=>c==="{"?"}":"]").join(""); try{ return JSON.parse(y) }catch(e){} }
+    const j=Math.max(x.lastIndexOf("},"),x.lastIndexOf("}")); if(j<=0) break; x=x.slice(0,j+1); }
+  return null }
 function stvClean(j){ const o={}; if(!j||typeof j!=="object") return o; const rg={L:[100,2000],W:[60,1200],H:[60,1200],D:[60,800],t:[0.5,6],doorW:[30,600],doorH:[30,600],swN:[0,5],swW:[20,400],swH:[20,400],chD:[20,200],chH:[0,2000],ventN:[0,20],ventD:[3,40],legH:[0,300]};
   for(const k in rg){ const v=+j[k]; if(isFinite(v)&&v>=rg[k][0]&&v<=rg[k][1]) o[k]=v; }
   if(j.tur==="silindr"||j.tur==="quti") o.tur=j.tur; if(j.nom) o.nom=String(j.nom).slice(0,40); if(j.glass!==undefined) o.glass=!!j.glass&&j.glass!=="false"; return o; }
@@ -2177,9 +2183,13 @@ function stoveStart(){ $("sheet").innerHTML=`<h2>🧩 Buyum loyihasi</h2><p clas
 async function stoveAnalyze(b64,hint){ hint=hint||""; stvPhoto=b64||""; stvInfo=""; busy=true; let j=null, web=""; 
   try{ setState("think","buyumni o'rganyapman");
     const hp=hint?`\nFoydalanuvchi izohi (ishon): ${hint}`:"";
-    j=b64?stvJson(await visionAsk(b64,"",GEN_PROMPT+hp)):stvJson(await askRaw(GEN_PROMPT+`\nRasm yo'q. Buyum: ${hint}. O'zing odatiy tuzilishini taxmin qil.`+hp));
+    const SHORT="\nJAVOBNI QISQA QIL: 4–9 ta qism, teshiklarni faqat perforatsiya bo'lsa yoz, izoh yozma, faqat JSON.";
+    let raw=b64?await visionAsk(b64,"",GEN_PROMPT+hp+SHORT,4000):await askRaw(GEN_PROMPT+`\nRasm yo'q. Buyum: ${hint}. O'zing odatiy tuzilishini taxmin qil.`+hp+SHORT);
+    j=stvJson(raw);
+    if((!j||!Array.isArray(j.qismlar)||!j.qismlar.length)&&b64){ setState("think","qayta urinyapman"); raw=await visionAsk(b64,"",GEN_PROMPT+hp+"\nENG ODDIY model: 3–6 ta qism (quti/plastina/silindr), teshiksiz. Faqat JSON.",4000); const j3=stvJson(raw); if(j3&&Array.isArray(j3.qismlar)&&j3.qismlar.length) j=j3; }
+    if(!raw) stvInfo="AI javob bermadi (API kalit yoki limit). Sozlamalarda kalitni tekshiring.";
     if(j&&/pech/i.test(j.tur||"")){ busy=false; await stoveFlow(b64); return; }
-    if(!j||!Array.isArray(j.qismlar)||j.qismlar.length<1){ stvInfo="AI buyumni qismlarga ajrata olmadi. Qo'lda qism qo'shing yoki izoh yozib qayta urining."; gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; busy=false; setState("idle"); genUI(); return; }
+    if(!j||!Array.isArray(j.qismlar)||j.qismlar.length<1){ stvInfo=stvInfo||"AI javobini tushunib bo'lmadi. Izoh yozib qayta urining yoki qism qo'shing."; gen={nom:hint||"Buyum",t:2,comps:[{n:"Asos",k:"box",x:0,y:0,z:0,dona:1,rang:"",sx:300,sy:300,sz:300,ochiq:false}]}; busy=false; setState("idle"); genUI(); return; }
     setState("think","internetdan qidiryapman");
     try{ const w=await webAnswer(`${j.qidir||j.nom}: typical real dimensions in mm (height, width, depth, material thickness, hole size). Raqamlar bilan javob ber.`); web=(w&&w.text)||""; if(/(topib bo.lmadi|topilmadi|aniq ma.lumot)/i.test(web)) web=""; }catch(e){}
     if(web){ const m=await askRaw(`Buyum rasmidan olingan model JSON: ${JSON.stringify(j)}\nInternetdan topilgan o'lchamlar: ${web}\nShu o'lchamlarga mos qilib modelni tuzat (qismlar tuzilishi va koordinata sxemasi o'zgarmasin) va FAQAT to'liq JSON qaytar.`); const j2=stvJson(m); if(j2&&Array.isArray(j2.qismlar)&&j2.qismlar.length>=Math.max(1,j.qismlar.length-2)) j=Object.assign({},j,j2); }
@@ -2334,7 +2344,7 @@ function pdfJpeg(b64,w,h){ const bin=atob(b64), jpg=new Uint8Array(bin.length); 
 /* ================= Umumiy buyum loyihasi (har qanday buyum) ================= */
 let gen=null;
 const GEN_PROMPT=`Rasmdagi buyumni (har qanday: axlat urnasi, javon, stol, darvoza, mangal, skameyka, pech, quti, stend va h.k.) ko'rib, uni lazer kesish va payvandlash bilan yasash uchun oddiy shakllardan (qutilar, silindrlar, plastinalar) yig'ilgan model sifatida FAQAT JSON qaytar.
-Koordinata: X=eni (chapdan o'ngga), Y=yuqoriga, Z=chuqurlik (old tomondan orqaga). Boshlanish nuqtasi buyumning pastki old-chap burchagi. Hamma o'lcham mm. Buyumning real o'lchamini baholab ber (rasmda ko'rsatilmasa shu turdagi buyumning odatiy o'lchami).
+Koordinata: X=eni (chapdan o'ngga), Y=yuqoriga, Z=chuqurlik (old tomondan orqaga). Boshlanish nuqtasi buyumning pastki old-chap burchagi. Hamma o'lcham mm. Rasmdagi yozuvlarga (masalan 70 cm, 40 cm, 3 MM) albatta tayan va ularni mm ga aylantir. Buyumning real o'lchamini baholab ber (rasmda ko'rsatilmasa shu turdagi buyumning odatiy o'lchami). Yig'ma/yassi paketli buyumlarni plastinalar (plate) bilan ifodala.
 {"nom":"buyum nomi","tur":"pech yoki boshqa","t":list_qalinligi_mm,"qidir":"shu buyumning o'lchamlarini topish uchun inglizcha qisqa qidiruv so'rovi","qismlar":[
 {"n":"qism nomi","k":"box","x":0,"y":0,"z":0,"sx":eni,"sy":balandligi,"sz":chuqurligi,"ochiq":"tepa yoki yoq","rang":"#rrggbb","teshik":{"f":"dumaloq yoki kvadrat","d":teshik_olchami,"dx":qadam_x,"dy":qadam_y,"m":chet_masofasi}},
 {"n":"qism nomi","k":"cyl","x":asos_markazi_x,"y":asos_y,"z":asos_markazi_z,"r":radius,"h":balandligi,"o":"y yoki x yoki z (o'q yo'nalishi)","arc":360 yoki yoy_gradusi,"a0":boshlanish_gradusi,"qopqoq":"ikki yoki yoq yoki past yoki tepa","rang":"#rrggbb","teshik":{...}},
