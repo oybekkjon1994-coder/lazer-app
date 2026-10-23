@@ -153,6 +153,12 @@ public class MainActivity extends Activity {
             if (pageReady) js("J.morning()"); else pendingCmd = "#report#";
             return;
         }
+        if (i != null && i.getBooleanExtra("evening", false)) {
+            i.removeExtra("evening");
+            if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
+            if (pageReady) js("J.evening && J.evening()"); else pendingCmd = "#evening#";
+            return;
+        }
         if (i != null && i.getBooleanExtra("car", false)) {
             i.removeExtra("car");
             if (pageReady) js("J.autoCar && J.autoCar(true)"); else pendingCmd = "#car#";
@@ -168,6 +174,7 @@ public class MainActivity extends Activity {
 
     void deliver(String cmd) {
         if ("#report#".equals(cmd)) js("J.morning()");
+        if ("#evening#".equals(cmd)) js("J.evening && J.evening()");
         else if ("#car#".equals(cmd)) js("J.autoCar && J.autoCar(true)");
         else js("J.external(" + q(cmd) + ")");
     }
@@ -764,6 +771,22 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface public void scheduleReport(boolean on, int h, int m) { ReportReceiver.schedule(MainActivity.this, on, h, m); }
+
+        @JavascriptInterface public void scheduleEvening(boolean on, int h, int m) { ReportReceiver.schedule(MainActivity.this, on, h, m, "evening"); }
+
+        @JavascriptInterface public boolean charging() {
+            try {
+                BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
+                return Build.VERSION.SDK_INT >= 23 && bm.isCharging();
+            } catch (Exception e) { return false; }
+        }
+
+        @JavascriptInterface public int freeMb() {
+            try {
+                android.os.StatFs st = new android.os.StatFs(android.os.Environment.getDataDirectory().getPath());
+                return (int) (st.getAvailableBytes() / (1024 * 1024));
+            } catch (Exception e) { return -1; }
+        }
 
         @JavascriptInterface public String media(String cmd) {
             int code;
