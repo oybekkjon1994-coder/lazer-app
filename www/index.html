@@ -391,10 +391,12 @@ body.shop .card{border-radius:16px}
         <span class="calc" id="nCalc"></span>
       </div>
       <div class="actions">
+        <label style="flex-basis:100%;display:flex;gap:8px;align-items:center;font-size:13px;min-height:40px"><input type="checkbox" id="nOpt" checked style="width:20px;height:20px"> Kesish tartibini optimallashtirish (teshiklar oldin, bo‘sh yurish kam)</label>
         <button class="primary" id="nSave">Listlarni DXF yuklab olish</button>
         <button id="nCopy">Nusxalash</button>
         <button id="nOrder">Buyurtma qilish</button>
       </div>
+      <p class="note" id="nOptInfo" aria-live="polite"></p>
     </section>
   </div>
   <!-- ===== 5. METALL ===== -->
@@ -1247,6 +1249,75 @@ PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",rerender:["mode","pt"
       else{const r2=patternHoles(zones,{pat:p.pt,s:p.ps,w:p.pw});out+=r2.out;info+=` Naqsh: ${r2.n} ta teshik.`}}
     this.warn=info;return out},
   label:p=>isBox(p)?`Quti ${p.A}x${p.B}x${p.h}`:"Yoyilma "+String(p.fl).trim().replace(/\s+/g,"-")};
+PARTS.gear={group:"tpl",name:"Shesterenka (tishli g‘ildirak)",
+  note:"Evolventa profilli to‘g‘ri tishli g‘ildirak. Tashqi diametr = modul × (tishlar soni + 2). Juft ishlashi uchun ikki g‘ildirakning moduli va burchagi bir xil bo‘lsin. Shponka kerak bo‘lmasa eni 0 qoldiring.",
+  fields:[["m","Modul (mm)",2],["z","Tishlar soni",20],["al","Bosim burchagi (°)",20],["d","Val teshigi Ø (mm)",10],["kb","Shponka eni (mm, 0 = yo‘q)",0],["kt","Shponka chuqurligi (mm, teshik chetidan)",2]],
+  build(p){const m=p.m,z=Math.round(p.z),al=p.al*Math.PI/180;
+    if(!(m>0))throw"Modul 0 dan katta bo‘lsin.";if(!(z>=6&&z<=300))throw"Tishlar soni 6 dan 300 gacha bo‘lsin.";if(!(p.al>=10&&p.al<=30))throw"Bosim burchagi 10–30° oralig‘ida bo‘lsin (odatda 20°).";
+    const r=m*z/2,rb=r*Math.cos(al),ra=r+m,rf=Math.max(.2*m,r-1.25*m),inv=a=>Math.tan(a)-a;
+    const psi=rho=>Math.PI/(2*z)+inv(al)-inv(Math.acos(Math.min(1,rb/rho)));
+    if(psi(ra)<=0.02)throw"Tishlar soni kam — tish uchi uchli bo‘lib qoladi (kamida 14 ta oling).";
+    if(p.d>=2*rf-m)throw"Val teshigi g‘ildirak tubiga sig‘maydi — teshikni kichraytiring.";
+    const r0=Math.max(rb,rf),N=7,pts=[];
+    for(let i=0;i<z;i++){const c=2*Math.PI*i/z,fl=[],fr=[];
+      for(let k=0;k<=N;k++){const rho=r0+(ra-r0)*k/N,a=psi(rho);fl.push([rho*Math.cos(c-a),rho*Math.sin(c-a)]);fr.push([rho*Math.cos(c+a),rho*Math.sin(c+a)])}
+      const a0=psi(r0);
+      if(rf<rb){pts.push([rf*Math.cos(c-a0),rf*Math.sin(c-a0)])}
+      fl.forEach(q=>pts.push(q));fr.reverse().forEach(q=>pts.push(q));
+      if(rf<rb)pts.push([rf*Math.cos(c+a0),rf*Math.sin(c+a0)]);
+      // tish tubi yoyi
+      const nxt=2*Math.PI*(i+1)/z-psi(r0)-0,cur=c+psi(r0);for(let k=1;k<=2;k++){const t=cur+(nxt-cur)*k/3;pts.push([rf*Math.cos(t),rf*Math.sin(t)])}}
+    let out=E.poly(pts,true);
+    const R=p.d/2;
+    if(R>0){if(p.kb>0){const hb=p.kb/2;if(hb>=R)throw"Shponka eni teshikdan kichik bo‘lsin.";
+        const y0=Math.sqrt(R*R-hb*hb),yk=R+p.kt,dl=Math.asin(hb/R),sw=2*Math.PI-2*dl;
+        out+=E.poly([[hb,y0,0],[hb,yk,0],[-hb,yk,0],[-hb,y0,Math.tan(sw/4)]],true)}
+      else out+=E.circle(0,0,R)}
+    this.warn=`Bo‘luvchi diametr ${(2*r).toFixed(1)} mm, tashqi diametr ${(2*ra).toFixed(1)} mm, tish balandligi ${(2.25*m).toFixed(2)} mm.`;
+    return out},
+  label:p=>`Shesterenka m${p.m} z${p.z}`};
+PARTS.stanina={group:"tpl",name:"Dastgoh bazasi (plita, paz va teshiklar)",
+  note:"To‘rtburchak asos plita: burchaklarda mahkamlash teshiklari, chetlari bo‘ylab uzun pazlar (sozlash uchun), markazda ixtiyoriy teshik.",
+  fields:[["L","Uzunligi (mm)",600],["B","Eni (mm)",400],["R","Burchak radiusi (mm)",10],["hd","Burchak teshigi Ø (mm)",14],["e","Teshikning chetdan masofasi (mm)",30],["ns","Har uzun chetda pazlar soni",3],["sl","Paz uzunligi (mm)",60],["sw","Paz eni (mm)",14],["cd","Markaziy teshik Ø (mm, 0 = yo‘q)",0]],
+  build(p){const {L,B}=p,R=Math.min(p.R,L/2-.1,B/2-.1);if(!(L>20&&B>20))throw"Uzunlik va enni kiriting.";if(p.e*2>=Math.min(L,B))throw"Teshik chetdan masofasi juda katta.";
+    let out=R>0.01?E.poly([[R,0,0],[L-R,0,Q],[L,R,0],[L,B-R,Q],[L-R,B,0],[R,B,Q],[0,B-R,0],[0,R,Q]],true):E.poly([[0,0],[L,0],[L,B],[0,B]],true);
+    const e=p.e;if(p.hd>0)for(const [x,y] of [[e,e],[L-e,e],[L-e,B-e],[e,B-e]])out+=E.circle(x,y,p.hd/2);
+    const ns=Math.max(0,Math.round(p.ns)),span=L-2*e-(p.hd>0?p.hd:0);
+    if(ns>0&&p.sw>0){if(p.sl<p.sw)throw"Paz uzunligi enidan kichik bo‘lmasin.";if(ns*p.sl>span+1e-6)throw"Pazlar sig‘maydi — sonini yoki uzunligini kamaytiring.";
+      const gap=(L-ns*p.sl)/(ns+1),a=(p.sl-p.sw)/2,r=p.sw/2;
+      for(const y of [e,B-e])for(let i=0;i<ns;i++){const x=gap*(i+1)+p.sl*i+p.sl/2;
+        out+=a<.01?E.circle(x,y,r):E.poly([[x-a,y-r,0],[x+a,y-r,1],[x+a,y+r,0],[x-a,y+r,1]],true)}}
+    if(p.cd>0)out+=E.circle(L/2,B/2,p.cd/2);
+    return out},
+  label:p=>`Dastgoh bazasi ${p.L}x${p.B}`};
+PARTS.mangalkit={group:"tpl",name:"Mangal (yig‘ma) — qismlar to‘plami",
+  note:"Bir faylda: tag, 2 ta uzun devor (shampur o‘yiqlari va havo teshiklari bilan), 2 ta qisqa devor. Qismlar orasi 20 mm. Devorlarni tagiga payvandlang.",
+  fields:[["L","Uzunligi (mm)",700],["B","Eni (mm)",200],["H","Devor balandligi (mm)",150],["nw","Shampur o‘yig‘i eni (mm)",10],["nd","O‘yiq chuqurligi (mm)",14],["np","O‘yiqlar oralig‘i (mm)",80],["ad","Havo teshigi Ø (mm, 0 = yo‘q)",8],["ap","Havo teshiklari oralig‘i (mm)",30],["ah","Teshiklar balandligi (tagdan, mm)",30]],
+  build(p){const {L,B,H}=p,g=20;if(!(L>100&&B>60&&H>40))throw"O‘lchamlarni kiriting.";
+    if(p.nw<3||p.nd<p.nw/2+1||p.nd>H-20)throw"O‘yiq o‘lchamlarini tekshiring.";if(p.np<p.nw+6)throw"O‘yiqlar oralig‘i juda kichik.";
+    let out="";const T=(dx,dy)=>s=>s;
+    const rect=(x,y,w,h)=>E.poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]],true);
+    out+=rect(0,0,L,B);
+    const y1=B+g,y2=y1+H+g;
+    const wall=y0=>{const n=Math.floor((L-20)/p.np)+1,cx=i=>(L-(n-1)*p.np)/2+i*p.np,v=[[0,y0,0],[L,y0,0],[L,y0+H,0]];
+      for(let i=n-1;i>=0;i--){const xc=cx(i),a=p.nw/2;v.push([xc+a,y0+H,0],[xc+a,y0+H-p.nd+a,-1],[xc-a,y0+H-p.nd+a,0],[xc-a,y0+H,0])}v.push([0,y0+H,0]);
+      let s=E.poly(v,true);
+      if(p.ad>0){const m=Math.floor((L-30)/p.ap)+1;for(let i=0;i<m;i++){const x=(L-(m-1)*p.ap)/2+i*p.ap;s+=E.circle(x,y0+p.ah,p.ad/2)}}return s};
+    out+=wall(y1)+wall(y2);
+    const xe=L+g;out+=rect(xe,0,B,H)+rect(xe,H+g,B,H);
+    this.warn=`Qismlar: tag ${L}×${B}, uzun devor 2 ta ${L}×${H}, qisqa devor 2 ta ${B}×${H}. Shampur o‘yig‘i: ${Math.floor((L-20)/p.np)+1} ta.`;
+    return out},
+  label:p=>`Mangal ${p.L}x${p.B}x${p.H}`};
+PARTS.dial={group:"tpl",name:"Soat siferblati (belgilar bilan)",
+  note:"Doira plastina: markazda val teshigi, soat belgilari kesik chiziq ko‘rinishida, ixtiyoriy daqiqa nuqtalari. 3, 6, 9, 12 belgilari kattaroq.",
+  fields:[["D","Diametri (mm)",300],["ring","Chetdan belgigacha masofa (mm)",12],["hl","Soat belgisi uzunligi (mm)",22],["hw","Soat belgisi eni (mm)",5],["big","Katta belgilar (12/3/6/9)","ha","select",[["ha","Ha — uzunroq"],["yoq","Yo‘q — hammasi bir xil"]]],["mm","Daqiqa nuqtalari","ha","select",[["ha","Ha — 60 ta teshik"],["yoq","Yo‘q"]]],["md","Daqiqa teshigi Ø (mm)",2.5],["cd","Markaziy val teshigi Ø (mm)",8]],
+  build(p){const R=p.D/2;if(!(R>40))throw"Diametr juda kichik.";const ro=R-p.ring;if(ro-p.hl*1.5<=p.cd/2+8)throw"Belgilar markazga juda yaqin — diametrni oshiring yoki belgini qisqartiring.";
+    let out=E.circle(0,0,R);if(p.cd>0)out+=E.circle(0,0,p.cd/2);
+    for(let h=0;h<12;h++){const a=h*Math.PI/6,big=p.big==="ha"&&h%3===0,len=p.hl*(big?1.5:1),w=p.hw*(big?1.3:1),c=Math.cos(a),s=Math.sin(a);
+      const P=(u,v)=>[u*c-v*s,u*s+v*c],r1=ro,r0=ro-len,pts=[P(r0,-w/2),P(r1,-w/2),P(r1,w/2),P(r0,w/2)];out+=E.poly(pts,true)}
+    if(p.mm==="ha"){for(let k=0;k<60;k++){if(k%5===0)continue;const a=k*Math.PI/30;out+=E.circle((ro-p.hl*.15)*Math.cos(a),(ro-p.hl*.15)*Math.sin(a),p.md/2)}}
+    return out},
+  label:p=>`Soat siferblati D${p.D}`};
 ["plate","flange","gusset"].forEach(k=>PARTS[k].group="det");
 Object.keys(PARTS).forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 try{const s=JSON.parse(localStorage.getItem("lazerParts")||"null");if(s)Object.keys(s).forEach(k=>{if(vals[k])Object.assign(vals[k],s[k])})}catch(_){}
@@ -2298,22 +2369,25 @@ function drawSheet(){
   for(const pl of sh.placed){const fn=placeFn(pl);
     for(const p of pl.part.paths){ctx.beginPath();p.pts.forEach((pt,i)=>{const [x,y]=fn(pt),X=ox+x*s,Y=oy+(SH-y)*s;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});if(p.closed)ctx.closePath();ctx.stroke()}}
 }
-function sheetDXF(sh){let s="";
-  for(const pl of sh.placed){const fn=placeFn(pl);
-    for(const p0 of pl.part.paths){const p=xform(p0,fn,pl.ang!==undefined?pl.ang:(pl.rot?90:0),1),g=p.geo;
-      if(g&&g.t==="c")s+=E.circle(g.x,g.y,g.r);
-      else if(g&&g.t==="a")s+=E.arc(g.x,g.y,g.r,g.a0,g.a1);
-      else if(g&&g.t==="p")s+=E.poly(g.v,g.closed);
-      else if(g&&g.t==="l")s+=E.line(p.pts[0][0],p.pts[0][1],p.pts[1][0],p.pts[1][1]);
-      else s+=E.poly(p.pts,p.closed)}}
-  return wrapDXF(s)}
+function sheetPaths(sh){const out=[];
+  for(const pl of sh.placed){const fn=placeFn(pl);for(const p0 of pl.part.paths)out.push(xform(p0,fn,pl.ang!==undefined?pl.ang:(pl.rot?90:0),1))}
+  return out}
+const nOptOn=()=>{const c=$("nOpt");return !c||c.checked};
+function sheetDXF(sh){let ps=sheetPaths(sh);
+  if(nOptOn()&&window.lzOptimize){const r=lzOptimize(ps);ps=r.paths;nest.rapB=(nest.rapB||0)+r.before;nest.rapA=(nest.rapA||0)+r.after}
+  return wrapDXF(ps.map(p=>{const g=p.geo;
+    if(g&&g.t==="c")return E.circle(g.x,g.y,g.r);
+    if(g&&g.t==="a")return E.arc(g.x,g.y,g.r,g.a0,g.a1);
+    if(g&&g.t==="p")return E.poly(g.v,g.closed);
+    if(g&&g.t==="l")return E.line(p.pts[0][0],p.pts[0][1],p.pts[1][0],p.pts[1][1]);
+    return E.poly(p.pts,p.closed)}).join(""))}
 $("nPrev").addEventListener("click",()=>{nPage=Math.max(0,nPage-1);drawSheet()});
 $("nNext").addEventListener("click",()=>{nPage=Math.min(nest.sheets.length-1,nPage+1);drawSheet()});
 ["sW","sH","sGap","sMar"].forEach(id=>$(id).addEventListener("input",runNest));try{const r=localStorage.getItem("lazerNestRot");if(r)$("sRot").value=r}catch(_){}
 $("sRot").addEventListener("input",()=>{try{localStorage.setItem("lazerNestRot",$("sRot").value)}catch(_){}$("ntoast").textContent="Joylanmoqda…";setTimeout(()=>{runNest();$("ntoast").textContent=""},30)});
 $("nthk").addEventListener("input",nestPrice);
-$("nSave").addEventListener("click",()=>{if(!nest.sheets.length)return;const t=(tiers.find(x=>x.id===$("nthk").value)||tiers[0]).name;
-  offerZip("nesting_"+t.replace(/[^0-9]+/g,"-").replace(/^-|-$/g,"")+"mm",nest.sheets.map((sh,i)=>[`list_${i+1}.dxf`,sheetDXF(sh)]),$("ntoast"))});
+$("nSave").addEventListener("click",()=>{if(!nest.sheets.length)return;nest.rapB=0;nest.rapA=0;const t=(tiers.find(x=>x.id===$("nthk").value)||tiers[0]).name;
+  offerZip("nesting_"+t.replace(/[^0-9]+/g,"-").replace(/^-|-$/g,"")+"mm",nest.sheets.map((sh,i)=>[`list_${i+1}.dxf`,sheetDXF(sh)]),$("ntoast"));const oi=$("nOptInfo");if(oi)oi.textContent=nOptOn()&&nest.rapB?lzOptInfo({before:nest.rapB,after:nest.rapA,note:""}):""});
 $("nCopy").addEventListener("click",()=>navigator.clipboard.writeText(nest.text||"").then(()=>$("ntoast").textContent="Nusxalandi — Telegramga joylashingiz mumkin.").catch(()=>$("ntoast").textContent=nest.text));
 const importFiles=files=>Promise.all([...files].map(f=>f.text().then(t=>[t,f.name.replace(/\.dxf$/i,"")]))).then(list=>{
   let ok=0;list.forEach(([t,n])=>{if(addPart(t,n,1))ok++});if(ok)$("ntoast").textContent=`${ok} ta fayl qo‘shildi. Har biriga sonini kiriting.`;
@@ -3359,6 +3433,236 @@ document.querySelectorAll("#shSeg button").forEach(b=>b.onclick=()=>thSet(b.data
 /* tizim "orqaga" tugmasi: bo'limdan bosh sahifaga */
 try{history.replaceState({sh:1},"");history.pushState({sh:2},"");addEventListener("popstate",()=>{const zo=document.querySelector(".zov");if(zo){zo._close&&zo._close();history.pushState({sh:2},"");return}if(cur!=="home"){view("home");history.pushState({sh:2},"")}})}catch(_){}
 window.lzView=view;
+})();
+
+/* ===== Chizma asboblari: tekshirish, o‘lcham/ko‘zgu/massiv, kesish tartibi ===== */
+(function(){
+const mm2=v=>(+v).toFixed(2);
+const toMM=obj=>{const u=obj.unit||1;return obj.paths.filter(p=>!(obj.frame&&obj.excludeFrame&&p.frame)).map(p=>xform(p,([x,y])=>[x*u,y*u],0,u))};
+function aff(p,M){
+  const fn=([x,y])=>[M[0]*x+M[2]*y+M[4],M[1]*x+M[3]*y+M[5]],det=M[0]*M[3]-M[1]*M[2],s=Math.sqrt(Math.abs(det));
+  const q={closed:p.closed,frame:p.frame,pts:p.pts.map(fn),geo:null},g=p.geo;
+  if(g){
+    if(g.t==="c"){const [x,y]=fn([g.x,g.y]);q.geo={t:"c",x,y,r:g.r*s}}
+    else if(g.t==="a"){const c=fn([g.x,g.y]),pt=a=>{const r=a*Math.PI/180;return fn([g.x+g.r*Math.cos(r),g.y+g.r*Math.sin(r)])},
+        ang=P=>(Math.atan2(P[1]-c[1],P[0]-c[0])*180/Math.PI+360)%360;let a0=ang(pt(g.a0)),a1=ang(pt(g.a1));if(det<0)[a0,a1]=[a1,a0];
+      q.geo={t:"a",x:c[0],y:c[1],r:g.r*s,a0,a1}}
+    else if(g.t==="p")q.geo={t:"p",closed:g.closed,v:g.v.map(([x,y,b])=>[...fn([x,y]),det<0?-(b||0):(b||0)])};
+    else if(g.t==="l")q.geo={t:"l"}}
+  return q}
+function pathBody(p){const g=p.geo;
+  if(g&&g.t==="c")return E.circle(g.x,g.y,g.r);
+  if(g&&g.t==="a")return E.arc(g.x,g.y,g.r,g.a0,g.a1);
+  if(g&&g.t==="p")return E.poly(g.v,g.closed);
+  if(g&&g.t==="l")return E.line(p.pts[0][0],p.pts[0][1],p.pts[1][0],p.pts[1][1]);
+  return E.poly(p.pts,p.closed)}
+const pathsBody=ps=>ps.map(pathBody).join("");
+const bbox=ps=>{let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;for(const p of ps)for(const [x,y] of p.pts){if(x<x0)x0=x;if(y<y0)y0=y;if(x>x1)x1=x;if(y>y1)y1=y}return [x0,y0,x1,y1]};
+const normalize=ps=>{const [x0,y0]=bbox(ps);return ps.map(p=>aff(p,[1,0,0,1,-x0,-y0]))};
+const isClosed=p=>p.closed||(p.pts.length>2&&Math.hypot(p.pts[0][0]-p.pts[p.pts.length-1][0],p.pts[0][1]-p.pts[p.pts.length-1][1])<1e-3);
+const sgnArea=pts=>{let a=0;for(let i=0,n=pts.length;i<n;i++){const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%n];a+=x1*y2-x2*y1}return a/2};
+const inPoly=(pt,poly)=>{let c=false;const [x,y]=pt;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c};
+
+/* ---------- tekshirish ---------- */
+const sigOf=p=>{const r=v=>Math.round(v*20);const a=p.pts.map(([x,y])=>r(x)+","+r(y));if(p.closed&&a.length>2){a.sort()}else{const f=a.join("|"),b=a.slice().reverse().join("|");return (f<b?f:b)+(p.closed?"c":"o")}return a.join("|")+"c"};
+function inspect(ps,minD){
+  const seen=new Set(),dup=[];ps.forEach((p,i)=>{const s=sigOf(p);if(seen.has(s))dup.push(i);else seen.add(s)});
+  const garbage=[],tiny=[],open=[];
+  ps.forEach((p,i)=>{const [x0,y0,x1,y1]=bbox([p]),d=Math.max(x1-x0,y1-y0);
+    if(d<0.3)garbage.push(i);else if(isClosed(p)&&d<minD)tiny.push(i);
+    if(!isClosed(p)&&!garbage.includes(i))open.push(i)});
+  return {dup,garbage,tiny,open}}
+function fixPaths(ps){
+  const rep={dup:0,garbage:0,joined:0,left:0};const seen=new Set();let out=[];
+  for(const p of ps){const [x0,y0,x1,y1]=bbox([p]);if(Math.max(x1-x0,y1-y0)<0.3){rep.garbage++;continue}
+    const s=sigOf(p);if(seen.has(s)){rep.dup++;continue}seen.add(s);out.push(p)}
+  const closed=[],open=[];for(const p of out)(isClosed(p)?closed:open).push(p);
+  if(open.length){const before=open.length,loops=chainLoops(open.map(p=>({pts:p.pts})));
+    const used=new Set();
+    // chainLoops ishlatilgan chiziqlarni qaytarmaydi — qolganini aniqlash uchun nuqtalar bo‘yicha solishtiramiz
+    const key=pt=>Math.round(pt[0]*20)+","+Math.round(pt[1]*20),ends=new Map();loops.forEach(l=>{ends.set(key(l[0]),(ends.get(key(l[0]))||0)+1)});
+    const keepOpen=open.filter(p=>{const a=key(p.pts[0]),b=key(p.pts[p.pts.length-1]);return !(ends.has(a)||ends.has(b))});
+    // chainLoops yopilgan zanjirlardagi barcha nuqtalarni qamraydi: zanjirga kirmagan ochiq chiziqlar qoladi
+    const inLoop=new Set();loops.forEach(l=>l.forEach(pt=>inLoop.add(key(pt))));
+    const rest=open.filter(p=>!(p.pts.every(pt=>inLoop.has(key(pt)))));
+    rep.joined=before-rest.length;rep.left=rest.length;
+    out=closed.concat(loops.map(l=>({pts:l,closed:true,geo:null})),rest)}
+  return {paths:out,rep}}
+function inspectText(r,n,minD){
+  const L=[];
+  L.push(r.dup.length?`⚠ Ustma-ust tushgan bir xil chiziq: ${r.dup.length} ta (ikki marta kesilib, material kuyadi)`:"✅ Ustma-ust chiziq yo‘q");
+  L.push(r.open.length?`⚠ Yopilmagan chiziq: ${r.open.length} ta (kesilmay qolishi mumkin)`:"✅ Hamma kontur yopiq");
+  L.push(r.garbage.length?`⚠ Juda mayda chiqindi (0.3 mm dan kichik): ${r.garbage.length} ta`:"✅ Mayda chiqindi yo‘q");
+  L.push(r.tiny.length?`⚠ ${minD} mm dan kichik teshik/kontur: ${r.tiny.length} ta (qalin listda kesilmaydi)`:`✅ ${minD} mm dan kichik teshik yo‘q`);
+  return `Jami ${n} ta obyekt.\n`+L.join("\n")}
+
+/* ---------- kesish tartibi ---------- */
+function rotStart(p,at){
+  const g=p.geo;
+  if(g&&g.t==="c"){let best=0,bd=1e18;for(let k=0;k<4;k++){const a=k*Math.PI/2,d=Math.hypot(g.x+g.r*Math.cos(a)-at[0],g.y+g.r*Math.sin(a)-at[1]);if(d<bd){bd=d;best=k}}
+    const R=g.r,pts=[[R,0],[0,R],[-R,0],[0,-R]],c=Math.cos(best*Math.PI/2),s=Math.sin(best*Math.PI/2),rot=([x,y])=>[g.x+x*c-y*s,g.y+x*s+y*c];
+    const v=[[...rot([R,0]),1],[...rot([-R,0]),1]];return {pts:polyFromVerts(v.map(([x,y,b])=>({p:[x,y],b})),true),closed:true,geo:{t:"p",closed:true,v}}}
+  if(g&&g.t==="p"&&g.closed){const v=g.v;let bi=0,bd=1e18;v.forEach((q,i)=>{const d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<bd){bd=d;bi=i}});
+    const nv=v.slice(bi).concat(v.slice(0,bi));return {pts:polyFromVerts(nv.map(([x,y,b])=>({p:[x,y],b:b||0})),true),closed:true,geo:{t:"p",closed:true,v:nv}}}
+  if(!g||g.t==="p"||g.t==="l"){ if(!g){let pts=p.pts.slice();const rep=pts.length>1&&Math.hypot(pts[0][0]-pts[pts.length-1][0],pts[0][1]-pts[pts.length-1][1])<1e-6;if(rep)pts.pop();
+      let bi=0,bd=1e18;pts.forEach((q,i)=>{const d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<bd){bd=d;bi=i}});pts=pts.slice(bi).concat(pts.slice(0,bi));return {pts,closed:true,geo:null}}}
+  return p}
+function revOpen(p){
+  const g=p.geo;
+  if(g&&g.t==="l")return {pts:[p.pts[1],p.pts[0]],closed:false,geo:{t:"l"}};
+  if(g&&g.t==="p"){const v=g.v,n=v.length,nv=[];for(let k=0;k<n;k++){const s=v[n-1-k];nv.push([s[0],s[1],k<n-1?-(v[n-2-k][2]||0):0])}
+    return {pts:polyFromVerts(nv.map(([x,y,b])=>({p:[x,y],b})),false),closed:false,geo:{t:"p",closed:false,v:nv}}}
+  if(!g)return {pts:p.pts.slice().reverse(),closed:false,geo:null};
+  return p}
+const startOf=p=>p.pts[0],endOf=p=>isClosed(p)?p.pts[0]:p.pts[p.pts.length-1];
+function rapidLen(ps,home){let d=0,cur=home;for(const p of ps){d+=Math.hypot(startOf(p)[0]-cur[0],startOf(p)[1]-cur[1]);cur=endOf(p)}return d}
+function optimizePaths(ps){
+  if(!ps.length)return {paths:ps,before:0,after:0,note:""};
+  const [bx,by]=bbox(ps),home=[bx,by],before=rapidLen(ps,home);
+  const N=ps.length,closedIdx=[],openIdx=[];ps.forEach((p,i)=>(isClosed(p)?closedIdx:openIdx).push(i));
+  const cl=closedIdx.map(i=>({i,poly:ps[i].geo&&ps[i].geo.t==="c"?ps[i].pts:ps[i].pts,bb:bbox([ps[i]])}));
+  cl.forEach(c=>{c.area=Math.abs(sgnArea(c.poly));c.par=-1;c.kids=[]});
+  const hier=cl.length<=1500;
+  if(hier){const order=cl.map((c,k)=>k).sort((a,b)=>cl[a].area-cl[b].area);
+    for(const a of order){const A=cl[a];let best=-1;
+      for(const b of order){const B=cl[b];if(B.area<=A.area||b===a)continue;
+        if(A.bb[0]<B.bb[0]-1e-6||A.bb[1]<B.bb[1]-1e-6||A.bb[2]>B.bb[2]+1e-6||A.bb[3]>B.bb[3]+1e-6)continue;
+        if(inPoly(A.poly[0],B.poly)){best=b;break}}
+      A.par=best;if(best>=0)cl[best].kids.push(a)}}
+  const depth=k=>{let d=0;while(cl[k].par>=0){k=cl[k].par;d++}return d};
+  cl.forEach((c,k)=>c.d=hier?depth(k):0);
+  // birlik = juft chuqurlikdagi kontur (detal) va uning teshiklari
+  const units=cl.map((c,k)=>k).filter(k=>cl[k].d%2===0).map(k=>({k,open:false}));
+  openIdx.forEach(i=>units.push({i,open:true}));
+  const out=[];let cur=home;
+  const emit=p=>{out.push(p);cur=endOf(p)};
+  const emitLoop=k=>{const p=rotStart(ps[cl[k].i],cur);emit(p)};
+  const done=new Set();
+  const doPart=k=>{ // detal: avval ichki teshiklar (ularning ichidagi orollar bilan), oxirida tashqi kontur
+    const holes=cl[k].kids.slice();
+    while(holes.length){let bi=0,bd=1e18;holes.forEach((h,j)=>{const q=ps[cl[h].i],d=Math.hypot(startOf(q)[0]-cur[0],startOf(q)[1]-cur[1]);if(d<bd){bd=d;bi=j}});
+      const h=holes.splice(bi,1)[0];
+      for(const isl of cl[h].kids)doPart(isl);
+      emitLoop(h)}
+    emitLoop(k)};
+  const pool=units.slice();
+  while(pool.length){let bi=0,bd=1e18;
+    pool.forEach((u,j)=>{const p=u.open?ps[u.i]:ps[cl[u.k].i],d=Math.hypot(startOf(p)[0]-cur[0],startOf(p)[1]-cur[1]);if(d<bd){bd=d;bi=j}});
+    const u=pool.splice(bi,1)[0];
+    if(u.open){let p=ps[u.i];const a=startOf(p),b=p.pts[p.pts.length-1];if(Math.hypot(b[0]-cur[0],b[1]-cur[1])<Math.hypot(a[0]-cur[0],a[1]-cur[1]))p=revOpen(p);emit(p)}
+    else doPart(u.k)}
+  const after=rapidLen(out,home);
+  return {paths:out,before,after,note:hier?"":"(juda ko‘p kontur — ichma-ich tartib hisobga olinmadi)"}}
+const fmtM=v=>(v/1000).toFixed(2)+" m";
+function optInfo(r){const pc=r.before>0?Math.round(100*(r.before-r.after)/r.before):0;return `Bo‘sh yurish: ${fmtM(r.before)} → ${fmtM(r.after)} (${pc>=0?"−":"+"}${Math.abs(pc)}%). Avval ichki teshiklar, oxirida tashqi kontur kesiladi ${r.note||""}`}
+window.lzOptimize=optimizePaths;window.lzPathsBody=pathsBody;window.lzOptInfo=optInfo;window.lzFmtM=fmtM;
+
+/* ---------- UI ---------- */
+const host=document.getElementById("toast");if(!host)return;
+host.insertAdjacentHTML("afterend",`<details class="lztools" id="lzTools"><summary>🛠 Chizma asboblari — tekshirish, o‘lcham, kesish tartibi</summary>
+ <div class="lt-b"><h5>1. Tekshirish</h5>
+  <div class="lt-r"><label>Eng kichik teshik (mm)<input id="ltMin" type="number" value="3" min="0" step="0.5" inputmode="decimal"></label></div>
+  <div class="lt-a"><button type="button" id="ltChk">Tekshirish</button><button type="button" id="ltFix" class="primary">Avto tuzatish</button></div>
+  <pre class="lt-o" id="ltRep"></pre></div>
+ <div class="lt-b"><h5>2. O‘lcham, ko‘zgu, nusxa</h5>
+  <div class="lt-r"><label>Masshtab (%)<input id="ltK" type="number" value="100" min="1" step="1" inputmode="decimal"></label><label>Yoki eni (mm)<input id="ltW" type="number" min="1" step="1" inputmode="decimal" placeholder="masalan 500"></label></div>
+  <div class="lt-a"><button type="button" id="ltScale">Masshtabla</button><button type="button" id="ltFitW">Eniga moslash</button><button type="button" id="ltMx">Ko‘zgu ↔</button><button type="button" id="ltMy">Ko‘zgu ↕</button><button type="button" id="ltRot">90° burish</button></div>
+  <div class="lt-r"><label>Ustun<input id="ltC" type="number" value="2" min="1" step="1" inputmode="numeric"></label><label>Qator<input id="ltRw" type="number" value="2" min="1" step="1" inputmode="numeric"></label><label>Oraliq (mm)<input id="ltG" type="number" value="5" min="0" step="1" inputmode="decimal"></label></div>
+  <div class="lt-a"><button type="button" id="ltArr">Nusxalash (massiv)</button><button type="button" id="ltUndo">↩ Bekor qilish</button></div></div>
+ <div class="lt-b"><h5>3. Kesish tartibi</h5>
+  <p class="lt-n">Lazer boshining bo‘sh yurishini qisqartiradi: ichki teshiklar oldin, tashqi kontur oxirida kesiladi. Raqamlar kesish ketma-ketligini ko‘rsatadi.</p>
+  <div class="lt-a"><button type="button" id="ltOpt" class="primary">Kesish tartibini optimallashtirish</button><button type="button" id="ltSave">DXF saqlash</button></div>
+  <pre class="lt-o" id="ltOptRep"></pre></div>
+ </details>`);
+document.head.insertAdjacentHTML("beforeend",`<style>
+.lztools{margin-top:12px;border:1px solid var(--line,#ddd);border-radius:14px;background:var(--panel,#fff);padding:0 14px}
+.lztools summary{font-weight:700;min-height:48px;display:flex;align-items:center;cursor:pointer}
+.lt-b{border-top:1px solid var(--line,#e5e5e5);padding:10px 0 12px}.lt-b h5{margin:0 0 8px;font-size:14px}
+.lt-r{display:flex;gap:8px;margin:6px 0;flex-wrap:wrap}.lt-r label{flex:1;min-width:90px;font-size:12px;display:flex;flex-direction:column;gap:3px}
+.lt-a{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.lt-a button{flex:1;min-width:110px;min-height:44px}
+.lt-o{white-space:pre-wrap;font:12px/1.5 inherit;margin:6px 0 0;color:var(--text,#222)}.lt-n{font-size:12px;opacity:.8;margin:0}
+</style>`);
+const $=id=>document.getElementById(id);
+let hist=[];
+const rep=(el,t)=>{$(el).textContent=t};
+function ensure(){if(typeof current==="undefined"||!current){rep("ltRep","Avval DXF chizma yuklang.");return false}return true}
+function commit(ps,msg,el){
+  const text=wrapDXF(pathsBody(normalize(ps)));hist.push([current.text,current.name]);if(hist.length>15)hist.shift();
+  const nm=current.name;load(text,nm);rep(el||"ltRep",msg)}
+function working(){return toMM(current)}
+$("ltChk").onclick=()=>{if(!ensure())return;const ps=working(),m=+$("ltMin").value||0;rep("ltRep",inspectText(inspect(ps,m),ps.length,m))};
+$("ltFix").onclick=()=>{if(!ensure())return;const ps=working(),r=fixPaths(ps);
+  const msg=`Tuzatildi: ${r.rep.dup} ta ustma-ust chiziq o‘chirildi, ${r.rep.garbage} ta chiqindi o‘chirildi, ${r.rep.joined} ta ochiq chiziq yopiq konturga ulandi`+(r.rep.left?`, ${r.rep.left} tasi ulanmadi (CAD da tekshiring).`:".");
+  if(!r.rep.dup&&!r.rep.garbage&&!r.rep.joined){rep("ltRep","Tuzatadigan narsa topilmadi ✅");return}
+  commit(r.paths,msg)};
+const mat=(a,b,c,d,e=0,f=0)=>[a,b,c,d,e,f];
+const apply=M=>ps=>ps.map(p=>aff(p,M));
+$("ltScale").onclick=()=>{if(!ensure())return;const k=(+$("ltK").value)/100;if(!(k>0.001&&k<1000)){rep("ltRep","Masshtab noto‘g‘ri.");return}commit(apply(mat(k,0,0,k))(working()),`Masshtab ${(k*100).toFixed(1)}% qo‘llandi.`)};
+$("ltFitW").onclick=()=>{if(!ensure())return;const w=+$("ltW").value;if(!(w>0)){rep("ltRep","Kerakli enini (mm) yozing.");return}const ps=working(),[x0,y0,x1,y1]=bbox(ps),k=w/(x1-x0);commit(apply(mat(k,0,0,k))(ps),`Eni ${w} mm qilindi (masshtab ${(k*100).toFixed(1)}%), bo‘yi ${mm2((y1-y0)*k)} mm.`)};
+$("ltMx").onclick=()=>{if(!ensure())return;commit(apply(mat(-1,0,0,1))(working()),"Chap-o‘ng ko‘zgu qilindi.")};
+$("ltMy").onclick=()=>{if(!ensure())return;commit(apply(mat(1,0,0,-1))(working()),"Tepa-past ko‘zgu qilindi.")};
+$("ltRot").onclick=()=>{if(!ensure())return;commit(apply(mat(0,1,-1,0))(working()),"90° burildi.")};
+$("ltArr").onclick=()=>{if(!ensure())return;const c=Math.max(1,Math.min(50,Math.round(+$("ltC").value||1))),r=Math.max(1,Math.min(50,Math.round(+$("ltRw").value||1))),g=+$("ltG").value||0;
+  if(c*r>400){rep("ltRep","Juda ko‘p nusxa (400 tadan oshmasin).");return}
+  const ps=working(),[x0,y0,x1,y1]=bbox(ps),w=x1-x0,h=y1-y0,out=[];
+  for(let j=0;j<r;j++)for(let i=0;i<c;i++)for(const p of ps)out.push(aff(p,mat(1,0,0,1,i*(w+g),j*(h+g))));
+  commit(out,`${c}×${r} = ${c*r} ta nusxa, jami ${mm2(c*w+(c-1)*g)} × ${mm2(r*h+(r-1)*g)} mm. Narxni qayta hisoblang.`)};
+$("ltUndo").onclick=()=>{const h=hist.pop();if(!h){rep("ltRep","Qaytadigan amal yo‘q.");return}load(h[0],h[1]);rep("ltRep","Oldingi holat qaytarildi.")};
+$("ltOpt").onclick=()=>{if(!ensure())return;const ps=working(),r=optimizePaths(ps);
+  hist.push([current.text,current.name]);const text=wrapDXF(pathsBody(r.paths)),nm=current.name;
+  load(text,nm);current.ordered=true;draw($("cv"),current);rep("ltOptRep",optInfo(r)+`\nKesish soni: ${r.paths.length} ta kontur.`)};
+$("ltSave").onclick=()=>{if(!ensure())return;const base=(safeName(current.name||"chizma")||"chizma")+"_tahrir";offerZip(base,[[base+".dxf",wrapDXF(pathsBody(toMM(current)))]],$("toast"))};
+/* tartib raqamlari */
+const _draw=draw;
+draw=function(cv,obj){_draw(cv,obj);if(!obj||!obj.ordered||cv.id!=="cv")return;
+  try{const ctx=cv.getContext("2d"),W=cv.width,H=cv.height,[x0,y0,x1,y1]=obj.box,pad=40,s=Math.min((W-2*pad)/((x1-x0)||1),(H-2*pad)/((y1-y0)||1)),ox=(W-(x1-x0)*s)/2,oy=(H-(y1-y0)*s)/2;
+    const ps=obj.paths,n=ps.length,step=n>120?Math.ceil(n/120):1;ctx.font="bold 15px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ps.forEach((p,i)=>{if(i%step&&i!==n-1)return;const [x,y]=p.pts[0],X=ox+(x-x0)*s,Y=H-(oy+(y-y0)*s);
+      ctx.fillStyle="#ff6a00";ctx.beginPath();ctx.arc(X,Y,10,0,7);ctx.fill();ctx.fillStyle="#fff";ctx.fillText(String(i+1),X,Y+1)})}catch(_){}};
+})();
+
+/* ===== Zaxira nusxa va offline belgisi ===== */
+(function(){
+const SKIP=new Set(["lzKey","lzDev","lzT"]);
+const $=id=>document.getElementById(id);
+const nowStr=ts=>new Date(ts).toLocaleDateString("ru-RU");
+function collect(){const d={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(SKIP.has(k)||!/^(laz|lz)/i.test(k))continue;d[k]=localStorage.getItem(k)}}catch(_){}return d}
+window.lzBackupData=()=>({app:"lazer-ustaxona",v:1,at:Date.now(),data:collect()});
+async function saveBackup(toast){
+  const o=window.lzBackupData(),txt=JSON.stringify(o),nm="lazer-zaxira-"+new Date().toISOString().slice(0,10)+".json";
+  try{
+    if(isNative()){await nativeShare(nm,new Blob([txt],{type:"application/json"}),toast)}
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=nm;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast.textContent=nm+" yuklab olindi."}
+    localStorage.setItem("lzBkAt",String(Date.now()));info()}catch(e){toast.textContent="Zaxira yaratib bo‘lmadi: "+(e.message||e)}}
+function restore(file,toast){
+  file.text().then(t=>{let o;try{o=JSON.parse(t)}catch(_){toast.textContent="Bu zaxira fayli emas.";return}
+    if(!o||o.app!=="lazer-ustaxona"||!o.data){toast.textContent="Bu «Lazer ustaxona» zaxirasi emas.";return}
+    const n=Object.keys(o.data).length;
+    if(!confirm(`Zaxiradan tiklansinmi? (${nowStr(o.at)}, ${n} ta bo‘lim). Hozirgi buyurtma va sozlamalar almashtiriladi.`))return;
+    try{for(const [k,v] of Object.entries(o.data)){if(!SKIP.has(k)&&/^(laz|lz)/i.test(k))localStorage.setItem(k,v)}}catch(_){toast.textContent="Tiklab bo‘lmadi.";return}
+    toast.textContent="Tiklandi ✅ Ilova qayta ochilmoqda…";setTimeout(()=>location.reload(),900)})}
+function info(){const el=$("lzBkInfo");if(!el)return;let at=0,orders=0;try{at=+localStorage.getItem("lzBkAt")||0;orders=JSON.parse(localStorage.getItem("lazerOrders")||"[]").length}catch(_){}
+  const days=at?Math.floor((Date.now()-at)/864e5):null;
+  el.textContent=at?`Oxirgi zaxira: ${nowStr(at)} (${days} kun oldin). Buyurtmalar: ${orders} ta.`:`Hali zaxira olinmagan. Buyurtmalar: ${orders} ta.`;
+  el.style.color=(orders>0&&(!at||days>14))?"#d9480f":""}
+const prof=$("p-prof");
+if(prof){prof.insertAdjacentHTML("beforeend",`<div class="sh-pcard" id="lzBk"><h4>Zaxira nusxa</h4>
+  <p id="lzBkInfo" style="font-size:13px;margin:0 0 10px"></p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="lzBkSave" class="primary" style="flex:1;min-height:46px">Zaxira yaratish</button><button type="button" id="lzBkLoad" style="flex:1;min-height:46px">Zaxiradan tiklash</button></div>
+  <input type="file" id="lzBkFile" accept=".json,application/json" hidden>
+  <p id="lzBkToast" style="font-size:13px;margin:8px 0 0" aria-live="polite"></p>
+  <p style="font-size:12px;opacity:.75;margin:6px 0 0">Buyurtmalar, kutubxona, narxlar va sozlamalar saqlanadi. Telefon almashtirsangiz yoki ilovani o‘chirsangiz, shu fayldan tiklaysiz. Faollashtirish kaliti zaxiraga kirmaydi.</p></div>`);
+  $("lzBkSave").onclick=()=>saveBackup($("lzBkToast"));
+  $("lzBkLoad").onclick=()=>$("lzBkFile").click();
+  $("lzBkFile").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)restore(f,$("lzBkToast"))};info()}
+/* eslatma: 14 kundan beri zaxira yo‘q va buyurtma bor */
+try{const at=+localStorage.getItem("lzBkAt")||0,orders=JSON.parse(localStorage.getItem("lazerOrders")||"[]").length,day=new Date().toDateString();
+  if(orders>0&&(!at||Date.now()-at>14*864e5)&&localStorage.getItem("lzBkRem")!==day){localStorage.setItem("lzBkRem",day);
+    document.body.insertAdjacentHTML("beforeend",`<div id="lzBkBar" style="position:fixed;left:10px;right:10px;top:10px;z-index:99990;background:#222;color:#fff;border-left:5px solid #ff6a00;border-radius:10px;padding:10px 12px;font:600 14px/1.3 system-ui;display:flex;gap:10px;align-items:center"><span style="flex:1">Buyurtmalaringiz zaxiraga olinmagan. Profil → «Zaxira yaratish».</span><button type="button" style="min-height:36px;padding:0 12px">OK</button></div>`);
+    const b=$("lzBkBar");b.querySelector("button").onclick=()=>b.remove();setTimeout(()=>b.remove(),9000)}}catch(_){}
+/* offline belgisi */
+document.body.insertAdjacentHTML("beforeend",`<div id="lzOff" hidden style="position:fixed;left:50%;transform:translateX(-50%);top:8px;z-index:99989;background:#444;color:#fff;border-radius:20px;padding:5px 12px;font:600 12px system-ui">📴 Offline — ilova ishlayapti</div>`);
+const upd=()=>{$("lzOff").hidden=navigator.onLine!==false};addEventListener("online",upd);addEventListener("offline",upd);upd();
 })();
 
 showTab("narx");lzView("home");
