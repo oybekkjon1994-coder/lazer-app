@@ -1200,7 +1200,8 @@ PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",rerender:["mode","pt"
   fields:[["mode","Bukish turi","profil","select",[["profil","Profil — bir yo‘nalishda (ugolok, U, Z)"],["quti","Quti / lotok — atrofi bukiladi"]]],
     ["fl","Tokchalar uzunligi (mm)","50 100 50","text",null,isProf],["ang","Bukish burchaklari (°, bo‘sh = 90)","","text",null,isProf],["W","Detal eni (mm)",200,"num",null,isProf],
     ["sides","Nechta tomoni bukiladi","4","select",[["1","1 tomon"],["2q","2 tomon — qarama-qarshi"],["2y","2 tomon — yonma-yon (burchak)"],["3","3 tomon"],["4","4 tomon — to‘liq quti"]],isBox],
-    ["A","Asos uzunligi (mm, tashqi)",400,"num",null,isBox],["B","Asos eni (mm, tashqi)",300,"num",null,isBox],["h","Devor balandligi (mm, tashqi)",50,"num",null,isBox],
+    ["dm","Asos o‘lchami qanday berilgan?","out","select",[["out","Tashqi — bukilgan qutining tashqi o‘lchami"],["flat","Tekis asos — bukishsiz tekis qism (tagi)"],["in","Ichki — qutining ichki o‘lchami"]],isBox],
+    ["A","Asos uzunligi (mm)",400,"num",null,isBox],["B","Asos eni (mm)",300,"num",null,isBox],["h","Devor balandligi (mm, tashqi)",50,"num",null,isBox],
     ["t","List qalinligi (mm)",2],["r","Ichki radius (mm)",2],["K","K-faktor",0.4],
     ["nt","Bukish belgilari","ha","select",[["ha","Ha — chetga kichik kesik"],["yoq","Yo‘q"]],isProf],
     ["pt","Ichiga naqsh","yoq","select",PAT_OPTS()],
@@ -1212,7 +1213,8 @@ PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",rerender:["mode","pt"
     if(isBox(p)){const sd={"1":"b","2q":"bt","2y":"br","3":"btr","4":"btrl"}[p.sides]||"btrl",has=c=>sd.includes(c);
       const {A,B,h}=p;if(!(A>0&&B>0&&h>0))throw"Asos o‘lchamlari va devor balandligini kiriting.";
       const ss=r+t,ba=Math.PI/2*(r+K*t),fh=h-ss;if(fh<=0)throw"Devor juda past — radius va qalinlikka sig‘maydi.";
-      const Ab=A-ss*((has("l")?1:0)+(has("r")?1:0)),Bb=B-ss*((has("b")?1:0)+(has("t")?1:0)),e=ba+fh;if(Ab<=0||Bb<=0)throw"Asos juda kichik.";
+      const nA=(has("l")?1:0)+(has("r")?1:0),nB=(has("b")?1:0)+(has("t")?1:0),dd=p.dm==="flat"?0:p.dm==="in"?r:ss;
+      const Ab=A-dd*nA,Bb=B-dd*nB,e=ba+fh;if(Ab<=0||Bb<=0)throw"Asos juda kichik.";
       const v=[];const P=(a,b)=>{const l=v[v.length-1];if(!l||Math.abs(l[0]-a)>1e-9||Math.abs(l[1]-b)>1e-9)v.push([a,b])};
       if(has("b")){P(0,-e);P(Ab,-e);P(Ab,0)}else{P(0,0);P(Ab,0)}
       if(has("r")){P(Ab+e,0);P(Ab+e,Bb);P(Ab,Bb)}else P(Ab,Bb);
@@ -1225,7 +1227,7 @@ PARTS.bend={group:"det",name:"Bukiladigan detal (yoyilma)",rerender:["mode","pt"
           if(has("r"))z.push([Ab+ba+pm,pm,Ab+e-pm,Bb-pm]);if(has("l"))z.push([-e+pm,pm,-ba-pm,Bb-pm])}
         for(const [a,b,c,d] of z)if(c-a>p.ps&&d-b>p.ps)zones.push([a+ox,b+oy,c+ox,d+oy])}
       const Wt=Ab+(has("l")?e:0)+(has("r")?e:0),Ht=Bb+(has("b")?e:0)+(has("t")?e:0);
-      info=`Yoyilma: ${Wt.toFixed(1)} × ${Ht.toFixed(1)} mm. Asos (tekis qismi): ${Ab.toFixed(1)} × ${Bb.toFixed(1)} mm, devor tekis qismi ${fh.toFixed(1)} mm, bukish zonasi ${ba.toFixed(1)} mm. Bukish chiziqlari asos chetidan ${(ba/2).toFixed(1)} mm tashqarida.`}
+      info=`Yoyilma: ${Wt.toFixed(1)} × ${Ht.toFixed(1)} mm. Tashqi o‘lcham: ${(Ab+ss*nA).toFixed(1)} × ${(Bb+ss*nB).toFixed(1)} mm. Asos (tekis qismi): ${Ab.toFixed(1)} × ${Bb.toFixed(1)} mm, devor tekis qismi ${fh.toFixed(1)} mm, bukish zonasi ${ba.toFixed(1)} mm. Bukish chiziqlari asos chetidan ${(ba/2).toFixed(1)} mm tashqarida.`}
     else{const nl=v=>String(v||"").replace(/,/g,".").trim().split(/[\s;\/xX×*-]+/).filter(Boolean).map(Number);
       const Ls=nl(p.fl);let As=nl(p.ang);const W=p.W;
       if(!Ls.length||Ls.some(v=>!isFinite(v)||v<=0))throw"Tokchalar uzunligini bo‘sh joy bilan yozing, masalan: 50 100 50";
