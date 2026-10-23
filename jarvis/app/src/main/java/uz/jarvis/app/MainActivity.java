@@ -645,6 +645,26 @@ public class MainActivity extends Activity {
             });
         }
 
+        @JavascriptInterface public String saveFileB64(String name, String mime, String b64) {
+            try {
+                byte[] data = Base64.decode(b64, Base64.DEFAULT);
+                if (Build.VERSION.SDK_INT >= 29) {
+                    ContentValues cv = new ContentValues();
+                    cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
+                    cv.put(MediaStore.Downloads.MIME_TYPE, mime);
+                    cv.put(MediaStore.Downloads.RELATIVE_PATH, "Download/Jarvis");
+                    Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                    try (OutputStream os = getContentResolver().openOutputStream(u)) { os.write(data); }
+                    return u.toString();
+                } else {
+                    File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);
+                    File f = new File(dir, name);
+                    try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(data); }
+                    return "file://" + f.getAbsolutePath();
+                }
+            } catch (Exception e) { return ""; }
+        }
+
         @JavascriptInterface public String saveFile(String name, String mime, String content) {
             try {
                 byte[] data = content.getBytes(StandardCharsets.UTF_8);
