@@ -1520,11 +1520,18 @@ function mainCrop(im,o){ // eng katta qora shakl (chetlarga tegmaydigan) atrofin
   const x=Math.max(0,(best.x0-mx)*k), y=Math.max(0,(best.y0-my)*k);
   return [x,y,Math.min(im.width-x,(best.x1-best.x0+2*mx)*k),Math.min(im.height-y,(best.y1-best.y0+2*my)*k)];
 }
+function enhanceGray(g,w,h,n){ // 1) yorug'lik oralig'ini to'liq cho'zish  2) chekkalarni keskinlashtirish (qora-oq o'tish tiniq bo'ladi, kontur joyi o'zgarmaydi)
+  const hi=new Uint32Array(256); for(let i=0;i<g.length;i++) hi[g[i]]++; const tot=g.length; let c=0,lo=0,up2=255;
+  for(let i=0;i<256;i++){ c+=hi[i]; if(c>=tot*0.005){lo=i;break} } c=0; for(let i=255;i>=0;i--){ c+=hi[i]; if(c>=tot*0.005){up2=i;break} }
+  const out=new Uint8Array(g.length); if(up2-lo>=40){ const k=255/(up2-lo); for(let i=0;i<g.length;i++) out[i]=Math.max(0,Math.min(255,Math.round((g[i]-lo)*k))); } else out.set(g);
+  const bl=blur(out,w,h,n); const r=new Uint8Array(g.length);
+  for(let i=0;i<g.length;i++){ const v=out[i]+1.6*(out[i]-bl[i]); r[i]=v<0?0:v>255?255:v; } return r; }
 function traceImage(im,o){
   const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height];
   const G=grayOf(im,cr,o.res||1400), w=G.w, h=G.h; const sm=o.smooth==null?2:o.smooth, up=Math.max(1,G.k);
   const g0=o.flat?flattenLight(G.g,w,h):G.g;
-  const bn=sm>=1?Math.min(w*h>6e6?3:6,Math.max(1,Math.round(up*1.5))):0; const gray=bn?blur(g0,w,h,bn):g0; /* JPEG shovqini va kattalashtirish zinapoyasini tekislaydi */
+  const bn=sm>=1?Math.min(w*h>6e6?3:6,Math.max(1,Math.round(up*1.5))):0; let gray=bn?blur(g0,w,h,bn):g0; /* JPEG shovqini va kattalashtirish zinapoyasini tekislaydi */
+  if(o.enh!==false) gray=enhanceGray(gray,w,h,Math.min(w*h>6e6?3:6,Math.max(2,Math.round(up*2))));
   const th=o.th==null||o.th<0?autoTh(gray):o.th;
   // qiymat maydoni: v<th = metall. Chetlar fon bilan to'ldiriladi
   const W=w+2,H=h+2, V=new Float32Array(W*H).fill(255);
@@ -1618,7 +1625,7 @@ function flattenLight(g,w,h){ // notekis yoritishni tekislash (kamera surati): f
   return out; }
 async function traceUI(b64,opt){
   const im=await loadImg(b64); if(!im){ say("Rasmni ochib bo'lmadi."); return; }
-  opt=opt||{}; const o={th:-1,inv:false,main:true,smooth:2,thin:true,flat:!!opt.cam,W:600,H:600,frame:0,thick:2,res:3200};
+  opt=opt||{}; const o={th:-1,inv:false,main:true,smooth:2,thin:true,flat:!!opt.cam,W:600,H:600,frame:0,thick:2,res:3200,enh:true};
   { const cr=mainCrop(im,o); o.H=Math.round(600*cr[3]/cr[2]); }
   $("sheet").innerHTML=`<h2>✏️ Rasmdan DXF</h2><p class="mut">Oq fonda qora shakl eng yaxshi chiqadi (naqsh, logo, siluet). Chegarani surib, chiziqlar to'g'ri chiqqanini ko'ring.</p>
   <div class="row" style="margin:6px 0"><button class="btn sm g" id="trCam">📷 Qayta suratga olish</button><button class="btn sm g" id="trGal">🖼 Boshqa rasm</button></div>
@@ -1626,6 +1633,7 @@ async function traceUI(b64,opt){
   <label>Chegara (yorug'lik): <span id="trThV">avto</span></label><input id="trTh" type="range" min="10" max="245" style="padding:0">
   <div class="tog"><span>Faqat asosiy shakl (fondagi narsalarsiz)</span><div class="sw on" id="trMain"></div></div>
   <div class="tog"><span>Qalinlikdan ingichka va mayda bo'laklarni olib tashlash</span><div class="sw on" id="trThin"></div></div>
+  <div class="tog"><span>Rasm sifatini oshirish (tiniqlashtirish)</span><div class="sw on" id="trEnh"></div></div>
   <div class="tog"><span>Notekis yorug'lik / soya (kamera surati)</span><div class="sw${o.flat?" on":""}" id="trFlat"></div></div>
   <div class="tog" style="border:0"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div>
   <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="800">Tez</option><option value="1400">Yaxshi</option><option value="2000">Juda yuqori</option><option value="3200" selected>Maksimal</option></select></div>
@@ -1641,6 +1649,7 @@ async function traceUI(b64,opt){
   let thT=null; $("trTh").oninput=()=>{o.th=+$("trTh").value;$("trThV").textContent=o.th;clearTimeout(thT);thT=setTimeout(redraw,150)};
   $("trInv").onclick=()=>{o.inv=!o.inv;$("trInv").classList.toggle("on",o.inv);redraw()};
   $("trMain").onclick=()=>{o.main=!o.main;$("trMain").classList.toggle("on",o.main); const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height]; o.H=Math.round(o.W*cr[3]/cr[2]); $("trH").value=o.H; redraw()};
+  $("trEnh").onclick=()=>{o.enh=!o.enh;$("trEnh").classList.toggle("on",o.enh);o.th=-1;redraw()};
   $("trSm").onchange=()=>{o.smooth=+$("trSm").value;redraw()};
   $("trThin").onclick=()=>{o.thin=!o.thin;$("trThin").classList.toggle("on",o.thin);redraw()};
   $("trFlat").onclick=()=>{o.flat=!o.flat;$("trFlat").classList.toggle("on",o.flat);o.th=-1;redraw()};
