@@ -66,6 +66,29 @@ public class MainActivity extends Activity {
     SpeechRecognizer rec;
     TextToSpeech tts;
     boolean ttsReady = false;
+    long ttsInitAt = 0;
+
+    void initTts() {
+        ttsInitAt = System.currentTimeMillis();
+        try { if (tts != null) tts.shutdown(); } catch (Exception ignored) {}
+        ttsReady = false;
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                ttsReady = true;
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String id) { js("J.onSpeakStart()"); }
+                    @Override public void onDone(String id) { js("J.onSpeakDone()"); }
+                    @Override public void onError(String id) { js("J.onSpeakDone()"); }
+                });
+                js("J.onTtsReady()");
+            } else js("J.onTtsBroken && J.onTtsBroken()");
+        });
+    }
+
+    boolean muted() {
+        try { AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE); return am.getStreamVolume(AudioManager.STREAM_MUSIC) == 0; }
+        catch (Exception e) { return false; }
+    }
     String ttsLang = "";
     SharedPreferences prefs;
     long lastRms = 0;
@@ -102,17 +125,7 @@ public class MainActivity extends Activity {
         setContentView(web);
         web.loadUrl("file:///android_asset/index.html");
 
-        tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                ttsReady = true;
-                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String id) { js("J.onSpeakStart()"); }
-                    @Override public void onDone(String id) { js("J.onSpeakDone()"); }
-                    @Override public void onError(String id) { js("J.onSpeakDone()"); }
-                });
-                js("J.onTtsReady()");
-            }
-        });
+        initTts();
 
         List<String> need = new ArrayList<>();
         need.add(Manifest.permission.RECORD_AUDIO);
@@ -337,11 +350,16 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface public void speak(String text, float rate, float pitch) {
-            if (!ttsReady) { js("J.onSpeakDone()"); return; }
+            if (muted()) js("J.onMuted && J.onMuted()");
+            if (!ttsReady) {
+                if (System.currentTimeMillis() - ttsInitAt > 5000) runOnUiThread(MainActivity.this::initTts);
+                js("J.onTtsBroken && J.onTtsBroken()"); js("J.onSpeakDone()"); return; }
             tts.setSpeechRate(rate);
             tts.setPitch(pitch);
             Bundle p = new Bundle();
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, p, "j" + System.currentTimeMillis());
+            p.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+            int r = tts.speak(text, TextToSpeech.QUEUE_FLUSH, p, "j" + System.currentTimeMillis());
+            if (r == TextToSpeech.ERROR) { runOnUiThread(MainActivity.this::initTts); js("J.onTtsBroken && J.onTtsBroken()"); js("J.onSpeakDone()"); }
         }
 
         @JavascriptInterface public void stopSpeak() {
@@ -351,6 +369,7 @@ public class MainActivity extends Activity {
 
         /** Bulut ovozi (Azure): SSML yuboriladi, mp3 olinib o'ynatiladi. */
         @JavascriptInterface public void cloudSpeak(String url, String headers, String body) {
+            if (muted()) js("J.onMuted && J.onMuted()");
             new Thread(() -> {
                 try {
                     HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();

@@ -402,6 +402,8 @@ const J = window.J = {
     if(loop&&errStreak>=5)stopLoop();
     setState("idle")},
   onSpeakStart(){setState("speak")},
+  onMuted(){ if(Date.now()-(J._mutedAt||0)<60000) return; J._mutedAt=Date.now(); sys("🔇 Telefonda media ovozi 0 da — Jarvis gapiryapti, lekin eshitilmaydi. Ovoz tugmasini ko'taring yoki \"Jarvis, ovozni 70 ga qo'y\" deng."); },
+  onTtsBroken(){ if(cloudOK()) return; if(Date.now()-(J._ttsAt||0)<60000) return; J._ttsAt=Date.now(); sys("🔇 Telefon ovoz dvigateli (Google TTS) javob bermayapti — qayta ishga tushiryapman. Yana jim bo'lsa: Sozlamalar → Ilovalar → Speech Services by Google → yangilang yoki keshini tozalang."); },
   onCloudFail(code){ sys(code===401||code===403?"Azure kaliti yoki hududi xato — oddiy ovozga o'tdim.":"Bulut ovozi ishlamadi — oddiy ovoz bilan aytaman.");
     if(code===401||code===403){S.cloud=false;saveAll();loadSet()} N.speak(forTTS(lastSpoken),S.rate,S.pitch); },
   onSpeakDone(){if(reading){ setTimeout(readNext,150); return; } if(labbay){followUntil=Date.now()+8000;labbay=false}
