@@ -612,7 +612,7 @@ function quick(t){
   if(/qarzdorlar|qarz daftari|kim(lar)? qarz/.test(s)) return debtsReport();
   if(/(xarajat|harajat).*(hisobot|qancha|necha|ko'rsat)/.test(s)) return ledgerReport(s);
   if(/(material|list).*(qoldiq|qancha qoldi|ombor)|ombor holati/.test(s)) return stockReport();
-  if(/(zaryad|batareya|batarey|akkumulyator)/.test(s)){const b=N.battery();return b>=0?`Zaryad ${b} foiz.`:"Zaryadni bilib bo'lmadi."}
+  if(/(zaryad|batareya|batarey|akkumulyator)/.test(s)){const b=N.battery();return b>=0?batInfo(b):"Zaryadni bilib bo'lmadi."}
   const g=s.replace(/^(hey |ey )?jarvis[,!.\s]*/,"").replace(/[!.?,]/g,"").trim();
   if(/^(salom|assalomu alaykum|assalom|salom jarvis|hayrli tong|xayrli tong|xayrli kech|qalaysan|yaxshimisan|ishlar qalay)( jarvis)?$/.test(g)||g===""&&/jarvis/.test(s)){
     const h=new Date().getHours(), o=openOrders().length;
@@ -2120,6 +2120,20 @@ setInterval(()=>{ try{ if(busy||state==="speak"||state==="listen") return; const
 setInterval(async()=>{ try{ if(S.rateWatch){ const rc=await rateCheck(false); if(rc&&rc.note){ notify(rc.note); if(state==="idle"&&!busy) say(rc.note); } }
   if(Object.keys(watchP).length&&Date.now()-(S.watchLast||0)>6*3600e3){ S.watchLast=Date.now(); saveAll(); const al=await watchCheck(false); for(const t of al){ notify(t); if(state==="idle"&&!busy) say(t); } } }catch(e){} },30*60000);
 
+
+/* --- zaryad qancha vaqtga yetishi --- */
+let batLog=ld("batLog",[]);
+function batSample(){ try{ const b=N.battery(); if(b<0) return; const ch=!!(N.charging&&N.charging()); const t=Date.now(), l=batLog[batLog.length-1];
+  if(l&&l.ch!==ch) batLog=[]; if(l&&t-l.t<4*60000&&l.b===b&&l.ch===ch) return; batLog.push({t,b,ch}); batLog=batLog.filter(x=>t-x.t<8*3600e3).slice(-120); sv("batLog",batLog); }catch(e){} }
+function batRate(){ const L=batLog.filter(x=>!x.ch); if(L.length<2) return 0; const a=L[0], z=L[L.length-1], dt=(z.t-a.t)/3600e3; if(dt<0.25) return 0;
+  const d=a.b-z.b; return d>0?d/dt:0; }
+function hm(h){ const m=Math.round(h*60); const H=Math.floor(m/60), M=m%60; return (H?`${H} soat `:"")+(M||!H?`${M} daqiqa`:"").trim(); }
+function batInfo(b){ batSample(); const ch=!!(N.charging&&N.charging()); let out=`Zaryad ${b} foiz.`;
+  if(ch){ const L=batLog.filter(x=>x.ch); if(L.length>1){ const a=L[0], z=L[L.length-1], dt=(z.t-a.t)/3600e3, d=z.b-a.b; if(dt>=0.1&&d>0){ out+=` Zaryadlanmoqda, to'lishiga taxminan ${hm(Math.max(0,(100-b)/(d/dt)))} qoldi.`; return out; } } return out+" Zaryadlanmoqda."; }
+  let r=batRate(); let est=false; if(!r){ r=+S.batAvg||0; est=true; } if(!r) return out+" Qancha yetishini aytish uchun biroz kuzatishim kerak, 20 daqiqadan keyin qayta so'rang.";
+  if(!est){ S.batAvg=S.batAvg?Math.round((S.batAvg*0.5+r*0.5)*10)/10:Math.round(r*10)/10; saveAll(); }
+  return out+` Hozirgi sarfga qarab taxminan ${hm(b/r)} yetadi${est?" (oldingi o'rtacha sarfdan hisobladim)":""}.`; }
+setInterval(batSample,5*60000); setTimeout(batSample,3000);
 function eveUI(){ $("swEve").classList.toggle("on",!!S.evening); $("sEveT").value=S.eveningTime||"21:00"; }
 eveUI(); sw("swEve","evening",schedEvening); bind("sEveT",v=>{S.eveningTime=v||"21:00";schedEvening()});
 J.evening=eveningSummary; schedEvening();
