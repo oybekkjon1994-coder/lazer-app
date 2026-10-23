@@ -1,0 +1,41 @@
+name: Lazer To'lov APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['tolov/**', '.github/workflows/tolov.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: APK yig'ish
+        env:
+          RUN: ${{ github.run_number }}
+        run: gradle -p tolov assembleRelease --no-daemon
+      - name: Doimiy kalit bilan imzolash
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 tolov/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out lazer-tolov.apk aligned.apk
+          $BT/apksigner verify --print-certs lazer-tolov.apk
+      - name: Releases sahifasiga joylash
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tolov-${{ github.run_number }}
+          name: Lazer To'lov ${{ github.run_number }}
+          files: lazer-tolov.apk
