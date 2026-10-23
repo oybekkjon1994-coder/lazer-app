@@ -251,6 +251,8 @@ body.car #mic{width:76px;height:76px}
   </div>
   <div class="card">
     <b>Mashina</b>
+    <div class="tog"><span>Mashinada zaryadga ulansa — mashina rejimi o'zi yoqilsin</span><div class="sw" id="swCarAuto"></div></div>
+    <p class="mut" style="margin:6px 0 0">Telefon zaryadga ulanganda, Wi-Fi tarmog'iga ulanmagan va modem (точка доступа) yoqiq bo'lsa — mashinadasiz deb hisoblanadi. Zaryaddan uzilsa, o'zi o'chadi. Uyda/ustaxonada (Wi-Fi bor joyda) yoqilmaydi.</p>
     <p class="mut" style="margin:6px 0 0">"Jarvis, uyga yo'l" yoki "ustaxonaga olib bor" deganda shu manzillarga yo'l ochiladi.</p>
     <label>Uy manzili</label><input id="plUy" placeholder="Masalan: Samarqand, Mirzo Ulug'bek ko'chasi 12">
     <label>Ustaxona manzili</label><input id="plUs" placeholder="Masalan: Samarqand, Sanoat zonasi">
@@ -420,6 +422,9 @@ const J = window.J = {
     const read=S.readMsg==="always"||(S.readMsg==="car"&&S.car); if(!read)return;
     if(state==="idle"||state==="listen"){ say(msgShort(m),true) } else msgQueue.push(m); },
   morning(){ go("pJarvis"); voiceIn=true; morningReport(); },
+  autoCar(on){ if(S.carAuto===false) return;
+    if(on){ if(S.car) return; S.carAutoOn=true; go("pJarvis"); voiceIn=true; setCar(true,true); say(`Mashinadasiz, ${S.name}. Mashina rejimi yoqildi — buyruq uchun "Jarvis" deng.`,true); }
+    else if(S.car&&S.carAutoOn){ S.carAutoOn=false; setCar(false,true); sys("🚗 Zaryaddan uzildi — mashina rejimi o'chirildi."); } },
   onShared(b64){ go("pJarvis"); if(!b64){ sys("Rasmni olib bo'lmadi."); return; }
     $("sheet").innerHTML=`<h2>📥 Rasm keldi</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px">
     <div class="row" style="margin-top:12px"><button class="btn" id="shI">💡 G'oyaga saqlash</button><button class="btn g" id="shD">✏️ DXF yasash</button></div>
@@ -1242,7 +1247,7 @@ function loadSet(){
   $("swPcA").classList.toggle("on",!!S.pcAuto);
   $("swTip").classList.toggle("on",!!S.tip); $("swHunt").classList.toggle("on",!!S.hunt); $("sHuntQ").value=S.huntQ||"";
   $("sRead").value=S.readMsg||"always";$("sTopic").value=S.botTopic||"";$("sRepT").value=S.reportTime||"07:30";
-  $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);
+  $("swRep").classList.toggle("on",!!S.report);$("swRate").classList.toggle("on",!!S.rateWatch);$("swCarAuto").classList.toggle("on",S.carAuto!==false);
   $("plUy").value=S.places.uy||"";$("plUs").value=S.places.ustaxona||"";$("sNav").value=S.nav||"auto";$("sCity").value=S.city||"";
   $("swVoice").classList.toggle("on",S.voice);$("swWake").classList.toggle("on",S.wake);$("swAwake").classList.toggle("on",S.awake);
   ["r1","r2","r3","r4"].forEach(k=>$(k).value=S.rates[k]);
@@ -1273,6 +1278,7 @@ $("pcB").onclick=()=>pcBackup(true); sw("swTip","tip"); sw("swHunt","hunt");
 $("sAzT").onclick=()=>{ if(!S.azKey||!S.azRegion){box("Azure","Avval kalit va hududni kiriting.");return} const c=S.cloud; S.cloud=true; speakRaw(`Salom, ${S.name}. Men Jarvisman. Endi tabiiy o'zbekcha ovozda gapiryapman.`); S.cloud=c; };bind("sTopic",v=>{S.botTopic=v.trim();S.botSince=0});
 bind("sRepT",v=>{S.reportTime=v||"07:30";schedReport()});
 sw("swRep","report",()=>schedReport());sw("swRate","rateWatch");
+$("swCarAuto").onclick=()=>{ S.carAuto=S.carAuto===false; $("swCarAuto").classList.toggle("on",S.carAuto); saveAll(); };
 bind("plUy",v=>S.places.uy=v.trim());bind("plUs",v=>S.places.ustaxona=v.trim());bind("sNav",v=>S.nav=v);bind("sCity",v=>S.city=v.trim()||"Toshkent");
 sw("swVoice","voice");sw("swWake","wake");sw("swAwake","awake",()=>{if(loop)N.keepAwake(S.awake)});
 $("sKeyBtn").onclick=()=>N.openUrl(S.prov==="groq"?"https://console.groq.com/keys":"https://aistudio.google.com/apikey");

@@ -45,7 +45,9 @@ public class ListenService extends Service {
     public void onCreate() {
         super.onCreate();
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        CarDetect.register(this, carRx);
     }
+    final CarDetect carRx = new CarDetect();
 
     SharedPreferences prefs() { return getSharedPreferences("jarvis", MODE_PRIVATE); }
 
@@ -127,6 +129,7 @@ public class ListenService extends Service {
 
     void shutdown() {
         running = false;
+        try { unregisterReceiver(carRx); } catch (Exception ignored) {}
         h.removeCallbacksAndMessages(null);
         if (rec != null) { try { rec.destroy(); } catch (Exception ignored) {} rec = null; }
         unmute();

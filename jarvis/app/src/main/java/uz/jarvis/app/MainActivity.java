@@ -94,6 +94,7 @@ public class MainActivity extends Activity {
     long lastRms = 0;
     static volatile boolean visible = false;
     static MainActivity inst;
+    final CarDetect carRx = new CarDetect();
     boolean pageReady = false;
     String pendingCmd = null;
     String pendingShare = null, pendingText = null;
@@ -106,6 +107,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         inst = this;
+        CarDetect.register(this, carRx);
         prefs = getSharedPreferences("jarvis", MODE_PRIVATE);
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -151,6 +153,11 @@ public class MainActivity extends Activity {
             if (pageReady) js("J.morning()"); else pendingCmd = "#report#";
             return;
         }
+        if (i != null && i.getBooleanExtra("car", false)) {
+            i.removeExtra("car");
+            if (pageReady) js("J.autoCar && J.autoCar(true)"); else pendingCmd = "#car#";
+            return;
+        }
         if (i == null || !i.getBooleanExtra("wake", false)) return;
         String cmd = i.getStringExtra("cmd");
         i.removeExtra("wake");
@@ -161,6 +168,7 @@ public class MainActivity extends Activity {
 
     void deliver(String cmd) {
         if ("#report#".equals(cmd)) js("J.morning()");
+        else if ("#car#".equals(cmd)) js("J.autoCar && J.autoCar(true)");
         else js("J.external(" + q(cmd) + ")");
     }
 
@@ -279,6 +287,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (inst == this) inst = null;
+        try { unregisterReceiver(carRx); } catch (Exception ignored) {}
         if (rec != null) rec.destroy();
         if (tts != null) tts.shutdown();
         super.onDestroy();
