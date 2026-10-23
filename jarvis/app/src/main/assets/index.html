@@ -120,6 +120,7 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipIdea">💡 G'oyalar</button>
     <button class="chip" id="chipPc">💻 Kompyuter</button>
     <button class="chip" id="chipTr">✏️ Rasmdan DXF</button>
+    <button class="chip" id="chipIdea">💡 Yangi g'oya</button>
     <button class="chip" id="chipStove">🧩 Buyum 3D + DXF</button>
     <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
@@ -734,7 +735,7 @@ Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi J
     LAS:all||has(/(narx|lazer|kes|metr|mm\b|dxf|chizma|naqsh|darvoza|panjara|teshik|to'rtburchak|doira|katalog|qancha)/),
     PC:all||has(/(kompyuter|komp|pc|bot|zaxira|navbat|fayl)/), PIN:all||has(/(pinterest|g'oya|goya|ilhom|dizayn)/),
     MSG:all||has(/(xabar|javob|yoz|yubor|telegram|whatsapp|instagram|direct|mijoz)/), SAVE:all||has(/(saqla|esla|manzil|raqam|kontakt|o'chir)/),
-    PHO:all||has(/(rasm|surat|foto|kamera|chizma)/), LED:all||has(/(xarajat|harajat|sarfla|sarf|daromad|tushum|qarz|qoldiq|material|ombor|list|tarjima|faktura|schyot|hisob-faktura|uchrashuv|kuzat|kun yakuni|xulosa|sotib oldim|pech|3d|chodir|o'rmon)/), NOTE:all||has(/(eslat|qayd|bajarildi|reja)/)};
+    PHO:all||has(/(rasm|surat|foto|kamera|chizma)/), LED:all||has(/(xarajat|harajat|sarfla|sarf|daromad|tushum|qarz|qoldiq|material|ombor|list|tarjima|faktura|schyot|hisob-faktura|uchrashuv|kuzat|kun yakuni|xulosa|sotib oldim|pech|3d|chodir|o'rmon|g'oya|goya|yangi mahsulot|nima yasa|nima sot)/), NOTE:all||has(/(eslat|qayd|bajarildi|reja)/)};
   return P.join("\n")+`
 
 FAQAT JSON qaytar: {"say":"aytiladigan matn","actions":[...]}
@@ -768,6 +769,7 @@ ${A.LED?`Hisob-kitob amallari:
 {"type":"invoice","client":"ism","item":"...","price":0,"paid":0} // PDF hisob-faktura; client buyurtmalardagi mijoz bo'lsa ma'lumot o'zi olinadi
 {"type":"price_watch","query":"3 mm list","action":"add|remove|check"} // OLX narxini kuzatish, tushsa xabar beradi
 {"type":"evening"} // kun yakuni xulosasi
+{"type":"idea","topic":"yo'nalish (ixtiyoriy)"} // yangi mahsulot g'oyalari: "nima yasasam", "yangi mahsulot g'oyasi", "qish uchun nima sotsam" so'ralsa
 {"type":"stove"} // buyum loyihasi: har qanday buyum (pech, urna, javon, stol...) surati bo'yicha 3D ko'rinish, detal DXF va bir sahifali PDF; Pinterest rasm/video ham shu yerdan
 `:""}
 
@@ -1185,7 +1187,7 @@ $("chipPc").onclick=()=>{ $("sheet").innerHTML=`<h2>💻 Kompyuter</h2>
   $("c3").onclick=async()=>{const q=$("cq").value.trim(); if(!q)return; closeModal(); say(await pcFind(q))};
   $("c4").onclick=()=>{closeModal();pcQueue(true);sys("💻 Navbat yuborildi")};
   $("c5").onclick=async()=>{closeModal(); const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text)}; };
-$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart();
+$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart(); $("chipIdea").onclick=()=>ideaGen("");
 $("chipPin").onclick=()=>pinOpen(); window._oldPin=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
   openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
@@ -2125,6 +2127,7 @@ async function runNew(a,ctx){ switch(a.type){
     watchP[q]=watchP[q]||{}; saveLed(); const al=await watchCheck(false,q); return `"${q}" narxini kuzata boshladim. `+(watchP[q].med?`Hozir o'rtacha ${money(watchP[q].med)}, eng arzoni ${money(watchP[q].min)}. Narx tushsa xabar beraman.`:"Hozircha narxni aniqlay olmadim, keyinroq qayta tekshiraman."); }
   case "evening": setTimeout(eveningSummary,30); return "";
   case "stove": setTimeout(stoveStart,30); return "";
+  case "idea": setTimeout(()=>ideaGen(a.topic||""),30); return "";
   } return null; }
 
 /* --- avtomatik ogohlantirishlar --- */
@@ -2489,6 +2492,25 @@ function pinOpen(){ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><label>Qidirish
     R.innerHTML=(m&&m.video?`<video src="${esc(m.video)}" controls playsinline style="width:100%;border-radius:8px;background:#000"></video><div class="row" style="margin:6px 0"><button class="btn sm g" id="pgF">📸 Shu kadrni olish</button></div>`:"")+(b?`<img src="data:image/jpeg;base64,${b}" style="width:100%;border-radius:8px"><button class="btn" id="pgU" style="width:100%;margin-top:8px">Bu rasm bilan davom etish</button>`:'<div class="mut">Rasmni olib bo\'lmadi.</div>');
     if($("pgU")) $("pgU").onclick=()=>J.onShared(b);
     if($("pgF")) $("pgF").onclick=()=>{ try{ const v=R.querySelector("video"), c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext("2d").drawImage(v,0,0); const d=c.toDataURL("image/jpeg",0.92).split(",")[1]; if(d&&d.length>1000){ J.onShared(d); return; } }catch(e){} if(b) J.onShared(b); sys("Videodan kadr olib bo'lmadi, muqova rasmi ishlatildi."); }; }; }
+
+/* ================= Yangi mahsulot g'oyalari (57) ================= */
+function pinOpenQ(q){ pinOpen(); $("pgQ").value=q; $("pgS").onclick(); }
+async function ideaGen(topic){ if(busy) return; busy=true; setState("think","g'oya qidiryapman"); topic=String(topic||"").trim();
+  try{ const hist=[...new Set(orders.slice(-40).map(o=>o.item).filter(Boolean))].slice(0,15).join("; "); const mon=["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"][new Date().getMonth()];
+    let trend=""; try{ const w=await webAnswer(`best selling laser cut metal products trending now ${mon} ${topic} Etsy Pinterest home garden camping decor. Javobda mahsulot turlarini ayt.`); trend=(w&&w.text)||""; if(/(topib bo.lmadi|topilmadi)/i.test(trend)) trend=""; }catch(e){}
+    const raw=await askRaw(`Sen lazer kesish va metall ustaxonasi uchun yangi mahsulot g'oyalari beradigan maslahatchisan. Joy: O'zbekiston. Bugun: ${nowStr()} (${mon} oyi, mavsumni hisobga ol).
+Ustaxona oldin yasagan: ${hist||"ma'lumot yo'q"}.
+Trend ma'lumoti: ${trend||"yo'q — o'z bilimingdan foydalan"}.
+${topic?`Yo'nalish: ${topic}.\n`:""}Ustaxonada lazer kesish, egish va payvand bor, mebel emas. 5 ta YANGI, sotilishi mumkin bo'lgan mahsulot g'oyasi ber (oldin yasaganlarini takrorlama). FAQAT JSON massiv qaytar:
+[{"nom":"qisqa nomi","nega":"nima uchun hozir sotiladi (1 gap)","material":"material va taxminiy sarf, masalan 2 mm list ~1.2 m²","narx":"taxminiy sotuv narxi oralig'i so'mda","qiyin":"oson yoki o'rta yoki qiyin","qidir":"Pinterest uchun 2-4 so'zli inglizcha qidiruv","izoh":"loyiha uchun izoh: tur va taxminiy o'lcham mm"}]`);
+    let arr=null; try{ arr=JSON.parse(String(raw||"").replace(/^[\s\S]*?(\[[\s\S]*\])[\s\S]*$/,"$1")); }catch(e){}
+    setState("idle");
+    if(!Array.isArray(arr)||!arr.length){ say(raw?"G'oyalarni tushunib bo'lmadi, qayta urinib ko'ring.":"AI javob bermadi. Sozlamalarda kalitni tekshiring."); return; }
+    arr=arr.slice(0,6); const el=addHtml(`<b>💡 Yangi mahsulot g'oyalari${topic?": "+esc(topic):""}</b>${trend?`<div class="mut" style="margin:4px 0">Trend: ${esc(trend.slice(0,160))}</div>`:""}`+arr.map((x,i)=>`<div style="border:1px solid #1d3547;border-radius:10px;padding:8px 10px;margin-top:8px"><b>${i+1}. ${esc(x.nom||"")}</b> <span class="mut">(${esc(x.qiyin||"")})</span><div style="margin:3px 0">${esc(x.nega||"")}</div><div class="mut">${esc(x.material||"")}${x.narx?" · narxi: "+esc(x.narx):""}</div>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-a="p" data-i="${i}">🧩 Loyiha</button><button class="btn sm g" data-a="r" data-i="${i}">📌 Rasmlar</button><button class="btn sm g" data-a="s" data-i="${i}">💾 Saqlash</button></div></div>`).join(""));
+    el.querySelectorAll("button").forEach(b=>b.onclick=()=>{ const x=arr[+b.dataset.i]; if(b.dataset.a==="p"){ stoveAnalyze("",x.izoh||x.nom); } else if(b.dataset.a==="r"){ pinOpenQ(x.qidir||x.nom); } else { notes.push({id:nid(),text:"G'oya: "+x.nom+" — "+(x.narx||""),at:null,done:false,created:Date.now()}); saveAll(); renderNotes(); b.textContent="✓ Saqlandi"; } });
+    say(`${arr.length} ta yangi mahsulot g'oyasi tayyor. Birinchisi: ${arr[0].nom}. ${arr[0].nega||""}`);
+  }finally{ busy=false; setState("idle"); } }
 
 /* ================= Ishga tushirish ================= */
 loadSet();renderOrders();renderNotes();refreshBg();chipText();schedReport();
