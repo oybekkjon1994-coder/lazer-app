@@ -2363,9 +2363,11 @@ function P_(n,x,y,z,a,b,p,extra){ return Object.assign({n,k:"plate",p,x,y,z,a,b,
 function B_(n,x,y,z,sx,sy,sz,extra){ return Object.assign({n,k:"box",x,y,z,sx,sy,sz,dona:1,rang:"",ochiq:false},extra||{}); }
 function genTemplate(j){ const sh=String(j.shablon||"").toLowerCase(); const t=Math.min(6,Math.max(1,genNum(j.t,sh==="mangal"?3:2))); const g={nom:String(j.nom||sh).slice(0,40),t,comps:[]};
   const num=(k,d,lo,hi)=>Math.min(hi,Math.max(lo,genNum(j[k],d)));
-  if(sh==="mangal"){ const L=num("L",700,300,1500), W=num("W",300,150,600), H=num("H",450,200,900), legH=Math.min(num("legH",200,60,500),H*0.7), tr=H-legH; const hh=(d,dx,dy)=>({tf:"dumaloq",td:d,tdx:dx,tdy:dy,tm:25});
-    g.comps=[P_("Old devor",0,legH,0,L,tr,"xy",hh(14,50,50)),P_("Orqa devor",0,legH,W-t,L,tr,"xy",hh(14,50,50)),P_("Yon devor (oyoq bilan) 1",0,0,0,W,H,"zy"),P_("Yon devor (oyoq bilan) 2",L-t,0,0,W,H,"zy"),
-      P_("Tub (kul tushadigan)",t,legH+30,t,L-2*t,W-2*t,"xz",hh(12,40,40)),P_("Panjara (shashlik tagi)",t,legH+tr-60,t,L-2*t,W-2*t,"xz",{tf:"kvadrat",td:8,tdx:24,tdy:24,tm:20})]; }
+  if(sh==="mangal"){ const L=num("L",700,300,1500), W=num("W",320,150,600), H=num("H",300,150,900), legH=Math.min(num("legH",90,30,400),H*0.5), hs=Math.round((H-legH)*0.6); const hh=(d,dx,dy)=>({tf:"dumaloq",td:d,tdx:dx,tdy:dy,tm:25}); const dark="#59616a", light="#c3c9ce";
+    g.comps=[P_("Yon devor (bezakli) 1",0,0,0,W,H,"zy",{rang:dark}),P_("Yon devor (bezakli) 2",L-t,0,0,W,H,"zy",{rang:dark}),
+      P_("Old devor (past)",t,legH,0,L-2*t,hs,"xy",Object.assign({rang:dark},hh(12,45,45))),P_("Orqa devor (past)",t,legH,W-t,L-2*t,hs,"xy",Object.assign({rang:dark},hh(12,45,45))),
+      P_("Tub (kul tushadigan)",t,legH+20,t,L-2*t,W-2*t,"xz",Object.assign({rang:dark},hh(12,40,40))),
+      P_("Panjara (shashlik tagi)",t,legH+hs-t,t,L-2*t,W-2*t,"xz",{rang:light,tf:"tirqish",td:8,tdx:20,tdy:20,tm:15,tl:W-2*t-30})]; }
   else if(sh==="stol"){ const L=num("L",1200,300,3000), W=num("W",600,300,1500), H=num("H",750,300,1200), lg=num("leg",40,20,100);
     g.comps=[P_("Stol usti",0,H-t,0,L,W,"xz"),B_("Oyoq 1",20,0,20,lg,H-t,lg),B_("Oyoq 2",L-20-lg,0,20,lg,H-t,lg),B_("Oyoq 3",20,0,W-20-lg,lg,H-t,lg),B_("Oyoq 4",L-20-lg,0,W-20-lg,lg,H-t,lg),
       P_("Old-orqa tortqi 1",20+lg,H-t-60,20,L-40-2*lg,60,"xy"),P_("Old-orqa tortqi 2",20+lg,H-t-60,W-20-t,L-40-2*lg,60,"xy")]; }
@@ -2380,11 +2382,12 @@ function genFix(j){ const g={nom:String(j.nom||"Buyum").slice(0,40),t:Math.min(6
     if(k==="box"){ o.sx=Math.max(1,genNum(c.sx,100)); o.sy=Math.max(1,genNum(c.sy,100)); o.sz=Math.max(1,genNum(c.sz,100)); o.ochiq=/tepa/.test(c.ochiq||""); }
     if(k==="cyl"){ o.r=Math.max(1,genNum(c.r,50)); o.h=Math.max(1,genNum(c.h,100)); o.o=/^[xz]$/.test(c.o)?c.o:"y"; o.arc=Math.min(360,Math.max(30,genNum(c.arc,360))); o.a0=genNum(c.a0,0); o.qopqoq=/yoq|past|tepa|ikki/.test(c.qopqoq||"")?c.qopqoq:"ikki"; }
     if(k==="plate"){ o.p=/^(xy|zy)$/.test(c.p)?c.p:"xz"; o.a=Math.max(1,genNum(c.a,100)); o.b=Math.max(1,genNum(c.b,100)); }
-    const t=c.teshik; if(t&&+t.d>0){ o.tf=/kvadrat|square/.test(t.f||"")?"kvadrat":"dumaloq"; o.td=Math.max(2,+t.d); o.tdx=Math.max(o.td*1.3,genNum(t.dx,o.td*2)); o.tdy=Math.max(o.td*1.3,genNum(t.dy,o.tdx)); o.tm=Math.max(0,genNum(t.m,o.td)); }
+    const t=c.teshik; if(t&&+t.d>0){ o.tf=/tirqish|slot/.test(t.f||"")?"tirqish":/kvadrat|square/.test(t.f||"")?"kvadrat":"dumaloq"; o.tl=genNum(t.l,0); o.td=Math.max(2,+t.d); o.tdx=Math.max(o.td*1.3,genNum(t.dx,o.td*2)); o.tdy=Math.max(o.td*1.3,genNum(t.dy,o.tdx)); o.tm=Math.max(0,genNum(t.m,o.td)); }
     g.comps.push(o); }
   return g; }
 function sSq(x,y,s,c){ return {k:"p",pts:[[x-s/2,y-s/2],[x+s/2,y-s/2],[x+s/2,y+s/2],[x-s/2,y+s/2]],c}; }
-function genHoles(c,w,h,cap){ if(!c.td) return []; const out=[]; let dx=c.tdx,dy=c.tdy; const m=c.tm+c.td/2; const cols=Math.floor((w-2*m)/dx)+1, rows=Math.floor((h-2*m)/dy)+1; if(cols<1||rows<1) return [];
+function genHoles(c,w,h,cap){ if(!c.td) return []; const out=[];
+  if(c.tf==="tirqish"){ const len=Math.min(c.tl||h-2*c.tm,h-2*c.tm); if(len<=0) return []; const cols=Math.floor((w-2*c.tm)/c.tdx)+1; const x0=(w-(cols-1)*c.tdx)/2; for(let i=0;i<cols;i++){ const x=x0+i*c.tdx; out.push(sRR(x-c.td/2,h/2-len/2,c.td,len,c.td/2,"#111")); } return out; } let dx=c.tdx,dy=c.tdy; const m=c.tm+c.td/2; const cols=Math.floor((w-2*m)/dx)+1, rows=Math.floor((h-2*m)/dy)+1; if(cols<1||rows<1) return [];
   const tot=cols*rows; if(cap&&tot>cap){ const k=Math.sqrt(tot/cap); dx*=k; dy*=k; }
   const cx=(w-(Math.floor((w-2*m)/dx))*dx)/2; const cy=(h-(Math.floor((h-2*m)/dy))*dy)/2;
   for(let y=cy;y<=h-m+0.01;y+=dy) for(let x=cx;x<=w-m+0.01;x+=dx) out.push(c.tf==="kvadrat"?sSq(x,y,c.td,"#111"):sC(x,y,c.td/2,"#111")); return out; }
@@ -2423,7 +2426,7 @@ function genFaces(g){ const F=[]; const quad=(pts,n,col,par)=>{ const o={pts,n,c
           quad(pts,P([Math.cos(ang),0,Math.sin(ang)]),"#111",segs[i]); } } } });
   let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9]; F.forEach(f=>f.pts.forEach(q=>{ for(let k=0;k<3;k++){ mn[k]=Math.min(mn[k],q[k]); mx[k]=Math.max(mx[k],q[k]); } }));
   const ct=[0,1,2].map(k=>(mn[k]+mx[k])/2); F.forEach(f=>{ f.pts=f.pts.map(q=>[q[0]-ct[0],q[1]-ct[1],q[2]-ct[2]]); }); F.R=Math.max(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||100; F.size=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]]; return F; }
-function genScale(g,k){ for(const c of g.comps){ for(const f of ["x","y","z","sx","sy","sz","r","h","a","b","td","tdx","tdy","tm"]) if(c[f]!==undefined) c[f]=Math.round(c[f]*k*10)/10; } }
+function genScale(g,k){ for(const c of g.comps){ for(const f of ["x","y","z","sx","sy","sz","r","h","a","b","td","tdx","tdy","tm","tl"]) if(c[f]!==undefined) c[f]=Math.round(c[f]*k*10)/10; } }
 function genUI(){ const g=gen; const parts=genParts(g), faces=genFaces(g); const sz=faces.size.map(v=>Math.round(v));
   const tot=parts.reduce((a,x)=>a+stvLen(x.sh)*x.qty,0)/1000, area=parts.reduce((a,x)=>a+x.w*x.h*x.qty,0)/1e6, lp=laserPrice(tot,g.t,1);
   const FL={sx:"Eni",sy:"Balandligi",sz:"Chuqurligi",r:"Radius",h:"Balandligi",a:"1-o'lcham",b:"2-o'lcham",x:"X",y:"Y",z:"Z",arc:"Yoy °",td:"Teshik Ø",tdx:"Qadam X",tdy:"Qadam Y"};
