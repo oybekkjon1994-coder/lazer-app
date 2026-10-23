@@ -621,7 +621,7 @@ public class MainActivity extends Activity {
         }
 
         /** Rasmdan DXF uchun: katta o'lchamda (aniqroq kontur) */
-        @JavascriptInterface public void pickImageHi(boolean camera) { imgMax = 2400; pickImage(camera); }
+        @JavascriptInterface public void pickImageHi(boolean camera) { imgMax = 3600; pickImage(camera); }
 
         @JavascriptInterface public void pickImage(boolean camera) {
             runOnUiThread(() -> {

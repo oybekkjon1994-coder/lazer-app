@@ -1499,7 +1499,7 @@ function autoTh(gray){ // qora va fon cho'qqilari orasidagi eng chuqur botiq —
   // botiq keng bo'lsa, uning qora tomonga yaqin o'rtasini olamiz
   let a=v,b=v; const lim=s[v]*1.6+1; while(a>p1&&s[a-1]<=lim)a--; while(b<p2&&s[b+1]<=lim)b++; return Math.round(Math.min(ot,(a+b)/2)); }
 function grayOf(im,cr,R){ // cr = [x,y,w,h] asl rasmda
-  const k=Math.min(4,R/Math.max(cr[2],cr[3])), w=Math.max(2,Math.round(cr[2]*k)), h=Math.max(2,Math.round(cr[3]*k));
+  const k=Math.min(5,R/Math.max(cr[2],cr[3])), w=Math.max(2,Math.round(cr[2]*k)), h=Math.max(2,Math.round(cr[3]*k));
   const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,w,h);
   cx.imageSmoothingQuality="high"; cx.drawImage(im,cr[0],cr[1],cr[2],cr[3],0,0,w,h);
   const d=cx.getImageData(0,0,w,h).data, g=new Uint8Array(w*h); for(let i=0;i<w*h;i++) g[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
@@ -1524,7 +1524,7 @@ function traceImage(im,o){
   const cr=o.main?mainCrop(im,o):[0,0,im.width,im.height];
   const G=grayOf(im,cr,o.res||1400), w=G.w, h=G.h; const sm=o.smooth==null?2:o.smooth, up=Math.max(1,G.k);
   const g0=o.flat?flattenLight(G.g,w,h):G.g;
-  const gray=sm>=3?blur(g0,w,h,1):g0;
+  const bn=sm>=1?Math.min(w*h>6e6?3:6,Math.max(1,Math.round(up*1.5))):0; const gray=bn?blur(g0,w,h,bn):g0; /* JPEG shovqini va kattalashtirish zinapoyasini tekislaydi */
   const th=o.th==null||o.th<0?autoTh(gray):o.th;
   // qiymat maydoni: v<th = metall. Chetlar fon bilan to'ldiriladi
   const W=w+2,H=h+2, V=new Float32Array(W*H).fill(255);
@@ -1568,8 +1568,9 @@ function traceImage(im,o){
   const sig=[0,0.9,1.8,3][Math.max(0,Math.min(3,sm))]*up;
   const eps=o.eps||((0.3+0.12*sig)*Math.max(1,up*0.7));
   const out=loops.filter(p=>p.length>3&&area(p)>=minA).map(p=>{ p=p.slice(0,-1);
-    if(sig>0&&p.length>8){ const q=resample(p,Math.max(0.5,up*0.5)); if(q.length>8){ const g2=gauss(q,sig/Math.max(0.5,up*0.5)), cw=cornerW(gauss(q,0.8),sig/Math.max(0.5,up*0.5)); p=q.map((z,i)=>[g2[i][0]+(z[0]-g2[i][0])*cw[i],g2[i][1]+(z[1]-g2[i][1])*cw[i]]); } }
-    const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),eps).slice(0,-1),...dp(p.slice(half),eps).slice(0,-1)]; }).filter(p=>p.length>=3);
+    if(sig>0&&p.length>8){ const q=resample(p,Math.max(0.5,up*0.5)); if(q.length>8){ const sgE=Math.min(sig/Math.max(0.5,up*0.5),q.length/28), g2=gauss(q,sgE), cw=cornerW(gauss(q,Math.min(0.8,sgE)),sgE); p=q.map((z,i)=>[g2[i][0]+(z[0]-g2[i][0])*cw[i],g2[i][1]+(z[1]-g2[i][1])*cw[i]]); } }
+    let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9; for(const z of p){bx0=Math.min(bx0,z[0]);bx1=Math.max(bx1,z[0]);by0=Math.min(by0,z[1]);by1=Math.max(by1,z[1])}
+    const epsL=Math.min(eps,Math.max(0.12,Math.hypot(bx1-bx0,by1-by0)*0.006)); const half=Math.floor(p.length/2); return [...dp(p.slice(0,half+1),epsL).slice(0,-1),...dp(p.slice(half),epsL).slice(0,-1)]; }).filter(p=>p.length>=3);
   return {loops:out,w,h,th};
 }
 function traceDxf(tr,o){
@@ -1617,7 +1618,7 @@ function flattenLight(g,w,h){ // notekis yoritishni tekislash (kamera surati): f
   return out; }
 async function traceUI(b64,opt){
   const im=await loadImg(b64); if(!im){ say("Rasmni ochib bo'lmadi."); return; }
-  opt=opt||{}; const o={th:-1,inv:false,main:true,smooth:2,thin:true,flat:!!opt.cam,W:600,H:600,frame:0,thick:2,res:1400};
+  opt=opt||{}; const o={th:-1,inv:false,main:true,smooth:2,thin:true,flat:!!opt.cam,W:600,H:600,frame:0,thick:2,res:3200};
   { const cr=mainCrop(im,o); o.H=Math.round(600*cr[3]/cr[2]); }
   $("sheet").innerHTML=`<h2>✏️ Rasmdan DXF</h2><p class="mut">Oq fonda qora shakl eng yaxshi chiqadi (naqsh, logo, siluet). Chegarani surib, chiziqlar to'g'ri chiqqanini ko'ring.</p>
   <div class="row" style="margin:6px 0"><button class="btn sm g" id="trCam">📷 Qayta suratga olish</button><button class="btn sm g" id="trGal">🖼 Boshqa rasm</button></div>
@@ -1627,7 +1628,7 @@ async function traceUI(b64,opt){
   <div class="tog"><span>Qalinlikdan ingichka va mayda bo'laklarni olib tashlash</span><div class="sw on" id="trThin"></div></div>
   <div class="tog"><span>Notekis yorug'lik / soya (kamera surati)</span><div class="sw${o.flat?" on":""}" id="trFlat"></div></div>
   <div class="tog" style="border:0"><span>Ranglarni almashtirish</span><div class="sw" id="trInv"></div></div>
-  <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="800">Tez</option><option value="1400" selected>Yaxshi</option><option value="2000">Juda yuqori</option></select></div>
+  <div class="row"><div><label>Aniqlik</label><select id="trRes"><option value="800">Tez</option><option value="1400">Yaxshi</option><option value="2000">Juda yuqori</option><option value="3200" selected>Maksimal</option></select></div>
   <div><label>Silliqlik</label><select id="trSm"><option value="0">Yo'q</option><option value="1">Kam</option><option value="2" selected>O'rtacha</option><option value="3">Ko'p</option></select></div></div>
   <div class="row"><div><label>Eni (mm)</label><input id="trW" inputmode="decimal" value="${o.W}"></div><div><label>Bo'yi (mm)</label><input id="trH" inputmode="decimal" value="${o.H}"></div></div>
   <div class="row"><div><label>Ramka (mm, 0 = yo'q)</label><input id="trF" inputmode="decimal" value="${o.frame}"></div><div><label>Qalinlik (mm)</label><input id="trT" inputmode="decimal" value="${o.thick}"></div></div>
