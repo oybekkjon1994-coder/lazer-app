@@ -247,7 +247,9 @@ body.car #mic{width:76px;height:76px}
     <label>Lazer bot kanali (botdagi bilan bir xil bo'lishi kerak)</label><input id="sTopic">
     <div class="tog"><span>Ertalabki hisobot</span><div class="sw" id="swRep"></div></div>
     <label>Hisobot vaqti</label><input id="sRepT" type="time">
-    <div class="tog" style="border:0"><span>Dollar kursi keskin o'zgarsa xabar berish</span><div class="sw" id="swRate"></div></div>
+    <div class="tog"><span>Dollar kursi keskin o'zgarsa xabar berish</span><div class="sw" id="swRate"></div></div>
+    <div class="tog"><span>Kun yakuni xulosasi (kechqurun)</span><div class="sw" id="swEve"></div></div>
+    <label>Kun yakuni vaqti</label><input id="sEveT" type="time">
   </div>
   <div class="card">
     <b>Mashina</b>
@@ -299,7 +301,7 @@ const N = window.Native || {
   http(id,url,m,h,b){fetch(url,{method:m,headers:JSON.parse(h||"{}"),body:b||undefined}).then(async r=>J._http(id,r.status,await r.text())).catch(e=>J._http(id,0,"ERR: "+e))},
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
-  torch(){return "ok"}, battery(){return 77}, volume(){}, keepAwake(){}, share(t){console.log(t)},
+  torch(){return "ok"}, battery(){return 77}, charging(){return false}, freeMb(){return 20000}, scheduleEvening(){}, saveFile(){return ""}, shareFile(){}, volume(){}, keepAwake(){}, share(t){console.log(t)},
   bgListen(){return "ok"}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
@@ -607,6 +609,9 @@ function quick(t){
     return `Hozir soat ${uzNum(d.getHours())}${d.getMinutes()?`, ${uzNum(d.getMinutes())} daqiqa`:" bo'ldi"}.`}
   if(/(bugun|sana).*(nechanchi|qaysi kun|necha)|bugun qanaqa kun/.test(s)){const d=new Date();
     return `Bugun ${d.getDate()}-${OY[d.getMonth()]}, ${HAFTA[d.getDay()]}.`}
+  if(/qarzdorlar|qarz daftari|kim(lar)? qarz/.test(s)) return debtsReport();
+  if(/(xarajat|harajat).*(hisobot|qancha|necha|ko'rsat)/.test(s)) return ledgerReport(s);
+  if(/(material|list).*(qoldiq|qancha qoldi|ombor)|ombor holati/.test(s)) return stockReport();
   if(/(zaryad|batareya|batarey|akkumulyator)/.test(s)){const b=N.battery();return b>=0?`Zaryad ${b} foiz.`:"Zaryadni bilib bo'lmadi."}
   const g=s.replace(/^(hey |ey )?jarvis[,!.\s]*/,"").replace(/[!.?,]/g,"").trim();
   if(/^(salom|assalomu alaykum|assalom|salom jarvis|hayrli tong|xayrli tong|xayrli kech|qalaysan|yaxshimisan|ishlar qalay)( jarvis)?$/.test(g)||g===""&&/jarvis/.test(s)){
@@ -726,7 +731,7 @@ Instagram statistikasi, raqobatchilar yoki post natijasi so'ralsa: telefondagi J
     LAS:all||has(/(narx|lazer|kes|metr|mm\b|dxf|chizma|naqsh|darvoza|panjara|teshik|to'rtburchak|doira|katalog|qancha)/),
     PC:all||has(/(kompyuter|komp|pc|bot|zaxira|navbat|fayl)/), PIN:all||has(/(pinterest|g'oya|goya|ilhom|dizayn)/),
     MSG:all||has(/(xabar|javob|yoz|yubor|telegram|whatsapp|instagram|direct|mijoz)/), SAVE:all||has(/(saqla|esla|manzil|raqam|kontakt|o'chir)/),
-    PHO:all||has(/(rasm|surat|foto|kamera|chizma)/), NOTE:all||has(/(eslat|qayd|bajarildi|reja)/)};
+    PHO:all||has(/(rasm|surat|foto|kamera|chizma)/), LED:all||has(/(xarajat|harajat|sarfla|sarf|daromad|tushum|qarz|qoldiq|material|ombor|list|tarjima|faktura|schyot|hisob-faktura|uchrashuv|kuzat|kun yakuni|xulosa|sotib oldim)/), NOTE:all||has(/(eslat|qayd|bajarildi|reja)/)};
   return P.join("\n")+`
 
 FAQAT JSON qaytar: {"say":"aytiladigan matn","actions":[...]}
@@ -747,6 +752,20 @@ ${A.SAVE?`{"type":"place_save","name":"uy|ustaxona","address":"..." } // manziln
 {"type":"copy","text":"..." } // matnni nusxalash (keyin Instagram/OLX'ga qo'yish uchun)
 {"type":"listen","on":false } // doimiy tinglashni o'chirish/yoqish
 {"type":"web","query":"aniq qidiruv so'rovi" } // internetdan qidirib javob berish
+${A.LED?`Hisob-kitob amallari:
+{"type":"expense","amount":50000,"cat":"material|transport|ovqat|kommunal|boshqa","text":"..."} // xarajat yozish ("say"da qisqa tasdiq ayt)
+{"type":"income","amount":300000,"text":"..."}
+{"type":"debt","dir":"menga|men","who":"ism","amount":200000,"due":"YYYY-MM-DD","text":"..."} // dir "menga" = u menga qarzdor; "men" = men unga qarzdorman
+{"type":"debt_paid","who":"ism","amount":100000} // amount yozilmasa to'liq yopiladi
+{"type":"ledger_report","period":"bugun|kecha|hafta|oy"} {"type":"debts_report"}
+{"type":"stock","name":"3 mm list","qty":10,"unit":"dona","mode":"add|use|set","min":5} // material qoldig'i: qo'shildi=add, ishlatildi=use, hozir bor=set; min=ogohlantirish chegarasi
+{"type":"stock_report"}
+{"type":"meeting","text":"Mijoz bilan uchrashuv","at":"YYYY-MM-DD HH:MM"} // 30 daqiqa oldin ham eslatadi
+{"type":"translate","text":"tarjima qilinadigan matn","to":"ruscha|inglizcha|o'zbekcha"}
+{"type":"invoice","client":"ism","item":"...","price":0,"paid":0} // PDF hisob-faktura; client buyurtmalardagi mijoz bo'lsa ma'lumot o'zi olinadi
+{"type":"price_watch","query":"3 mm list","action":"add|remove|check"} // OLX narxini kuzatish, tushsa xabar beradi
+{"type":"evening"} // kun yakuni xulosasi
+`:""}
 
 Qoidalar: buyurtma qo'shishda narx/muddat aytilmagan bo'lsa 0 / bo'sh qoldir. "Hisobot" so'ralsa: ochiq buyurtmalar soni, bugun/ertaga muddati tugaydiganlar, to'lanmagan qoldiq summa va bugungi eslatmalarni qisqa ayt.
 BILIM: Sen juda ko'p narsani bilasan (tarix, fan, texnika, mashinalar, filmlar, seriallar, kitoblar, sport, din, tibbiyot, retseptlar, biznes...). Umumiy bilimga oid savolga O'ZING darhol javob ber — "web" kerak emas.
@@ -1027,6 +1046,7 @@ async function findNumber(a){
 }
 async function run(a,ctx){
   const t=a.type;
+  { const rn=await runNew(a,ctx); if(rn!==null) return rn; }
   switch(t){
     case "call":{const f=await findNumber(a);if(!f)return"";if(f.perm)return"Kontaktlarni o'qishga ruxsat bering va qayta ayting.";
       if(f.none)return`${a.name} kontaktlarda topilmadi.`;N.call(f.number);return""}
@@ -1966,6 +1986,143 @@ setInterval(()=>{
   else if(state==="listen" && now-lastBeat>9000){ N.stopListen(); setState("idle"); setTimeout(()=>{if(loop&&state==="idle")listen()},400); }
   else if(state==="speak" && now-stateSince>45000){ N.stopSpeak(); setState("idle"); }
 },2000);
+
+/* ================= YANGI: xarajat/qarz, qoldiq, kun yakuni, tarjima, hisob-faktura, narx kuzatish, ogohlantirishlar ================= */
+if(S.evening===undefined){ S.evening=true; S.eveningTime="21:00"; }
+let ledger=ld("ledger",[]), stock=ld("stock",{}), watchP=ld("watchP",{});
+const saveLed=()=>{ sv("ledger",ledger.slice(-1500)); sv("stock",stock); sv("watchP",watchP); };
+const ymd=d=>{ d=d||new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const money=n=>fmt(n)+" so'm";
+const sameDay=(a,b)=>a===b;
+function schedEvening(){ const [h,m]=(S.eveningTime||"21:00").split(":").map(Number); try{ N.scheduleEvening&&N.scheduleEvening(!!S.evening,isNaN(h)?21:h,isNaN(m)?0:m); }catch(e){} }
+
+/* --- xarajat / daromad / qarz --- */
+function addLedger(e){ e.id=nid(); e.date=e.date||ymd(); e.ts=Date.now(); ledger.push(e); saveLed(); return e; }
+function periodRange(p){ const now=new Date(), t=ymd(now); p=norm(p||"bugun");
+  if(/(oy|oylik)/.test(p)){ const a=new Date(now.getFullYear(),now.getMonth(),1); return {from:ymd(a),to:t,name:"bu oy"}; }
+  if(/(hafta|haftalik)/.test(p)){ const a=new Date(now); a.setDate(a.getDate()-6); return {from:ymd(a),to:t,name:"oxirgi 7 kun"}; }
+  if(/(kecha)/.test(p)){ const a=new Date(now); a.setDate(a.getDate()-1); return {from:ymd(a),to:ymd(a),name:"kecha"}; }
+  return {from:t,to:t,name:"bugun"}; }
+function ledgerReport(p){ const r=periodRange(p);
+  const L=ledger.filter(e=>(e.kind==="xarajat"||e.kind==="daromad")&&e.date>=r.from&&e.date<=r.to);
+  const ex=L.filter(e=>e.kind==="xarajat"), inc=L.filter(e=>e.kind==="daromad");
+  const se=ex.reduce((a,e)=>a+(+e.amount||0),0), si=inc.reduce((a,e)=>a+(+e.amount||0),0);
+  if(!L.length) return `${r.name[0].toUpperCase()+r.name.slice(1)} uchun xarajat yoki daromad yozilmagan.`;
+  const cat={}; ex.forEach(e=>{ const k=e.cat||"boshqa"; cat[k]=(cat[k]||0)+(+e.amount||0); });
+  const top=Object.entries(cat).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} ${money(v)}`).join(", ");
+  return `${r.name[0].toUpperCase()+r.name.slice(1)}: xarajat ${money(se)}${top?` (${top})`:""}${si?`, daromad ${money(si)}, farqi ${money(si-se)}`:""}.`; }
+function openDebts(dir){ return ledger.filter(e=>(e.kind==="qarz_menga"||e.kind==="qarz_men")&&!e.closed&&(!dir||e.kind===dir)); }
+const debtLeft=e=>Math.max(0,(+e.amount||0)-(+e.paid||0));
+function debtsReport(){ const a=openDebts("qarz_menga"), b=openDebts("qarz_men"); if(!a.length&&!b.length) return "Qarz yozuvlari yo'q.";
+  const f=l=>l.slice(0,5).map(e=>`${e.who} ${money(debtLeft(e))}${e.due?`, muddati ${e.due}`:""}`).join("; ");
+  const ta=a.reduce((s,e)=>s+debtLeft(e),0), tb=b.reduce((s,e)=>s+debtLeft(e),0);
+  return [a.length?`Sizga qarzdorlar jami ${money(ta)}: ${f(a)}.`:"",b.length?`Siz qarzdorsiz jami ${money(tb)}: ${f(b)}.`:""].filter(Boolean).join(" "); }
+function debtPay(who,amount){ const k=norm(who||""); const l=openDebts().filter(e=>norm(e.who).includes(k)||k.includes(norm(e.who)));
+  if(!l.length) return `${who} bo'yicha ochiq qarz topilmadi.`; let rest=+amount||0, all=!(+amount);
+  for(const e of l){ if(all){ e.paid=e.amount; e.closed=true; } else { const d=Math.min(rest,debtLeft(e)); e.paid=(+e.paid||0)+d; rest-=d; if(debtLeft(e)<=0) e.closed=true; if(rest<=0) break; } }
+  saveLed(); const left=l.reduce((s,e)=>s+debtLeft(e),0); return left?`Yozib qo'ydim. ${who}dan qolgan qarz ${money(left)}.`:`${who} qarzi to'liq yopildi.`; }
+
+/* --- material qoldig'i --- */
+function stockKey(n){ return norm(String(n||"")).replace(/\s+/g," "); }
+function stockSet(a){ const k=stockKey(a.name); if(!k) return "Material nomi aytilmadi."; const it=stock[k]||(stock[k]={name:a.name,qty:0,min:0,unit:a.unit||"dona"});
+  const q=+a.qty||0, mode=a.mode||"add"; if(a.unit) it.unit=a.unit; if(a.min!=null&&a.min!=="") it.min=+a.min||0; if(a.name) it.name=a.name;
+  if(mode==="set") it.qty=q; else if(mode==="use") it.qty=Math.max(0,it.qty-q); else it.qty+=q; saveLed();
+  const warn=it.min&&it.qty<=it.min?` Diqqat, ${it.name} kam qoldi, ${it.qty} ${it.unit}. Buyurtma berish vaqti.`:"";
+  return `${it.name}: ${it.qty} ${it.unit} qoldi.${warn}`; }
+function stockReport(){ const l=Object.values(stock); if(!l.length) return "Material qoldig'i yozilmagan. Masalan: Jarvis, 3 millik listdan 10 ta qo'shildi.";
+  const low=l.filter(x=>x.min&&x.qty<=x.min); return l.slice(0,8).map(x=>`${x.name} ${x.qty} ${x.unit}`).join("; ")+"."+(low.length?` Kam qolgan: ${low.map(x=>x.name).join(", ")}.`:""); }
+
+/* --- kun yakuni --- */
+async function eveningSummary(){ if(busy) return; busy=true; setState("think","kun yakuni");
+  try{ const parts=[`${S.name}, kun yakuni xulosasi.`]; const t=ymd();
+    const L=ledger.filter(e=>e.date===t&&(e.kind==="xarajat"||e.kind==="daromad"));
+    const se=L.filter(e=>e.kind==="xarajat").reduce((a,e)=>a+(+e.amount||0),0), si=L.filter(e=>e.kind==="daromad").reduce((a,e)=>a+(+e.amount||0),0);
+    if(L.length) parts.push(`Bugun xarajat ${money(se)}${si?`, daromad ${money(si)}`:""}.`);
+    const open=openOrders(); const done=orders.filter(o=>o.status==="tayyor"||o.status==="topshirildi").length;
+    parts.push(open.length?`Ochiq buyurtmalar ${open.length} ta.`:"Ochiq buyurtma yo'q.");
+    const tm=new Date(); tm.setDate(tm.getDate()+1); const tms=ymd(tm);
+    const due=open.filter(o=>o.due&&o.due<=tms&&o.status!=="tayyor"); if(due.length) parts.push(`Ertagacha muddati kelganlar: ${due.slice(0,3).map(o=>o.client).join(", ")}.`);
+    const dd=openDebts().filter(e=>e.due&&e.due<=tms); if(dd.length) parts.push(`Qarz muddati yaqin: ${dd.slice(0,3).map(e=>`${e.who} ${money(debtLeft(e))}`).join("; ")}.`);
+    const a=new Date(tm); a.setHours(0,0,0,0); const b=new Date(tm); b.setHours(23,59,59,0);
+    const rem=notes.filter(n=>!n.done&&n.at&&n.at>=a.getTime()&&n.at<=b.getTime()); if(rem.length) parts.push(`Ertangi eslatmalar: ${rem.slice(0,4).map(n=>n.text).join("; ")}.`);
+    const low=Object.values(stock).filter(x=>x.min&&x.qty<=x.min); if(low.length) parts.push(`Kam qolgan material: ${low.map(x=>x.name).join(", ")}.`);
+    parts.push("Xayrli tun.");
+    setState("idle"); say(parts.join(" ")); }
+  finally{ busy=false; } }
+
+/* --- uchrashuv / tarjima --- */
+function addMeeting(a){ const at=parseAt(a.at); if(!at||at<=Date.now()) return "Uchrashuv vaqtini tushunmadim."; const tx=a.text||"Uchrashuv";
+  const n1={id:nid(),text:tx+" — 30 daqiqadan keyin",at:at-30*60000,done:false,created:Date.now()}, n2={id:nid(),text:tx,at,done:false,created:Date.now()};
+  [n1,n2].forEach(n=>{ notes.push(n); if(n.at>Date.now()) N.remind(n.at,n.text,n.id); }); saveAll(); renderNotes();
+  return `Uchrashuv yozildi. 30 daqiqa oldin ham eslataman.`; }
+async function translateTo(text,to){ const L={ruscha:"ruscha",rus:"ruscha",inglizcha:"inglizcha",ingliz:"inglizcha",ozbekcha:"o'zbekcha",uzbekcha:"o'zbekcha",o:"o'zbekcha"};
+  const lang=L[norm(to||"").replace(/ga$/,"")]||to||"ruscha";
+  const t=await askRaw(`Quyidagi matnni ${lang} tilga tarjima qil. FAQAT tarjimani yoz, boshqa gap yozma.\n${text}`);
+  if(!t) return "Tarjima qila olmadim."; try{ N.copy(t); }catch(e){} setTimeout(()=>addMsg("j",`${lang}: ${t}`),50);
+  return `Tarjimasi: ${t}. Nusxalab qo'ydim.`; }
+
+/* --- PDF hisob-faktura --- */
+function mkPdf(rows){ const ex=s=>String(s).replace(/[‘’ʻʼ`´]/g,"'").replace(/[\\()]/g,"\\$&").replace(/[^\x20-\x7e]/g,"?");
+  let c=""; for(const r of rows) c+=`BT /${r.b?"F2":"F1"} ${r.s||12} Tf ${r.x||50} ${r.y} Td (${ex(r.t)}) Tj ET\n`;
+  const objs=["<</Type/Catalog/Pages 2 0 R>>","<</Type/Pages/Kids[3 0 R]/Count 1>>","<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R/F2 5 0 R>>>>/Contents 6 0 R>>",
+    "<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>","<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold>>",`<</Length ${c.length}>>\nstream\n${c}endstream`];
+  let out="%PDF-1.4\n"; const off=[]; objs.forEach((o,i)=>{ off.push(out.length); out+=`${i+1} 0 obj\n${o}\nendobj\n`; });
+  const x=out.length; out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+`trailer\n<</Size ${objs.length+1}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`;
+  return out; }
+function makeInvoice(a){ let o=null; if(a.orderId) o=orders.find(x=>x.id==a.orderId);
+  if(!o&&a.client){ const k=norm(a.client); o=orders.slice().reverse().find(x=>norm(x.client||"").includes(k)); }
+  const d={client:a.client||(o&&o.client)||"Mijoz",item:a.item||(o&&o.item)||"Lazer kesish xizmati",price:+(a.price!=null?a.price:o&&o.price)||0,paid:+(a.paid!=null?a.paid:o&&o.paid)||0,due:a.due||(o&&o.due)||""};
+  const no=(o&&o.id)||nid(); const rows=[{t:"HISOB-FAKTURA No "+no,s:20,y:790,b:1},{t:"Metartshop - lazer kesish va metall ishlari",s:12,y:765},{t:"Instagram: @metart_shop   Telegram: @lazekametal",s:11,y:748},
+    {t:"Sana: "+ymd(),y:715},{t:"Mijoz: "+d.client,y:695,s:13,b:1},{t:"Xizmat / buyum: "+d.item,y:672,s:13},{t:"Narxi: "+fmt(d.price)+" so'm",y:640,s:13},{t:"To'langan: "+fmt(d.paid)+" so'm",y:620,s:13},
+    {t:"Qoldiq: "+fmt(Math.max(0,d.price-d.paid))+" so'm",y:598,s:15,b:1}]; if(d.due) rows.push({t:"Tayyor bo'lish muddati: "+d.due,y:570,s:12});
+  rows.push({t:"Rahmat! Savollar uchun Telegram yoki Instagram'ga yozing.",y:520,s:11});
+  const nm="faktura_"+String(d.client).replace(/[^\w]+/g,"_").slice(0,20)+"_"+no+".pdf"; const uri=saveF(nm,"application/pdf",mkPdf(rows));
+  setTimeout(()=>{ const el=addHtml(`<b>${esc(nm)}</b><div class="mut" style="margin:6px 0">${esc(d.client)} · ${esc(d.item)} · ${fmt(d.price)} so'm, qoldiq ${fmt(Math.max(0,d.price-d.paid))} so'm</div>${uri?`<button class="btn sm">Yuborish (Telegram…)</button>`:""}`);
+    const b=el.querySelector("button"); if(b) b.onclick=()=>N.shareFile(uri,"application/pdf"); },60);
+  return uri?`Hisob-faktura tayyor, Yuklamalar, Jarvis papkasiga saqlandi. Yuborish tugmasi ekranda.`:"Hisob-faktura tayyor, lekin faylni saqlab bo'lmadi."; }
+
+/* --- OLX narx kuzatish --- */
+function parsePrice(l){ const s=String(l||""); const m=s.replace(/\u00a0/g," ").match(/(\d[\d\s]*)/); if(!m) return 0; let v=+m[1].replace(/\s/g,""); if(!v) return 0; if(/(\$|y\.?e|usd)/i.test(s)) v*=12500; return v; }
+async function watchCheck(speakNow,only){ const qs=only?[only]:Object.keys(watchP); if(!qs.length){ if(speakNow) say("Kuzatiladigan narx yo'q. Masalan: Jarvis, 3 millik list narxini kuzat."); return []; }
+  const alerts=[], lines=[];
+  for(const q of qs){ const res=await olxSearch(q); if(!res.ok){ lines.push(`${q}: OLX'ga ulanib bo'lmadi.`); continue; }
+    const pr=res.items.map(i=>parsePrice(i.price)).filter(v=>v>1000).sort((a,b)=>a-b); if(pr.length<3){ lines.push(`${q}: narxli e'lon kam.`); continue; }
+    const med=pr[Math.floor(pr.length/2)], mn=pr[0], w=watchP[q]||(watchP[q]={}); const prev=w.med;
+    if(prev&&med<=prev*0.95) alerts.push(`${q}: narx tushdi. O'rtacha ${money(prev)} edi, hozir ${money(med)}. Eng arzoni ${money(mn)}.`);
+    lines.push(`${q}: o'rtacha ${money(med)}, eng arzoni ${money(mn)}.`); w.med=med; w.min=mn; w.t=Date.now(); }
+  saveLed(); if(speakNow) say(lines.join(" ")); return alerts; }
+function notify(txt){ try{ N.remind(Date.now()+1500,txt,nid()); }catch(e){} }
+
+/* --- run() ga yangi amallar --- */
+async function runNew(a,ctx){ switch(a.type){
+  case "expense": addLedger({kind:"xarajat",amount:+a.amount||0,cat:a.cat||"",text:a.text||""}); return "";
+  case "income": addLedger({kind:"daromad",amount:+a.amount||0,text:a.text||""}); return "";
+  case "debt": addLedger({kind:norm(a.dir||"")==="men"?"qarz_men":"qarz_menga",who:a.who||"Noma'lum",amount:+a.amount||0,paid:0,due:a.due||"",text:a.text||""}); return "";
+  case "debt_paid": return debtPay(a.who,a.amount);
+  case "ledger_report": return ledgerReport(a.period);
+  case "debts_report": return debtsReport();
+  case "stock": return stockSet(a);
+  case "stock_report": return stockReport();
+  case "meeting": return addMeeting(a);
+  case "translate": return await translateTo(a.text||"",a.to);
+  case "invoice": return makeInvoice(a);
+  case "price_watch":{ const q=String(a.query||"").trim(); if(a.action==="remove"){ delete watchP[q]; saveLed(); return "Kuzatuv o'chirildi."; }
+    if(a.action==="check"||!q){ const al=await watchCheck(true); return ""; }
+    watchP[q]=watchP[q]||{}; saveLed(); const al=await watchCheck(false,q); return `"${q}" narxini kuzata boshladim. `+(watchP[q].med?`Hozir o'rtacha ${money(watchP[q].med)}, eng arzoni ${money(watchP[q].min)}. Narx tushsa xabar beraman.`:"Hozircha narxni aniqlay olmadim, keyinroq qayta tekshiraman."); }
+  case "evening": setTimeout(eveningSummary,30); return "";
+  } return null; }
+
+/* --- avtomatik ogohlantirishlar --- */
+let lastBat=0, lastMem=0;
+setInterval(()=>{ try{ if(busy||state==="speak"||state==="listen") return; const b=N.battery(), ch=N.charging&&N.charging();
+  if(b>=0&&b<=20&&!ch&&Date.now()-lastBat>45*60000){ lastBat=Date.now(); const t=`Zaryad ${b} foiz qoldi. Zaryadga ulang.`; say(t); if(b<=10) notify(t); }
+  const m=N.freeMb?N.freeMb():-1; if(m>=0&&m<1500&&Date.now()-lastMem>24*3600e3){ lastMem=Date.now(); const t=`Telefon xotirasi kam qoldi, ${m} megabayt. Keraksiz fayllarni o'chiring.`; say(t); notify(t); } }catch(e){} },5*60000);
+setInterval(async()=>{ try{ if(S.rateWatch){ const rc=await rateCheck(false); if(rc&&rc.note){ notify(rc.note); if(state==="idle"&&!busy) say(rc.note); } }
+  if(Object.keys(watchP).length&&Date.now()-(S.watchLast||0)>6*3600e3){ S.watchLast=Date.now(); saveAll(); const al=await watchCheck(false); for(const t of al){ notify(t); if(state==="idle"&&!busy) say(t); } } }catch(e){} },30*60000);
+
+function eveUI(){ $("swEve").classList.toggle("on",!!S.evening); $("sEveT").value=S.eveningTime||"21:00"; }
+eveUI(); sw("swEve","evening",schedEvening); bind("sEveT",v=>{S.eveningTime=v||"21:00";schedEvening()});
+J.evening=eveningSummary; schedEvening();
 
 /* ================= Ishga tushirish ================= */
 loadSet();renderOrders();renderNotes();refreshBg();chipText();schedReport();
