@@ -29,6 +29,7 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import android.os.PowerManager;
 import android.provider.Settings;
@@ -785,6 +786,75 @@ public class MainActivity extends Activity {
                 } catch (Exception ignored) {}
                 js("J._http(" + q(id) + ",200," + q(out) + ")");
             }).start();
+        }
+
+        /** Tripo3D: rasmni multipart yuklaydi (maydon nomi "file"). Javob matni J._http orqali. */
+        @JavascriptInterface public void tripoUpload(String id, String url, String apiKey, String b64jpg) {
+            new Thread(() -> {
+                int code = 0; String out;
+                try {
+                    byte[] data = Base64.decode(b64jpg, Base64.DEFAULT);
+                    String bd = "----jarvis" + System.currentTimeMillis();
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(90000);
+                    c.setRequestProperty("Authorization", "Bearer " + apiKey);
+                    c.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + bd);
+                    c.setDoOutput(true); c.setChunkedStreamingMode(0);
+                    try (OutputStream os = c.getOutputStream()) {
+                        os.write(("--" + bd + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"photo.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                        os.write(data);
+                        os.write(("\r\n--" + bd + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                    code = c.getResponseCode();
+                    InputStream is = code >= 400 ? c.getErrorStream() : c.getInputStream();
+                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                    if (is != null) { byte[] buf = new byte[8192]; int n; while ((n = is.read(buf)) > 0) bo.write(buf, 0, n); is.close(); }
+                    out = bo.toString("UTF-8");
+                } catch (Exception e) { out = "ERR: " + e.getMessage(); }
+                js("J._http(" + q(id) + "," + code + "," + q(out) + ")");
+            }).start();
+        }
+
+        /** Katta ikkilik faylni (GLB) keshga yuklab oladi; javobda hajm (bayt). */
+        @JavascriptInterface public void binGet(String id, String url, String fname) {
+            new Thread(() -> {
+                int code = 0; String out;
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setInstanceFollowRedirects(true); c.setConnectTimeout(20000); c.setReadTimeout(120000);
+                    code = c.getResponseCode();
+                    if (code == 200) {
+                        File f = new File(getCacheDir(), new File(fname).getName());
+                        long tot = 0;
+                        try (InputStream is = c.getInputStream(); FileOutputStream fo = new FileOutputStream(f)) {
+                            byte[] buf = new byte[32768]; int n; while ((n = is.read(buf)) > 0) { fo.write(buf, 0, n); tot += n; }
+                        }
+                        out = String.valueOf(tot);
+                    } else out = "HTTP " + code;
+                } catch (Exception e) { out = "ERR: " + e.getMessage(); }
+                js("J._http(" + q(id) + "," + code + "," + q(out) + ")");
+            }).start();
+        }
+
+        /** Kesh faylidan bo'lak o'qiydi (base64). */
+        @JavascriptInterface public String binChunk(String fname, int off, int len) {
+            try (java.io.RandomAccessFile r = new java.io.RandomAccessFile(new File(getCacheDir(), new File(fname).getName()), "r")) {
+                r.seek(off); byte[] b = new byte[len]; int n = r.read(b);
+                if (n <= 0) return "";
+                return Base64.encodeToString(b, 0, n, Base64.NO_WRAP);
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface public int binSize(String fname) { File f = new File(getCacheDir(), new File(fname).getName()); return f.exists() ? (int) f.length() : 0; }
+
+        /** Kesh faylini Yuklamalar/Jarvis papkasiga nusxalaydi. */
+        @JavascriptInterface public String binExport(String fname, String outName, String mime) {
+            try {
+                File src = new File(getCacheDir(), new File(fname).getName());
+                byte[] data = new byte[(int) src.length()];
+                try (FileInputStream fi = new FileInputStream(src)) { int o = 0, n; while (o < data.length && (n = fi.read(data, o, data.length - o)) > 0) o += n; }
+                return saveFileB64(outName, mime, Base64.encodeToString(data, Base64.NO_WRAP));
+            } catch (Exception e) { return ""; }
         }
 
         @JavascriptInterface public String readAsset(String path) {

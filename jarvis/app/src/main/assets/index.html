@@ -124,6 +124,7 @@ body.car #mic{width:76px;height:76px}
     <button class="chip" id="chipNewIdea">💡 Yangi g'oya</button>
     <button class="chip" id="chipApps">📱 Ilovalar</button>
     <button class="chip" id="chipStove">🧩 Buyum 3D + DXF</button>
+    <button class="chip" id="chip3d">🧊 Rasmdan 3D</button>
     <button class="chip" id="chipPin">📌 Pinterest</button>
     <button class="chip" id="chipRead">📖 O'qish</button>
     <button class="chip" id="chipHunt">🎯 Buyurtma qidir</button>
@@ -306,7 +307,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, listApps(){return JSON.stringify([{l:"Telegram",p:"org.telegram.messenger"},{l:"Instagram",p:"com.instagram.android"},{l:"WhatsApp",p:"com.whatsapp"},{l:"YouTube",p:"com.google.android.youtube"},{l:"Chrome",p:"com.android.chrome"},{l:"Kamera",p:"com.android.camera"},{l:"Click",p:"uz.click.evo"},{l:"Payme",p:"uz.dida.payme"},{l:"Boshqa",p:"x.y"}])}, appIcon(){return ""}, launchPkg(){return "ok"}, battery(){return 77}, charging(){return false}, freeMb(){return 20000}, scheduleEvening(){}, saveFile(){return ""}, saveFileB64(){return "mock://pdf"}, shareFile(){}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, tripoUpload(id){setTimeout(()=>J._http(id,200,"{}"),10)}, binGet(id){setTimeout(()=>J._http(id,200,"0"),10)}, binChunk(){return ""}, binSize(){return 0}, binExport(){return ""}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -435,8 +436,9 @@ const J = window.J = {
     $("sheet").innerHTML=`<h2>📥 Rasm keldi</h2><img src="data:image/jpeg;base64,${b64}" style="width:100%;max-height:300px;object-fit:contain;border-radius:8px">
     <div class="row" style="margin-top:12px"><button class="btn" id="shI">💡 G'oyaga saqlash</button><button class="btn g" id="shD">✏️ DXF yasash</button></div>
     <button class="btn g" id="shA" style="width:100%;margin-top:8px">🔍 Tahlil qilish</button>
-    <button class="btn" id="shG" style="width:100%;margin-top:8px">🧩 Buyum loyihasi (3D + DXF + PDF)</button>`;
-    openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)}; $("shG").onclick=()=>{closeModal();stoveAnalyze(b64,"")};
+    <button class="btn" id="shG" style="width:100%;margin-top:8px">🧩 Buyum loyihasi (3D + DXF + PDF)</button>
+    <button class="btn" id="sh3" style="width:100%;margin-top:8px">🧊 To'liq 3D model (Tripo)</button>`;
+    openModal(); $("shI").onclick=()=>saveIdeaUI(b64); $("shD").onclick=()=>{closeModal();traceUI(b64)}; $("shG").onclick=()=>{closeModal();stoveAnalyze(b64,"")}; $("sh3").onclick=()=>{ if(!S.tripoKey){ t3Start(); return } closeModal(); t3Run(b64) };
     $("shA").onclick=()=>{ closeModal(); imgMode="ask"; imgQ="Bu naqsh/buyumni lazerda qanday yasash mumkin va taxminiy narxi?"; J.onImage(b64); }; },
   onSharedText(t){ go("pJarvis"); t=String(t||"").trim(); if(!t)return;
     const link=(t.match(/https?:\/\/\S+/)||[])[0];
@@ -449,6 +451,7 @@ const J = window.J = {
     setState("think","rasmni ko'ryapman"); busy=true;
     if(imgMode==="idea"){ imgMode="ask"; setState("idle"); busy=false; saveIdeaUI(b64,()=>openIdeas("")); return; }
     if(imgMode==="trace"){ imgMode="ask"; setState("idle"); busy=false; if(!b64){ sys("Rasm olinmadi."); return; } traceUI(b64,{cam:traceCam}); return; }
+    if(imgMode==="t3d"){ imgMode="ask"; setState("idle"); busy=false; t3Run(b64); return; }
     if(imgMode==="stove"){ imgMode="ask"; setState("idle"); busy=false; stoveAnalyze(b64,stvHint); return; }
     if(imgMode==="dxf"){ try{ const a=await visionAsk(b64,"",PARTS_PROMPT); setState("idle"); imgMode="ask";
         let j=null; try{ j=JSON.parse(String(a).replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/,"$1")) }catch(e){}
@@ -607,6 +610,7 @@ function ordersBrief(){
 function norm(t){return String(t).toLowerCase().replace(/[‘’ʻʼ`´]/g,"'").replace(/\s+/g," ").trim()}
 function quick(t){
   const s=norm(t);
+  if(/(rasmdan|suratdan|rasmni|suratni).{0,12}(3d|3 d|uch ?o.?lchamli)|(3d|3 d) (model|qil|yasa)/.test(s)){ t3Start(); return "Rasmdan 3D oynasi ochildi."; }
   if(/(fonar|chiroq|fonarik|svet)/.test(s)){
     if(/(o'chir|uchir|ochir|o'chsin|выкл)/.test(s)){const r=N.torch(false);return r==="ok"?"Fonar o'chirildi.":"Fonarni boshqarib bo'lmadi."}
     if(/(yoq|och|yonsin|вкл)/.test(s)){const r=N.torch(true);return r==="ok"?"Fonar yoqildi.":r==="noflash"?"Bu telefonda fonar yo'q.":"Fonarni yoqib bo'lmadi."}
@@ -1189,7 +1193,7 @@ $("chipPc").onclick=()=>{ $("sheet").innerHTML=`<h2>💻 Kompyuter</h2>
   $("c3").onclick=async()=>{const q=$("cq").value.trim(); if(!q)return; closeModal(); say(await pcFind(q))};
   $("c4").onclick=()=>{closeModal();pcQueue(true);sys("💻 Navbat yuborildi")};
   $("c5").onclick=async()=>{closeModal(); const d=await pcAsk({cmd:"bot_start"},["text"],25000); say(d.text)}; };
-$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart(); $("chipNewIdea").onclick=()=>ideaGen(""); $("chipApps").onclick=()=>appsOpen();
+$("chipTr").onclick=()=>traceStart(); $("chipStove").onclick=()=>stoveStart(); $("chip3d").onclick=()=>t3Start(); $("chipNewIdea").onclick=()=>ideaGen(""); $("chipApps").onclick=()=>appsOpen();
 $("chipPin").onclick=()=>pinOpen(); window._oldPin=()=>{ $("sheet").innerHTML=`<h2>📌 Pinterest</h2><input id="pnQ" placeholder="Masalan: darvoza naqshi, loft javon, mangal dizayn"><div class="row" style="margin-top:12px"><button class="btn g" id="pnX">Bekor</button><button class="btn" id="pnOk">Qidirish</button></div>`;
   openModal(); $("pnX").onclick=closeModal; $("pnOk").onclick=async()=>{ const v=$("pnQ").value; closeModal(); voiceIn=false; say(await pinterestSearch(v)); }; };
 $("chipHunt").onclick=()=>{voiceIn=false;huntOrders(true)};
@@ -2533,6 +2537,256 @@ function appsOpen(){ const all=appsLoad(); let fav=(S.favApps||[]).slice();
     $("apL").querySelectorAll("input").forEach(c=>c.onchange=()=>{ const a=all.find(x=>x.p===c.dataset.p); if(c.checked){ if(!fav.some(f=>f.p===a.p)) fav.push({l:a.l,p:a.p}); } else fav=fav.filter(f=>f.p!==a.p); S.favApps=fav; saveAll(); favRender(); }); };
   $("apQ").oninput=draw; $("apA").onclick=()=>{ fav=appsAuto(); S.favApps=fav; saveAll(); favRender(); draw(); }; $("apC").onclick=()=>{ fav=[]; S.favApps=fav; saveAll(); favRender(); draw(); }; $("apX").onclick=closeModal; draw(); }
 setTimeout(()=>{ try{ if(S.favApps===undefined){ const a=appsAuto(); if(a.length){ S.favApps=a; saveAll(); } } favRender(); }catch(e){} },900);
+
+/* ================= Rasmdan 3D (Tripo3D) ================= */
+const T3_GLB="tripo_last.glb";
+let t3=null, t3gl=null;
+const t3sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function t3Start(){
+  $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><p class="mut">Buyum suratini bering — Tripo3D uni to'liq 3D modelga aylantiradi (orqa tomoni ham). Keyin o'lchamini kiritib, lazer uchun <b>3 tomondan kontur DXF</b> yoki <b>qatlamli kesim DXF</b> olasiz, STL/GLB ham saqlanadi.</p>
+  <label>Tripo API kaliti (tripo3d.ai → API keys, "tsk_…")</label><input id="t3K" type="password" placeholder="tsk_..." value="${esc(S.tripoKey||"")}">
+  <div class="row" style="margin-top:12px"><button class="btn" id="t3C">📷 Kamera</button><button class="btn g" id="t3G">🖼 Galereya</button></div>
+  <button class="btn g" id="t3L" style="width:100%;margin-top:8px">📂 Oxirgi 3D modelni ochish</button>
+  <p class="mut" style="margin-top:8px">Eng yaxshi natija: buyum yakka, fon sodda, to'liq ko'rinib tursin.</p>`;
+  openModal();
+  const keyOk=()=>{ const k=$("t3K").value.trim(); if(!k){ alert("Avval Tripo API kalitini kiriting."); return false } S.tripoKey=k; saveAll(); return true };
+  const go=c=>{ if(!keyOk()) return; closeModal(); imgMode="t3d"; setState("think","rasm kutilmoqda"); N.pickImage(c); };
+  $("t3C").onclick=()=>go(true); $("t3G").onclick=()=>go(false);
+  $("t3L").onclick=()=>{ t3OpenLast() };
+}
+function t3Prog(t,p){ $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><div style="margin:14px 0">${esc(t)}</div><div style="height:10px;background:#16303f;border-radius:6px"><div style="height:10px;width:${Math.max(3,Math.min(100,p))}%;background:#2fd8ff;border-radius:6px;transition:width .4s"></div></div><p class="mut">Odatda 1–3 daqiqa. Ilovani yopmang.</p>`; openModal(); }
+function t3Nat(fn,ms){ return new Promise(res=>{ const id="n"+Date.now()+Math.random(); let d=false; J._cb[id]=(c,b)=>{ if(d)return; d=true; res({code:c,body:b}) }; setTimeout(()=>{ if(d)return; d=true; delete J._cb[id]; res({code:-1,body:"timeout"}) },ms||120000); try{ fn(id) }catch(e){ if(!d){ d=true; res({code:-2,body:"ERR: "+e.message}) } } }); }
+function t3Err(title,r){ let m=""; try{ const j=JSON.parse(r.body); m=(j.message||j.suggestion||"")+(j.code!=null?" (kod "+j.code+")":""); }catch(e){} if(!m) m=String(r.body||"").slice(0,200);
+  const hint=/401|403|1001|2001|invalid|unauthor/i.test(r.code+" "+m)?"\nKalit noto'g'ri yoki ruxsat yo'q.":(/2010|credit|balance|insufficient/i.test(m)?"\nTripo hisobida kredit yetarli emas.":"");
+  box(title,"Javob: "+r.code+" "+m+hint); }
+async function t3Run(b64){
+  const key=S.tripoKey; if(!key){ t3Start(); return; }
+  const H={"Authorization":"Bearer "+key,"Content-Type":"application/json"}, API="https://api.tripo3d.ai/v2/openapi";
+  try{
+    t3Prog("Rasm Tripo'ga yuklanmoqda…",5);
+    const up=await t3Nat(id=>N.tripoUpload(id,API+"/upload",key,b64),150000);
+    let j=null; try{ j=JSON.parse(up.body) }catch(e){}
+    const tok=j&&j.data&&(j.data.image_token||j.data.file_token);
+    if(!tok){ t3Err("Rasm yuklanmadi",up); return; }
+    t3Prog("3D model buyurtma qilinmoqda…",10);
+    const tk=await http(API+"/task","POST",H,{type:"image_to_model",file:{type:"jpg",file_token:tok}},60000);
+    try{ j=JSON.parse(tk.body) }catch(e){ j=null }
+    const tid=j&&j.data&&j.data.task_id;
+    if(!tid){ t3Err("Buyurtma berilmadi",tk); return; }
+    let url="", last="";
+    for(let i=0;i<120;i++){
+      await t3sleep(3000);
+      const r=await http(API+"/task/"+tid,"GET",H,"",30000); if(r.code!==200){ last=r.code+" "+String(r.body).slice(0,120); if(i>5&&r.code>=400&&r.code<500){ t3Err("Holatni olib bo'lmadi",r); return; } continue; }
+      try{ j=JSON.parse(r.body) }catch(e){ continue }
+      const d=j.data||{}, st=String(d.status||"").toLowerCase();
+      t3Prog(st==="queued"?"Navbatda…":"3D model yasalmoqda… "+(d.progress||0)+"%",12+(d.progress||0)*0.7);
+      if(st==="success"){ const o=d.output||{}; url=o.pbr_model||o.model||o.base_model||""; if(!url){ const m=String(r.body).replace(/\\\//g,"/").match(/https?:[^"\\\s]+\.glb[^"\\\s]*/); if(m) url=m[0]; } break; }
+      if(/failed|cancelled|banned|expired|unknown/.test(st)){ box("Tripo xato berdi","Holat: "+st+"\nBoshqa rasm bilan urinib ko'ring (buyum yakka, fon sodda)."); return; }
+    }
+    if(!url){ box("Model tayyor bo'lmadi","Vaqt tugadi yoki havola topilmadi. "+last); return; }
+    t3Prog("3D model yuklab olinmoqda…",88);
+    const dl=await t3Nat(id=>N.binGet(id,url,T3_GLB),180000);
+    if(dl.code!==200||!(+dl.body>1000)){ box("Yuklab bo'lmadi","Javob: "+dl.code+" "+String(dl.body).slice(0,150)); return; }
+    await t3OpenLast();
+  }catch(e){ box("Xato","3D yaratishda xato: "+(e&&e.message||e)); }
+}
+function t3Bytes(){ const n=N.binSize(T3_GLB); if(!n) return null; const u=new Uint8Array(n), CH=786432; for(let o=0;o<n;o+=CH){ const s=atob(N.binChunk(T3_GLB,o,Math.min(CH,n-o))); for(let i=0;i<s.length;i++) u[o+i]=s.charCodeAt(i); } return u; }
+async function t3OpenLast(){ try{ t3Prog("Model ochilmoqda…",92); const u=t3Bytes(); if(!u){ box("Model yo'q","Hali 3D model yaratilmagan."); return; } await t3Show(u); }catch(e){ box("Modelni ochib bo'lmadi",String(e&&e.message||e)); } }
+
+/* ---- GLB o'qish ---- */
+const m4={
+  id:()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+  mul(a,b){ const o=new Array(16); for(let c=0;c<4;c++)for(let r=0;r<4;r++){ let s=0; for(let k=0;k<4;k++) s+=a[k*4+r]*b[c*4+k]; o[c*4+r]=s } return o },
+  trs(t,q,s){ const [x,y,z,w]=q, x2=x+x,y2=y+y,z2=z+z, xx=x*x2,xy=x*y2,xz=x*z2,yy=y*y2,yz=y*z2,zz=z*z2,wx=w*x2,wy=w*y2,wz=w*z2;
+    return [(1-(yy+zz))*s[0],(xy+wz)*s[0],(xz-wy)*s[0],0,(xy-wz)*s[1],(1-(xx+zz))*s[1],(yz+wx)*s[1],0,(xz+wy)*s[2],(yz-wx)*s[2],(1-(xx+yy))*s[2],0,t[0],t[1],t[2],1] },
+  persp(f,a,n,fa){ const t=1/Math.tan(f/2); return [t/a,0,0,0,0,t,0,0,0,0,(fa+n)/(n-fa),-1,0,0,2*fa*n/(n-fa),0] },
+  tr:(x,y,z)=>[1,0,0,0,0,1,0,0,0,0,1,0,x,y,z,1],
+  sc:(s)=>[s,0,0,0,0,s,0,0,0,0,s,0,0,0,0,1],
+  ry:(a)=>{const c=Math.cos(a),s=Math.sin(a);return [c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1]},
+  rx:(a)=>{const c=Math.cos(a),s=Math.sin(a);return [1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1]}
+};
+async function glbParse(u8){
+  if(u8.length<20) throw new Error("fayl juda kichik");
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  if(dv.getUint32(0,true)!==0x46546C67) throw new Error("bu GLB fayl emas");
+  let off=12, json=null, bin=null;
+  while(off+8<=u8.length){ const len=dv.getUint32(off,true), ty=dv.getUint32(off+4,true), st=off+8;
+    if(ty===0x4E4F534A) json=JSON.parse(new TextDecoder().decode(u8.subarray(st,st+len)));
+    else if(ty===0x004E4942 && !bin) bin=u8.subarray(st,st+len);
+    off=st+((len+3)&~3); }
+  if(!json||!bin) throw new Error("GLB tuzilishi noto'g'ri");
+  if((json.extensionsRequired||[]).some(e=>/draco|meshopt/i.test(e))) throw new Error("siqilgan GLB (Draco) qo'llab-quvvatlanmaydi");
+  const bdv=new DataView(bin.buffer,bin.byteOffset,bin.byteLength);
+  const NC={SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16}, CS={5120:1,5121:1,5122:2,5123:2,5125:4,5126:4};
+  const acc=i=>{ const a=json.accessors[i], bv=json.bufferViews[a.bufferView], nc=NC[a.type], cs=CS[a.componentType], stride=bv.byteStride||nc*cs, base=(bv.byteOffset||0)+(a.byteOffset||0), out=new Float32Array(a.count*nc), ct=a.componentType;
+    for(let k=0;k<a.count;k++)for(let c=0;c<nc;c++){ const p=base+k*stride+c*cs; let v;
+      if(ct===5126) v=bdv.getFloat32(p,true); else if(ct===5123) v=bdv.getUint16(p,true); else if(ct===5125) v=bdv.getUint32(p,true); else if(ct===5121) v=bdv.getUint8(p); else if(ct===5122) v=bdv.getInt16(p,true); else v=bdv.getInt8(p);
+      if(a.normalized&&ct!==5126) v=ct===5121?v/255:ct===5123?v/65535:ct===5122?Math.max(v/32767,-1):Math.max(v/127,-1);
+      out[k*nc+c]=v; }
+    return out; };
+  const imgs={}; const getImg=async ti=>{ const t=(json.textures||[])[ti]; if(!t||t.source==null) return null; if(imgs[t.source]!==undefined) return imgs[t.source];
+    const im=json.images[t.source]; let url=null; if(im.bufferView!=null){ const bv=json.bufferViews[im.bufferView]; url=URL.createObjectURL(new Blob([bin.subarray(bv.byteOffset||0,(bv.byteOffset||0)+bv.byteLength)],{type:im.mimeType||"image/png"})); } else if(im.uri&&/^data:/.test(im.uri)) url=im.uri;
+    if(!url){ imgs[t.source]=null; return null; }
+    imgs[t.source]=await new Promise(r=>{ const I=new Image(); I.onload=()=>r(I); I.onerror=()=>r(null); I.src=url; }); return imgs[t.source]; };
+  const prims=[]; const sc=json.scenes&&json.scenes[json.scene||0]; const roots=sc?sc.nodes:(json.nodes||[]).map((_,i)=>i);
+  const walk=async(ni,pm)=>{ const n=json.nodes[ni]; const lm=n.matrix?n.matrix.slice():m4.trs(n.translation||[0,0,0],n.rotation||[0,0,0,1],n.scale||[1,1,1]); const wm=m4.mul(pm,lm);
+    if(n.mesh!=null){ for(const p of json.meshes[n.mesh].primitives){ if(p.mode!=null&&p.mode!==4) continue; const at=p.attributes; if(at.POSITION==null) continue;
+        const P=acc(at.POSITION), cnt=P.length/3; const pos=new Float32Array(P.length);
+        for(let i=0;i<cnt;i++){ const x=P[i*3],y=P[i*3+1],z=P[i*3+2]; pos[i*3]=wm[0]*x+wm[4]*y+wm[8]*z+wm[12]; pos[i*3+1]=wm[1]*x+wm[5]*y+wm[9]*z+wm[13]; pos[i*3+2]=wm[2]*x+wm[6]*y+wm[10]*z+wm[14]; }
+        let idx; if(p.indices!=null){ const I=acc(p.indices); idx=cnt>65535?new Uint32Array(I):new Uint16Array(I); } else { idx=cnt>65535?new Uint32Array(cnt):new Uint16Array(cnt); for(let i=0;i<cnt;i++) idx[i]=i; }
+        // normallar: har doim yuzalardan hisoblanadi (ishonchli)
+        const nrm=new Float32Array(P.length); for(let i=0;i+2<idx.length;i+=3){ const a=idx[i]*3,b=idx[i+1]*3,c=idx[i+2]*3; const ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],vx=pos[c]-pos[a],vy=pos[c+1]-pos[a+1],vz=pos[c+2]-pos[a+2]; const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx; for(const q of [a,b,c]){ nrm[q]+=nx;nrm[q+1]+=ny;nrm[q+2]+=nz } }
+        for(let i=0;i<cnt;i++){ const l=Math.hypot(nrm[i*3],nrm[i*3+1],nrm[i*3+2])||1; nrm[i*3]/=l;nrm[i*3+1]/=l;nrm[i*3+2]/=l }
+        const mat=p.material!=null?(json.materials||[])[p.material]:null, pbr=(mat&&mat.pbrMetallicRoughness)||{};
+        let tex=null; if(pbr.baseColorTexture&&at.TEXCOORD_0!=null) tex=await getImg(pbr.baseColorTexture.index);
+        let col=null, cn=0; if(at.COLOR_0!=null){ col=acc(at.COLOR_0); cn=col.length/cnt; }
+        prims.push({pos,nrm,idx,uv:at.TEXCOORD_0!=null?acc(at.TEXCOORD_0):null,col,cn,base:pbr.baseColorFactor||[1,1,1,1],tex}); } }
+    for(const c of (n.children||[])) await walk(c,wm); };
+  for(const r of roots) await walk(r,m4.id());
+  if(!prims.length) throw new Error("modelda yuza topilmadi");
+  const mn=[1e9,1e9,1e9], mx=[-1e9,-1e9,-1e9]; let nt=0;
+  for(const p of prims){ for(let i=0;i<p.pos.length;i+=3) for(let k=0;k<3;k++){ const v=p.pos[i+k]; if(v<mn[k])mn[k]=v; if(v>mx[k])mx[k]=v } nt+=p.idx.length/3; }
+  const tri=new Float32Array(nt*9); let o=0; for(const p of prims) for(let i=0;i<p.idx.length;i++){ const q=p.idx[i]*3; tri[o++]=p.pos[q];tri[o++]=p.pos[q+1];tri[o++]=p.pos[q+2]; }
+  return {prims,mn,mx,tri,nt};
+}
+
+/* ---- WebGL ko'rgich ---- */
+function t3Viewer(cv,model){
+  const gl=cv.getContext("webgl",{antialias:true,alpha:false})||cv.getContext("experimental-webgl"); if(!gl) throw new Error("WebGL yo'q");
+  const u32=gl.getExtension("OES_element_index_uint");
+  const sh=(t,s)=>{ const x=gl.createShader(t); gl.shaderSource(x,s); gl.compileShader(x); if(!gl.getShaderParameter(x,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x };
+  const pg=gl.createProgram(); gl.attachShader(pg,sh(gl.VERTEX_SHADER,"attribute vec3 aP;attribute vec3 aN;attribute vec2 aT;attribute vec3 aC;uniform mat4 uM;uniform mat4 uR;varying vec2 vT;varying vec3 vC;varying float vL;void main(){gl_Position=uM*vec4(aP,1.);vec3 n=normalize((uR*vec4(aN,0.)).xyz);vL=0.42+0.7*abs(dot(n,normalize(vec3(.35,.6,.7))));vT=aT;vC=aC;}"));
+  gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,"precision mediump float;uniform sampler2D uS;uniform vec4 uB;uniform float uH;varying vec2 vT;varying vec3 vC;varying float vL;void main(){vec3 c=uB.rgb*vC;if(uH>.5)c*=texture2D(uS,vT).rgb;gl_FragColor=vec4(c*vL,1.);}"));
+  gl.linkProgram(pg); if(!gl.getProgramParameter(pg,gl.LINK_STATUS)) throw new Error("shader xatosi"); gl.useProgram(pg);
+  const L={P:gl.getAttribLocation(pg,"aP"),N:gl.getAttribLocation(pg,"aN"),T:gl.getAttribLocation(pg,"aT"),C:gl.getAttribLocation(pg,"aC"),M:gl.getUniformLocation(pg,"uM"),R:gl.getUniformLocation(pg,"uR"),B:gl.getUniformLocation(pg,"uB"),H:gl.getUniformLocation(pg,"uH"),S:gl.getUniformLocation(pg,"uS")};
+  const mk=(tg,d)=>{ const b=gl.createBuffer(); gl.bindBuffer(tg,b); gl.bufferData(tg,d,gl.STATIC_DRAW); return b };
+  const G=model.prims.map(p=>{ let idx=p.idx; if(idx instanceof Uint32Array&&!u32){ idx=new Uint16Array(0); } const g={n:p.idx.length,u32:p.idx instanceof Uint32Array,P:mk(gl.ARRAY_BUFFER,p.pos),N:mk(gl.ARRAY_BUFFER,p.nrm),I:mk(gl.ELEMENT_ARRAY_BUFFER,p.idx),base:p.base,hasT:!!p.tex};
+    if(p.uv) g.T=mk(gl.ARRAY_BUFFER,p.uv); if(p.col&&p.cn>=3){ let c=p.col; if(p.cn===4){ c=new Float32Array(p.col.length/4*3); for(let i=0;i<c.length/3;i++){ c[i*3]=p.col[i*4];c[i*3+1]=p.col[i*4+1];c[i*3+2]=p.col[i*4+2] } } g.C=mk(gl.ARRAY_BUFFER,c); }
+    if(p.tex){ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      // NPOT uchun kvadrat 2 darajali kanvasga o'tkazamiz
+      const pw=x=>{ let r=1; while(r<x&&r<2048) r<<=1; return r }; const c2=document.createElement("canvas"); c2.width=pw(p.tex.width); c2.height=pw(p.tex.height); c2.getContext("2d").drawImage(p.tex,0,0,c2.width,c2.height);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c2); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT); g.tex=t; }
+    return g; });
+  const cx=(model.mn[0]+model.mx[0])/2, cy=(model.mn[1]+model.mx[1])/2, cz=(model.mn[2]+model.mx[2])/2, ext=Math.max(model.mx[0]-model.mn[0],model.mx[1]-model.mn[1],model.mx[2]-model.mn[2])||1;
+  const V={yaw:0.6,pitch:0.25,dist:1.9}; let raf=0;
+  const draw=()=>{ raf=0; const dpr=Math.min(2,window.devicePixelRatio||1), w=Math.max(10,cv.clientWidth*dpr|0), h=Math.max(10,cv.clientHeight*dpr|0); if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h }
+    gl.viewport(0,0,w,h); gl.clearColor(0.024,0.075,0.114,1); gl.enable(gl.DEPTH_TEST); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    const R=m4.mul(m4.rx(V.pitch),m4.ry(V.yaw)); const Mv=m4.mul(m4.persp(0.8,w/h,0.05,50),m4.mul(m4.tr(0,0,-V.dist),m4.mul(R,m4.mul(m4.sc(1/ext),m4.tr(-cx,-cy,-cz)))));
+    gl.uniformMatrix4fv(L.M,false,new Float32Array(Mv)); gl.uniformMatrix4fv(L.R,false,new Float32Array(R)); gl.uniform1i(L.S,0);
+    for(const g of G){ gl.bindBuffer(gl.ARRAY_BUFFER,g.P); gl.enableVertexAttribArray(L.P); gl.vertexAttribPointer(L.P,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,g.N); gl.enableVertexAttribArray(L.N); gl.vertexAttribPointer(L.N,3,gl.FLOAT,false,0,0);
+      if(g.T&&g.hasT){ gl.bindBuffer(gl.ARRAY_BUFFER,g.T); gl.enableVertexAttribArray(L.T); gl.vertexAttribPointer(L.T,2,gl.FLOAT,false,0,0); } else { gl.disableVertexAttribArray(L.T); gl.vertexAttrib2f(L.T,0,0); }
+      if(g.C){ gl.bindBuffer(gl.ARRAY_BUFFER,g.C); gl.enableVertexAttribArray(L.C); gl.vertexAttribPointer(L.C,3,gl.FLOAT,false,0,0); } else { gl.disableVertexAttribArray(L.C); gl.vertexAttrib3f(L.C,1,1,1); }
+      gl.uniform4f(L.B,g.base[0],g.base[1],g.base[2],g.base[3]); gl.uniform1f(L.H,g.hasT?1:0); if(g.tex){ gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,g.tex); }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,g.I); gl.drawElements(gl.TRIANGLES,g.n,g.u32?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,0); } };
+  const req=()=>{ if(!raf) raf=requestAnimationFrame(draw) };
+  const pts=new Map(); let pd=0;
+  cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]); pd=0 });
+  cv.addEventListener("pointerup",e=>{ pts.delete(e.pointerId) }); cv.addEventListener("pointercancel",e=>{ pts.delete(e.pointerId) });
+  cv.addEventListener("pointermove",e=>{ const p=pts.get(e.pointerId); if(!p) return; const nx=e.clientX, ny=e.clientY;
+    if(pts.size===1){ V.yaw+=(nx-p[0])*0.01; V.pitch=Math.max(-1.5,Math.min(1.5,V.pitch+(ny-p[1])*0.01)); }
+    else if(pts.size===2){ const o=[...pts.entries()].find(([k])=>k!==e.pointerId)[1]; const d0=Math.hypot(p[0]-o[0],p[1]-o[1]), d1=Math.hypot(nx-o[0],ny-o[1]); if(d0>0) V.dist=Math.max(1.2,Math.min(8,V.dist*d0/d1)); }
+    pts.set(e.pointerId,[nx,ny]); req(); });
+  cv.addEventListener("wheel",e=>{ e.preventDefault(); V.dist=Math.max(1.2,Math.min(8,V.dist*(1+e.deltaY*0.001))); req() },{passive:false});
+  req(); return {req,V,draw};
+}
+
+/* ---- ko'rish oynasi ---- */
+async function t3Show(u8){
+  t3=await glbParse(u8);
+  const ex=[t3.mx[0]-t3.mn[0],t3.mx[1]-t3.mn[1],t3.mx[2]-t3.mn[2]];
+  $("sheet").innerHTML=`<h2>🧊 3D model tayyor</h2>
+  <canvas id="t3cv" style="width:100%;height:300px;border-radius:10px;touch-action:none;display:block"></canvas>
+  <p class="mut" style="margin:6px 0">Bir barmoq — aylantirish, ikki barmoq — kattalashtirish.</p>
+  <label>Buyumning haqiqiy balandligi (mm)</label><input id="t3H" type="number" value="300" inputmode="decimal">
+  <div class="mut" id="t3Dim" style="margin:4px 0 8px"></div>
+  <div class="row"><button class="btn g" id="t3Glb">💾 GLB</button><button class="btn g" id="t3Stl">💾 STL</button></div>
+  <button class="btn" id="t3Sil" style="width:100%;margin-top:10px">📐 3 tomondan kontur DXF</button>
+  <label>Material qalinligi (mm) — qatlamli kesim uchun</label><input id="t3T" type="number" value="6" inputmode="decimal">
+  <button class="btn" id="t3Sl" style="width:100%;margin-top:6px">🥞 Qatlamli kesim DXF</button>
+  <div id="t3out" style="margin-top:12px"></div>`;
+  openModal();
+  const dim=()=>{ const h=+$("t3H").value||0, s=h/(ex[1]||1); $("t3Dim").textContent=h>0?`Natija o'lchami: eni ${(ex[0]*s).toFixed(0)} × balandligi ${h.toFixed(0)} × chuqurligi ${(ex[2]*s).toFixed(0)} mm`:""; };
+  $("t3H").oninput=dim; dim();
+  await new Promise(r=>setTimeout(r,60));
+  try{ t3gl=t3Viewer($("t3cv"),t3); }catch(e){ $("t3cv").outerHTML=`<div class="mut" style="padding:20px;text-align:center">3D ko'rsatib bo'lmadi (${esc(e.message)}), lekin eksportlar ishlaydi.</div>`; }
+  const sc=()=>{ const h=+$("t3H").value; if(!(h>0)){ alert("Balandlikni mm da kiriting."); return 0 } return h/(ex[1]||1) };
+  const done=(uri,name,mime,extra)=>{ $("t3out").innerHTML=`<div><b>✅ ${esc(name)}</b> — Yuklamalar/Jarvis papkasiga saqlandi.${extra?"<br>"+extra:""}</div>${uri?'<button class="btn sm" id="t3Sh" style="margin-top:8px">Yuborish (Telegram…)</button>':""}`; const b=$("t3Sh"); if(b) b.onclick=()=>N.shareFile(uri,mime); };
+  $("t3Glb").onclick=()=>{ const u=N.binExport(T3_GLB,"model3d_"+Date.now()+".glb","model/gltf-binary"); done(u,"model3d.glb","model/gltf-binary","Blender, Windows 3D Viewer, SketchUp (import) da ochiladi."); };
+  $("t3Stl").onclick=()=>{ const s=sc(); if(!s) return; const b=t3Stl(s); const u=N.saveFileB64("model3d_"+Date.now()+".stl","model/stl",b); done(u,"model3d.stl","model/stl","3D printer yoki CAD uchun, o'lchami mm."); };
+  $("t3Sil").onclick=()=>{ const s=sc(); if(!s) return; $("t3out").textContent="Kontur hisoblanyapti…"; setTimeout(()=>{ try{ const r=t3SilDxf(s); if(!r){ $("t3out").textContent="Kontur topilmadi."; return } const nm="kontur3_"+Date.now()+".dxf"; const u=saveF(nm,"application/dxf",r.dxf);
+      done(u,nm,"application/dxf",`Kesim uzunligi: ${(r.len).toFixed(2)} m, ${r.n} ta kontur.`); $("t3out").insertAdjacentHTML("beforeend",r.pv); }catch(e){ $("t3out").textContent="Xato: "+e.message } },30); };
+  $("t3Sl").onclick=()=>{ const s=sc(); if(!s) return; const t=+$("t3T").value; if(!(t>0.2)){ alert("Qalinlikni mm da kiriting."); return } $("t3out").textContent="Qatlamlar hisoblanyapti…"; setTimeout(()=>{ try{ const r=t3SliceDxf(s,t); if(!r){ $("t3out").textContent="Qatlam topilmadi (model yopiq emas bo'lishi mumkin)."; return } const nm="qatlam_"+Date.now()+".dxf"; const u=saveF(nm,"application/dxf",r.dxf);
+      done(u,nm,"application/dxf",`${r.layers} ta qatlam (har biri ${t} mm), jami kesim ${r.len.toFixed(1)} m, list ${r.W.toFixed(0)}×${r.H.toFixed(0)} mm.${r.warn?"<br>⚠ "+r.warn:""}`); $("t3out").insertAdjacentHTML("beforeend",r.pv); }catch(e){ $("t3out").textContent="Xato: "+e.message } },30); };
+}
+function t3B64(u8){ let s=""; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+function t3Stl(s){ const T=t3.tri, n=t3.nt, ab=new ArrayBuffer(84+n*50), dv=new DataView(ab); dv.setUint32(80,n,true);
+  const mn=t3.mn; const X=(i)=>(T[i]-mn[0])*s, Y=(i)=>-(T[i+2]-t3.mx[2])*s, Z=(i)=>(T[i+1]-mn[1])*s; // (x,y,z)->(x,-z,y)
+  for(let t=0;t<n;t++){ const o=84+t*50, b=t*9; const v=[0,3,6].map(k=>[X(b+k),Y(b+k),Z(b+k)]); const ux=v[1][0]-v[0][0],uy=v[1][1]-v[0][1],uz=v[1][2]-v[0][2],vx=v[2][0]-v[0][0],vy=v[2][1]-v[0][1],vz=v[2][2]-v[0][2]; let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx; const l=Math.hypot(nx,ny,nz)||1; nx/=l;ny/=l;nz/=l;
+    dv.setFloat32(o,nx,true);dv.setFloat32(o+4,ny,true);dv.setFloat32(o+8,nz,true); for(let k=0;k<3;k++){ dv.setFloat32(o+12+k*12,v[k][0],true);dv.setFloat32(o+16+k*12,v[k][1],true);dv.setFloat32(o+20+k*12,v[k][2],true) } }
+  return t3B64(new Uint8Array(ab)); }
+function t3DxfText(L,ly,x,y,h,s){ L.push("0","TEXT","8",ly,"10",x.toFixed(3),"20",y.toFixed(3),"30","0","40",h.toFixed(2),"1",s); }
+function t3DxfPoly(L,ly,pts,closed){ L.push("0","POLYLINE","8",ly,"66","1","10","0","20","0","30","0","70",closed?"1":"0"); for(const q of pts) L.push("0","VERTEX","8",ly,"10",q[0].toFixed(3),"20",q[1].toFixed(3),"30","0"); L.push("0","SEQEND","8",ly); }
+function t3DxfWrap(L){ return ["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES",...L,"0","ENDSEC","0","EOF"].join("\n"); }
+const t3plen=(p,cl)=>{ let l=0; for(let i=0;i<p.length-(cl?0:1);i++){ const q=p[(i+1)%p.length]; l+=Math.hypot(q[0]-p[i][0],q[1]-p[i][1]) } return l; };
+function t3Rdp(p,eps,closed){ if(p.length<8) return p; const dp=(a)=>{ if(a.length<3) return a; const [x1,y1]=a[0],[x2,y2]=a[a.length-1]; const L2=Math.hypot(x2-x1,y2-y1)||1e-9; let mx=0,ix=0; for(let i=1;i<a.length-1;i++){ const d=Math.abs((y2-y1)*a[i][0]-(x2-x1)*a[i][1]+x2*y1-y2*x1)/L2; if(d>mx){mx=d;ix=i} } return mx>eps?[...dp(a.slice(0,ix+1)).slice(0,-1),...dp(a.slice(ix))]:[a[0],a[a.length-1]]; };
+  if(!closed) return dp(p); const h=p.length>>1; return [...dp(p.slice(0,h+1)).slice(0,-1),...dp(p.slice(h).concat([p[0]])).slice(0,-1)]; }
+/* 3 tomondan kontur: old (x,y), yon (z,y), tepa (x,-z) */
+function t3SilDxf(s){
+  const T=t3.tri, n=t3.nt, mn=t3.mn, mx=t3.mx; const Wm=(mx[0]-mn[0])*s, Hm=(mx[1]-mn[1])*s, Dm=(mx[2]-mn[2])*s;
+  const ppm=Math.min(12,1600/Math.max(Wm,Hm,Dm,1)); // piksel/mm
+  const views=[["OLDIDAN",0,1,Wm,Hm,1,1],["YONDAN",2,1,Dm,Hm,1,1],["TEPADAN",0,2,Wm,Dm,1,-1]];
+  const res=[]; const gap=Math.max(Wm,Hm,Dm)*0.06+10;
+  for(const [name,ax,ay,w,h,,fy] of views){
+    const pad=6, cw=Math.max(8,Math.ceil(w*ppm)+2*pad), ch=Math.max(8,Math.ceil(h*ppm)+2*pad); const cv=document.createElement("canvas"); cv.width=cw; cv.height=ch; const cx=cv.getContext("2d");
+    cx.fillStyle="#fff"; cx.fillRect(0,0,cw,ch); cx.fillStyle="#000"; cx.strokeStyle="#000"; cx.lineWidth=1.3; cx.lineJoin="round";
+    const X=v=>pad+(v-mn[ax])*s*ppm, Y=v=>fy>0?ch-pad-(v-mn[ay])*s*ppm:pad+(v-mn[ay])*s*ppm; // tepa: +z pastga
+    // chuqurlik bo'yicha tartiblash shart emas — siluet
+    for(let t=0;t<n;t++){ const b=t*9; cx.beginPath(); cx.moveTo(X(T[b+ax]),Y(T[b+ay])); cx.lineTo(X(T[b+3+ax]),Y(T[b+3+ay])); cx.lineTo(X(T[b+6+ax]),Y(T[b+6+ay])); cx.closePath(); cx.fill(); cx.stroke(); }
+    const tr=traceImage(cv,{res:Math.max(cw,ch),th:128,enh:false,smooth:2,flat:false});
+    res.push({name,tr,w,h,cw,ch}); }
+  const L=[], svg=[]; let len=0, cnt=0, X0=0, Y0=0; const place=[[0,0],[Wm+gap,0],[0,Hm+gap]];
+  res.forEach((v,i)=>{ const loops=v.tr.loops; if(!loops.length) return; let x0=1e9,y1=-1e9,x1=-1e9,y0=1e9; loops.forEach(p=>p.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}));
+    const ox=place[i][0], oy=place[i][1]; for(const p of loops){ const q=p.map(([x,y])=>[ox+(x-x0)/ppm, oy+(y1-y)/ppm]); t3DxfPoly(L,v.name,q,true); len+=t3plen(q,true); cnt++; svg.push(`<polygon points="${q.map(z=>z[0].toFixed(1)+","+z[1].toFixed(1)).join(" ")}"/>`); }
+    t3DxfText(L,"YOZUV",ox,oy-Math.max(5,Hm*0.03)-2,Math.max(4,Hm*0.03),v.name+` ${v.w.toFixed(0)}x${v.h.toFixed(0)} mm`); });
+  if(!cnt) return null;
+  const TW=Wm+gap+Dm, TH=Hm+gap+Dm, mg=Math.max(TW,TH)*0.04;
+  const pv=`<svg viewBox="${-mg} ${-(TH+mg)} ${TW+2*mg} ${TH+2*mg+10}" style="width:100%;max-height:300px;background:#06131d;border-radius:8px;margin-top:10px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(TW,TH)/350}">${svg.join("")}</g></svg>`;
+  return {dxf:t3DxfWrap(L),len:len/1000,n:cnt,pv};
+}
+/* qatlamli kesim: y bo'yicha t mm qalinlikdagi kesimlar */
+function t3SliceDxf(s,t){
+  const T=t3.tri, n=t3.nt, mn=t3.mn; const Hm=(t3.mx[1]-mn[1])*s; let nl=Math.ceil(Hm/t); let warn=""; if(nl>150){ warn=`Qatlam soni ${nl} ta — juda ko'p. Qalinroq material tanlang.`; nl=150; t=Hm/nl; }
+  const segs=Array.from({length:nl},()=>[]);
+  const K=(x,z)=>x.toFixed(3)+","+z.toFixed(3);
+  for(let i=0;i<n;i++){ const b=i*9; const P=[0,1,2].map(k=>[(T[b+k*3]-mn[0])*s,(T[b+k*3+1]-mn[1])*s,(T[b+k*3+2]-mn[2])*s]);
+    const lo=Math.min(P[0][1],P[1][1],P[2][1]), hi=Math.max(P[0][1],P[1][1],P[2][1]); if(hi<=lo) continue;
+    const i0=Math.max(0,Math.ceil((lo-t/2)/t)), i1=Math.min(nl-1,Math.floor((hi-t/2)/t));
+    for(let li=i0;li<=i1;li++){ const h=(li+0.5)*t; const pts=[];
+      for(let e=0;e<3;e++){ let a=P[e], c=P[(e+1)%3]; const sa=a[1]>=h, sc=c[1]>=h; if(sa===sc) continue;
+        if(a[1]>c[1]||(a[1]===c[1]&&(a[0]>c[0]||(a[0]===c[0]&&a[2]>c[2])))){ const q=a;a=c;c=q } // tartib: aniq bir xil nuqta chiqishi uchun
+        const f=(h-a[1])/(c[1]-a[1]); pts.push([a[0]+(c[0]-a[0])*f,a[2]+(c[2]-a[2])*f]); }
+      if(pts.length===2&&(pts[0][0]!==pts[1][0]||pts[0][1]!==pts[1][1])) segs[li].push(pts); } }
+  const layers=[]; let len=0;
+  for(let li=0;li<nl;li++){ const S=segs[li]; if(!S.length) continue; const adj=new Map(); S.forEach((sg,i)=>{ for(const q of sg){ const k=K(q[0],q[1]); (adj.get(k)||adj.set(k,[]).get(k)).push(i) } });
+    const used=new Uint8Array(S.length), loops=[];
+    for(let i=0;i<S.length;i++){ if(used[i]) continue; used[i]=1; const pts=[S[i][0],S[i][1]]; let cur=S[i][1], startK=K(S[i][0][0],S[i][0][1]), closed=false;
+      for(;;){ const ck=K(cur[0],cur[1]); if(ck===startK&&pts.length>2){ closed=true; pts.pop(); break }
+        const cand=(adj.get(ck)||[]).find(j=>!used[j]); if(cand==null) break; used[cand]=1; const sg=S[cand]; cur=K(sg[0][0],sg[0][1])===ck?sg[1]:sg[0]; pts.push(cur); }
+      if(pts.length>=3){ const sp=t3Rdp(pts,0.04,closed); const L0=t3plen(sp,closed); if(L0>=3&&sp.length>=3) loops.push({p:sp,closed}); } }
+    if(loops.length) layers.push({li,loops}); }
+  if(!layers.length) return null;
+  // joylashtirish: qatorlarga
+  const maxW=1500, gp=10; let cx=0, cy=0, rowH=0, sheetW=0; const L=[], svg=[];
+  for(const ly of layers){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; ly.loops.forEach(l=>l.p.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}));
+    const w=x1-x0, h=y1-y0; if(cx>0&&cx+w>maxW){ cx=0; cy+=rowH+gp+8; rowH=0 }
+    for(const l of ly.loops){ const q=l.p.map(([x,y])=>[cx+(x-x0), cy+(y1-y)]); t3DxfPoly(L,"QATLAM",q,l.closed); len+=t3plen(q,l.closed); svg.push(`<polygon points="${q.map(z=>z[0].toFixed(1)+","+z[1].toFixed(1)).join(" ")}"/>`); }
+    t3DxfText(L,"YOZUV",cx,cy-6,4,String(ly.li+1)); // raqam — yig'ish tartibi (pastdan yuqoriga)
+    sheetW=Math.max(sheetW,cx+w); cx+=w+gp; rowH=Math.max(rowH,h); }
+  const SH=cy+rowH, mg=Math.max(sheetW,SH)*0.03;
+  const pv=`<svg viewBox="${-mg} ${-(SH+mg)} ${sheetW+2*mg} ${SH+2*mg+10}" style="width:100%;max-height:300px;background:#06131d;border-radius:8px;margin-top:10px"><g transform="scale(1,-1)" fill="none" stroke="#2fd8ff" stroke-width="${Math.max(sheetW,SH)/400}">${svg.join("")}</g></svg>`;
+  return {dxf:t3DxfWrap(L),layers:layers.length,len:len/1000,W:sheetW,H:SH,pv,warn};
+}
 
 /* ================= Ishga tushirish ================= */
 loadSet();renderOrders();renderNotes();refreshBg();chipText();schedReport();
