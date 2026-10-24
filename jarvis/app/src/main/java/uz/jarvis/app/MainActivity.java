@@ -105,6 +105,7 @@ public class MainActivity extends Activity {
     MediaPlayer player = null;
     static final int REQ_IMG = 41;
     static final int REQ_MODEL = 42;
+    static final int REQ_BROWSE = 43;
     int imgMax = 1280;
 
     @Override
@@ -231,6 +232,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_BROWSE) {
+            if (res != RESULT_OK || data == null) { js("J.onModel(0,'')"); return; }
+            final String nm = data.getStringExtra("name");
+            new Thread(() -> {
+                long tot = 0;
+                try { File a = new File(getCacheDir(), "dl_model.dat"), b = new File(getCacheDir(), "model_last.dat"); BrowserActivity.copy(a, b); tot = b.length(); } catch (Exception e) { tot = 0; }
+                js("J.onModel(" + tot + "," + q(nm) + ")");
+            }).start();
+            return;
+        }
         if (req == REQ_MODEL) {
             if (res != RESULT_OK || data == null || data.getData() == null) { js("J.onModel(0,'')"); return; }
             final Uri mu = data.getData();
@@ -678,6 +689,11 @@ public class MainActivity extends Activity {
         }
 
         /** Rasmdan DXF uchun: katta o'lchamda (aniqroq kontur) */
+        @JavascriptInterface public void browseModels(String url) {
+            try { Intent i = new Intent(MainActivity.this, BrowserActivity.class); i.putExtra("url", url == null ? "" : url); startActivityForResult(i, REQ_BROWSE); }
+            catch (Exception e) { js("J.onModel(0,'')"); }
+        }
+
         @JavascriptInterface public void pickModel() {
             try {
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT); i.setType("*/*"); i.addCategory(Intent.CATEGORY_OPENABLE);
