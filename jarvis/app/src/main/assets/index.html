@@ -2557,7 +2557,7 @@ function t3Start(){
 function t3Prog(t,p){ $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><div style="margin:14px 0">${esc(t)}</div><div style="height:10px;background:#16303f;border-radius:6px"><div style="height:10px;width:${Math.max(3,Math.min(100,p))}%;background:#2fd8ff;border-radius:6px;transition:width .4s"></div></div><p class="mut">Odatda 1–3 daqiqa. Ilovani yopmang.</p>`; openModal(); }
 function t3Nat(fn,ms){ return new Promise(res=>{ const id="n"+Date.now()+Math.random(); let d=false; J._cb[id]=(c,b)=>{ if(d)return; d=true; res({code:c,body:b}) }; setTimeout(()=>{ if(d)return; d=true; delete J._cb[id]; res({code:-1,body:"timeout"}) },ms||120000); try{ fn(id) }catch(e){ if(!d){ d=true; res({code:-2,body:"ERR: "+e.message}) } } }); }
 function t3Err(title,r){ let m=""; try{ const j=JSON.parse(r.body); m=(j.message||j.suggestion||"")+(j.code!=null?" (kod "+j.code+")":""); }catch(e){} if(!m) m=String(r.body||"").slice(0,200);
-  const hint=/401|403|1001|2001|invalid|unauthor/i.test(r.code+" "+m)?"\nKalit noto'g'ri yoki ruxsat yo'q.":(/2010|credit|balance|insufficient/i.test(m)?"\nTripo hisobida kredit yetarli emas.":"");
+  const hint=/2010|credit|balance|insufficient/i.test(m)?"\nTripo API krediti yetarli emas. Saytdagi kredit API uchun ishlamaydi: developers.tripo3d.ai → Биллинг bo'limida API kredit sotib oling.":(/401|1001|2001|invalid|unauthor/i.test(r.code+" "+m)?"\nKalit noto'g'ri yoki ruxsat yo'q.":"");
   box(title,"Javob: "+r.code+" "+m+hint); }
 async function t3Run(b64){
   const key=S.tripoKey; if(!key){ t3Start(); return; }
