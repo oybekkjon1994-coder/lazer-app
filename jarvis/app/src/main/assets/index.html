@@ -469,6 +469,7 @@ const J = window.J = {
   onShown(){ refreshBg(); try{pcBackup(false)}catch(e){} try{syncBot()}catch(e){} pollBot(false); if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
   async onModel(n,name){ if(!n){ sys("Fayl olinmadi."); return; } const ext=String(name||"").split(".").pop().toLowerCase();
+    if(n>90e6){ box("Fayl juda katta","Fayl "+Math.round(n/1e6)+" MB. Telefon xotirasi yetmaydi. Sketchfab'da kichikroq variantni (Texture size 1k yoki 2k) yoki STL/OBJ ni tanlang."); return; }
     if(!/^(glb|stl|obj)$/.test(ext)){ box("Bu format emas","GLB, STL yoki OBJ fayl tanlang. (Fayl: "+name+")"); return; }
     try{ t3Prog("Fayl ochilmoqda…",50); const u=t3Bytes("model_last.dat"); await t3Show(u,ext); }catch(e){ box("Faylni ochib bo'lmadi",String(e&&e.message||e)); } },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},

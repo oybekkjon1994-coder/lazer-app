@@ -76,6 +76,7 @@ public class BrowserActivity extends Activity {
 
     void download(String u, String cd, String mime) {
         final String name = URLUtil.guessFileName(u, cd, mime);
+        final String ref = wv.getUrl() == null ? u : wv.getUrl();
         runOnUiThread(() -> status.setText("Yuklanmoqda: " + name + " …"));
         new Thread(() -> {
             try {
@@ -83,7 +84,7 @@ public class BrowserActivity extends Activity {
                 c.setInstanceFollowRedirects(true); c.setConnectTimeout(20000); c.setReadTimeout(120000);
                 c.setRequestProperty("User-Agent", UA);
                 String ck = CookieManager.getInstance().getCookie(u); if (ck != null) c.setRequestProperty("Cookie", ck);
-                c.setRequestProperty("Referer", wv.getUrl() == null ? u : wv.getUrl());
+                c.setRequestProperty("Referer", ref);
                 if (c.getResponseCode() != 200) { fail("Yuklab bo'lmadi (HTTP " + c.getResponseCode() + "). Saytga kirganingizni tekshiring."); return; }
                 File dir = getCacheDir();
                 File raw = new File(dir, "dl_raw.bin");
