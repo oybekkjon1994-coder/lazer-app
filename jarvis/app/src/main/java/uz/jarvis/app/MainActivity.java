@@ -104,6 +104,7 @@ public class MainActivity extends Activity {
     Uri camUri = null;
     MediaPlayer player = null;
     static final int REQ_IMG = 41;
+    static final int REQ_MODEL = 42;
     int imgMax = 1280;
 
     @Override
@@ -230,6 +231,24 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_MODEL) {
+            if (res != RESULT_OK || data == null || data.getData() == null) { js("J.onModel(0,'')"); return; }
+            final Uri mu = data.getData();
+            new Thread(() -> {
+                String nm = "model"; long tot = 0;
+                try {
+                    try (android.database.Cursor c = getContentResolver().query(mu, null, null, null, null)) {
+                        if (c != null && c.moveToFirst()) { int ix = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME); if (ix >= 0) nm = c.getString(ix); }
+                    }
+                    File f = new File(getCacheDir(), "model_last.dat");
+                    try (InputStream is = getContentResolver().openInputStream(mu); FileOutputStream fo = new FileOutputStream(f)) {
+                        byte[] buf = new byte[32768]; int n; while ((n = is.read(buf)) > 0) { fo.write(buf, 0, n); tot += n; }
+                    }
+                } catch (Exception e) { tot = 0; }
+                js("J.onModel(" + tot + "," + q(nm) + ")");
+            }).start();
+            return;
+        }
         if (req != REQ_IMG) return;
         if (res != RESULT_OK) { js("J.onImage('')"); return; }
         Uri u = (data != null && data.getData() != null) ? data.getData() : camUri;
@@ -659,6 +678,13 @@ public class MainActivity extends Activity {
         }
 
         /** Rasmdan DXF uchun: katta o'lchamda (aniqroq kontur) */
+        @JavascriptInterface public void pickModel() {
+            try {
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT); i.setType("*/*"); i.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(Intent.createChooser(i, "3D fayl tanlang (GLB / STL / OBJ)"), REQ_MODEL);
+            } catch (Exception e) { js("J.onModel(0,'')"); }
+        }
+
         @JavascriptInterface public void pickImageHi(boolean camera) { imgMax = 3600; pickImage(camera); }
 
         @JavascriptInterface public void pickImage(boolean camera) {

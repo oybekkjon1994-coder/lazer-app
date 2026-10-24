@@ -307,7 +307,7 @@ const N = window.Native || {
   call(){return "ok"}, sms(){return "ok"}, contacts(){return "[]"}, alarm(){return "ok"}, timer(){return "ok"},
   remind(){return "ok"}, cancelRemind(){}, openApp(n){return "notfound"}, openUrl(u){window.open(u);return "ok"},
   torch(){return "ok"}, listApps(){return JSON.stringify([{l:"Telegram",p:"org.telegram.messenger"},{l:"Instagram",p:"com.instagram.android"},{l:"WhatsApp",p:"com.whatsapp"},{l:"YouTube",p:"com.google.android.youtube"},{l:"Chrome",p:"com.android.chrome"},{l:"Kamera",p:"com.android.camera"},{l:"Click",p:"uz.click.evo"},{l:"Payme",p:"uz.dida.payme"},{l:"Boshqa",p:"x.y"}])}, appIcon(){return ""}, launchPkg(){return "ok"}, battery(){return 77}, charging(){return false}, freeMb(){return 20000}, scheduleEvening(){}, saveFile(){return ""}, saveFileB64(){return "mock://pdf"}, shareFile(){}, volume(){}, keepAwake(){}, share(t){console.log(t)},
-  bgListen(){return "ok"}, tripoUpload(id){setTimeout(()=>J._http(id,200,"{}"),10)}, binGet(id){setTimeout(()=>J._http(id,200,"0"),10)}, binChunk(){return ""}, binSize(){return 0}, binExport(){return ""}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
+  bgListen(){return "ok"}, tripoUpload(id){setTimeout(()=>J._http(id,200,"{}"),10)}, binGet(id){setTimeout(()=>J._http(id,200,"0"),10)}, binChunk(){return ""}, binSize(){return 0}, binExport(){return ""}, pickModel(){}, fetchImage(id,u){setTimeout(()=>J._http(id,200,""),10)}, ideaSave(){return "x.jpg"}, ideaList(){return "[]"}, ideaRead(){return ""}, ideaDelete(){return true}, readAsset(){return ""}, cloudSpeak(){setTimeout(()=>J.onSpeakDone(),20)}, xabarInstalled(){return false}, pushMsgSettings(){}, recentMsgs(){return "[]"}, reply(){return "none"}, hasNotifAccess(){return false}, askNotifAccess(){}, copy(){}, scheduleReport(){}, pickImage(){setTimeout(()=>J.onImage(""),50)}, pickImageHi(){setTimeout(()=>J.onImage(""),50)}, saveFile(){return "content://x/1"}, shareFile(){}, media(){return "ok"}, navigate(){return "Yandex Navigator"}, bgRunning(){return false}, canOverlay(){return false}, askOverlay(){}, batteryOk(){return false}, askBattery(){}, appSettings(){}, toBack(){}
 };
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -468,6 +468,9 @@ const J = window.J = {
     else handle(cmd,false); },
   onShown(){ refreshBg(); try{pcBackup(false)}catch(e){} try{syncBot()}catch(e){} pollBot(false); if(S.bg && !loop) startLoop(true); },
   onHidden(){ if(loop){loop=false;N.keepAwake(false)} chipText(); if(state==="listen")setState("idle"); },
+  async onModel(n,name){ if(!n){ sys("Fayl olinmadi."); return; } const ext=String(name||"").split(".").pop().toLowerCase();
+    if(!/^(glb|stl|obj)$/.test(ext)){ box("Bu format emas","GLB, STL yoki OBJ fayl tanlang. (Fayl: "+name+")"); return; }
+    try{ t3Prog("Fayl ochilmoqda…",50); const u=t3Bytes("model_last.dat"); await t3Show(u,ext); }catch(e){ box("Faylni ochib bo'lmadi",String(e&&e.message||e)); } },
   _http(id,code,body){const f=J._cb[id];delete J._cb[id];if(f)f(code,body)},
   back(){ if($("modal").classList.contains("on")){closeModal();return true}
     if(!$("pJarvis").classList.contains("on")){go("pJarvis");return true} return false }
@@ -2540,19 +2543,20 @@ setTimeout(()=>{ try{ if(S.favApps===undefined){ const a=appsAuto(); if(a.length
 
 /* ================= Rasmdan 3D (Tripo3D) ================= */
 const T3_GLB="tripo_last.glb";
-let t3=null, t3gl=null;
+let t3=null, t3gl=null, t3ext="glb";
 const t3sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function t3Start(){
-  $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><p class="mut">Buyum suratini bering — Tripo3D uni to'liq 3D modelga aylantiradi (orqa tomoni ham). Keyin o'lchamini kiritib, lazer uchun <b>3 tomondan kontur DXF</b> yoki <b>qatlamli kesim DXF</b> olasiz, STL/GLB ham saqlanadi.</p>
+  $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><p class="mut">Buyum suratini bering — Tripo3D (pullik API) yoki boshqa joydan (Meshy, Hugging Face, Sketchfab, skaner ilovalari) olingan tayyor 3D faylni oching. Tripo3D uni to'liq 3D modelga aylantiradi (orqa tomoni ham). Keyin o'lchamini kiritib, lazer uchun <b>3 tomondan kontur DXF</b> yoki <b>qatlamli kesim DXF</b> olasiz, STL/GLB ham saqlanadi.</p>
   <label>Tripo API kaliti (tripo3d.ai → API keys, "tsk_…")</label><input id="t3K" type="password" placeholder="tsk_..." value="${esc(S.tripoKey||"")}">
   <div class="row" style="margin-top:12px"><button class="btn" id="t3C">📷 Kamera</button><button class="btn g" id="t3G">🖼 Galereya</button></div>
-  <button class="btn g" id="t3L" style="width:100%;margin-top:8px">📂 Oxirgi 3D modelni ochish</button>
+  <button class="btn g" id="t3F" style="width:100%;margin-top:8px">📁 Tayyor 3D fayl ochish (GLB / STL / OBJ) — bepul</button>
+  <button class="btn g" id="t3L" style="width:100%;margin-top:8px">📂 Oxirgi Tripo modelini ochish</button>
   <p class="mut" style="margin-top:8px">Eng yaxshi natija: buyum yakka, fon sodda, to'liq ko'rinib tursin.</p>`;
   openModal();
   const keyOk=()=>{ const k=$("t3K").value.trim(); if(!k){ alert("Avval Tripo API kalitini kiriting."); return false } S.tripoKey=k; saveAll(); return true };
   const go=c=>{ if(!keyOk()) return; closeModal(); imgMode="t3d"; setState("think","rasm kutilmoqda"); N.pickImage(c); };
   $("t3C").onclick=()=>go(true); $("t3G").onclick=()=>go(false);
-  $("t3L").onclick=()=>{ t3OpenLast() };
+  $("t3L").onclick=()=>{ t3OpenLast() }; $("t3F").onclick=()=>{ closeModal(); N.pickModel(); };
 }
 function t3Prog(t,p){ $("sheet").innerHTML=`<h2>🧊 Rasmdan 3D</h2><div style="margin:14px 0">${esc(t)}</div><div style="height:10px;background:#16303f;border-radius:6px"><div style="height:10px;width:${Math.max(3,Math.min(100,p))}%;background:#2fd8ff;border-radius:6px;transition:width .4s"></div></div><p class="mut">Odatda 1–3 daqiqa. Ilovani yopmang.</p>`; openModal(); }
 function t3Nat(fn,ms){ return new Promise(res=>{ const id="n"+Date.now()+Math.random(); let d=false; J._cb[id]=(c,b)=>{ if(d)return; d=true; res({code:c,body:b}) }; setTimeout(()=>{ if(d)return; d=true; delete J._cb[id]; res({code:-1,body:"timeout"}) },ms||120000); try{ fn(id) }catch(e){ if(!d){ d=true; res({code:-2,body:"ERR: "+e.message}) } } }); }
@@ -2590,7 +2594,7 @@ async function t3Run(b64){
     await t3OpenLast();
   }catch(e){ box("Xato","3D yaratishda xato: "+(e&&e.message||e)); }
 }
-function t3Bytes(){ const n=N.binSize(T3_GLB); if(!n) return null; const u=new Uint8Array(n), CH=786432; for(let o=0;o<n;o+=CH){ const s=atob(N.binChunk(T3_GLB,o,Math.min(CH,n-o))); for(let i=0;i<s.length;i++) u[o+i]=s.charCodeAt(i); } return u; }
+function t3Bytes(fn){ fn=fn||T3_GLB; const n=N.binSize(fn); if(!n) return null; const u=new Uint8Array(n), CH=786432; for(let o=0;o<n;o+=CH){ const s=atob(N.binChunk(fn,o,Math.min(CH,n-o))); for(let i=0;i<s.length;i++) u[o+i]=s.charCodeAt(i); } return u; }
 async function t3OpenLast(){ try{ t3Prog("Model ochilmoqda…",92); const u=t3Bytes(); if(!u){ box("Model yo'q","Hali 3D model yaratilmagan."); return; } await t3Show(u); }catch(e){ box("Modelni ochib bo'lmadi",String(e&&e.message||e)); } }
 
 /* ---- GLB o'qish ---- */
@@ -2644,12 +2648,30 @@ async function glbParse(u8){
     for(const c of (n.children||[])) await walk(c,wm); };
   for(const r of roots) await walk(r,m4.id());
   if(!prims.length) throw new Error("modelda yuza topilmadi");
+  return t3Pack(prims);
+}
+function t3Pack(prims){
   const mn=[1e9,1e9,1e9], mx=[-1e9,-1e9,-1e9]; let nt=0;
   for(const p of prims){ for(let i=0;i<p.pos.length;i+=3) for(let k=0;k<3;k++){ const v=p.pos[i+k]; if(v<mn[k])mn[k]=v; if(v>mx[k])mx[k]=v } nt+=p.idx.length/3; }
   const tri=new Float32Array(nt*9); let o=0; for(const p of prims) for(let i=0;i<p.idx.length;i++){ const q=p.idx[i]*3; tri[o++]=p.pos[q];tri[o++]=p.pos[q+1];tri[o++]=p.pos[q+2]; }
   return {prims,mn,mx,tri,nt};
 }
-
+function t3Prim(pos,idx){ const cnt=pos.length/3; const I=cnt>65535?new Uint32Array(idx):new Uint16Array(idx); const nrm=new Float32Array(pos.length);
+  for(let i=0;i+2<I.length;i+=3){ const a=I[i]*3,b=I[i+1]*3,c=I[i+2]*3; const ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],vx=pos[c]-pos[a],vy=pos[c+1]-pos[a+1],vz=pos[c+2]-pos[a+2]; const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx; for(const q of [a,b,c]){ nrm[q]+=nx;nrm[q+1]+=ny;nrm[q+2]+=nz } }
+  for(let i=0;i<cnt;i++){ const l=Math.hypot(nrm[i*3],nrm[i*3+1],nrm[i*3+2])||1; nrm[i*3]/=l;nrm[i*3+1]/=l;nrm[i*3+2]/=l }
+  return {pos,nrm,idx:I,uv:null,col:null,cn:0,base:[0.78,0.82,0.88,1],tex:null}; }
+/* STL (binary/ASCII): Z-yuqori -> Y-yuqori ga o'giriladi */
+function stlParse(u8){ const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength); let pos;
+  const n=u8.length>=84?dv.getUint32(80,true):0;
+  if(u8.length===84+50*n&&n>0){ pos=new Float32Array(n*9); for(let t=0;t<n;t++) for(let k=0;k<3;k++) for(let c=0;c<3;c++) pos[t*9+k*3+c]=dv.getFloat32(84+t*50+12+k*12+c*4,true); }
+  else { const tx=new TextDecoder().decode(u8), a=[]; const re=/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g; let m; while((m=re.exec(tx))) a.push(+m[1],+m[2],+m[3]); pos=new Float32Array(a); }
+  if(pos.length<9) throw new Error("STL bo'sh yoki o'qib bo'lmadi");
+  for(let i=0;i<pos.length;i+=3){ const y=pos[i+1], z=pos[i+2]; pos[i+1]=z; pos[i+2]=-y; }
+  const idx=new Array(pos.length/3); for(let i=0;i<idx.length;i++) idx[i]=i; return t3Pack([t3Prim(pos,idx)]); }
+function objParse(u8){ const tx=new TextDecoder().decode(u8).split(/\r?\n/); const v=[], idx=[];
+  for(const l of tx){ if(l[0]==="v"&&l[1]===" "){ const p=l.trim().split(/\s+/); v.push(+p[1],+p[2],+p[3]); }
+    else if(l[0]==="f"&&l[1]===" "){ const p=l.trim().split(/\s+/).slice(1).map(z=>{ let k=parseInt(z.split("/")[0]); return k<0?v.length/3+k:k-1 }); for(let i=1;i<p.length-1;i++) idx.push(p[0],p[i],p[i+1]); } }
+  if(!idx.length) throw new Error("OBJ da yuzalar topilmadi"); return t3Pack([t3Prim(new Float32Array(v),idx)]); }
 /* ---- WebGL ko'rgich ---- */
 function t3Viewer(cv,model){
   const gl=cv.getContext("webgl",{antialias:true,alpha:false})||cv.getContext("experimental-webgl"); if(!gl) throw new Error("WebGL yo'q");
@@ -2692,15 +2714,18 @@ function t3Viewer(cv,model){
 }
 
 /* ---- ko'rish oynasi ---- */
-async function t3Show(u8){
-  t3=await glbParse(u8);
+async function t3Show(u8,ext){
+  t3=ext==="stl"?stlParse(u8):ext==="obj"?objParse(u8):await glbParse(u8); t3ext=ext||"glb"; return t3Render();
+}
+async function t3Render(){
   const ex=[t3.mx[0]-t3.mn[0],t3.mx[1]-t3.mn[1],t3.mx[2]-t3.mn[2]];
   $("sheet").innerHTML=`<h2>🧊 3D model tayyor</h2>
   <canvas id="t3cv" style="width:100%;height:300px;border-radius:10px;touch-action:none;display:block"></canvas>
   <p class="mut" style="margin:6px 0">Bir barmoq — aylantirish, ikki barmoq — kattalashtirish.</p>
   <label>Buyumning haqiqiy balandligi (mm)</label><input id="t3H" type="number" value="300" inputmode="decimal">
   <div class="mut" id="t3Dim" style="margin:4px 0 8px"></div>
-  <div class="row"><button class="btn g" id="t3Glb">💾 GLB</button><button class="btn g" id="t3Stl">💾 STL</button></div>
+  <div class="row">${t3ext==="glb"?'<button class="btn g" id="t3Glb">💾 GLB</button>':""}<button class="btn g" id="t3Stl">💾 STL</button></div>
+  <button class="btn g" id="t3Rot" style="width:100%;margin-top:8px">⟲ Model yotib qolgan bo'lsa — to'g'rilash</button>
   <button class="btn" id="t3Sil" style="width:100%;margin-top:10px">📐 3 tomondan kontur DXF</button>
   <label>Material qalinligi (mm) — qatlamli kesim uchun</label><input id="t3T" type="number" value="6" inputmode="decimal">
   <button class="btn" id="t3Sl" style="width:100%;margin-top:6px">🥞 Qatlamli kesim DXF</button>
@@ -2712,7 +2737,8 @@ async function t3Show(u8){
   try{ t3gl=t3Viewer($("t3cv"),t3); }catch(e){ $("t3cv").outerHTML=`<div class="mut" style="padding:20px;text-align:center">3D ko'rsatib bo'lmadi (${esc(e.message)}), lekin eksportlar ishlaydi.</div>`; }
   const sc=()=>{ const h=+$("t3H").value; if(!(h>0)){ alert("Balandlikni mm da kiriting."); return 0 } return h/(ex[1]||1) };
   const done=(uri,name,mime,extra)=>{ $("t3out").innerHTML=`<div><b>✅ ${esc(name)}</b> — Yuklamalar/Jarvis papkasiga saqlandi.${extra?"<br>"+extra:""}</div>${uri?'<button class="btn sm" id="t3Sh" style="margin-top:8px">Yuborish (Telegram…)</button>':""}`; const b=$("t3Sh"); if(b) b.onclick=()=>N.shareFile(uri,mime); };
-  $("t3Glb").onclick=()=>{ const u=N.binExport(T3_GLB,"model3d_"+Date.now()+".glb","model/gltf-binary"); done(u,"model3d.glb","model/gltf-binary","Blender, Windows 3D Viewer, SketchUp (import) da ochiladi."); };
+  $("t3Rot").onclick=()=>{ for(const p of t3.prims){ for(let i=0;i<p.pos.length;i+=3){ const y=p.pos[i+1],z=p.pos[i+2]; p.pos[i+1]=z; p.pos[i+2]=-y } } const pk=t3Pack(t3.prims); t3=pk; t3Render(); };
+  if($("t3Glb")) $("t3Glb").onclick=()=>{ const u=N.binExport(T3_GLB,"model3d_"+Date.now()+".glb","model/gltf-binary"); done(u,"model3d.glb","model/gltf-binary","Blender, Windows 3D Viewer, SketchUp (import) da ochiladi."); };
   $("t3Stl").onclick=()=>{ const s=sc(); if(!s) return; const b=t3Stl(s); const u=N.saveFileB64("model3d_"+Date.now()+".stl","model/stl",b); done(u,"model3d.stl","model/stl","3D printer yoki CAD uchun, o'lchami mm."); };
   $("t3Sil").onclick=()=>{ const s=sc(); if(!s) return; $("t3out").textContent="Kontur hisoblanyapti…"; setTimeout(()=>{ try{ const r=t3SilDxf(s); if(!r){ $("t3out").textContent="Kontur topilmadi."; return } const nm="kontur3_"+Date.now()+".dxf"; const u=saveF(nm,"application/dxf",r.dxf);
       done(u,nm,"application/dxf",`Kesim uzunligi: ${(r.len).toFixed(2)} m, ${r.n} ta kontur.`); $("t3out").insertAdjacentHTML("beforeend",r.pv); }catch(e){ $("t3out").textContent="Xato: "+e.message } },30); };
