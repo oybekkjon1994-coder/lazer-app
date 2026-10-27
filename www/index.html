@@ -3412,7 +3412,7 @@ nav.insertAdjacentHTML("afterend",`
     <a class="sh-link" href="${TG_BOT}">Telegram bot <span>@lazer_uz77_bot</span></a>
     <a class="sh-link" href="${TG_ME}">Yordam (Telegram) <span>@lazekametal</span></a>
     <a class="sh-link" href="${IG}">Instagram <span>@metart_shop</span></a></div>
-  <div class="sh-pcard"><h4>Ilova</h4><div class="sh-link" style="border:0">Lazer ustaxona <span id="shVer">Android</span></div></div>
+  <div class="sh-pcard"><h4>Ilova</h4><div class="sh-link" style="border:0">Lazer ustaxona <span id="shVer">Android</span></div><button type="button" class="sh-link" id="shUpd" style="width:100%;text-align:left;background:none;border:0;cursor:pointer">Yangilanishni tekshirish <span>↻</span></button></div>
 </div>`);
 document.body.insertAdjacentHTML("beforeend",`<a class="sh-fab" href="${TG_ME}" aria-label="Yordam">${SV(I.head,30,2)}</a>
 <nav class="sh-nav" aria-label="Asosiy menyu">
@@ -3679,6 +3679,45 @@ try{const at=+localStorage.getItem("lzBkAt")||0,orders=JSON.parse(localStorage.g
 /* offline belgisi */
 document.body.insertAdjacentHTML("beforeend",`<div id="lzOff" hidden style="position:fixed;left:50%;transform:translateX(-50%);top:8px;z-index:99989;background:#444;color:#fff;border-radius:20px;padding:5px 12px;font:600 12px system-ui">📴 Offline — ilova ishlayapti</div>`);
 const upd=()=>{$("lzOff").hidden=navigator.onLine!==false};addEventListener("online",upd);addEventListener("offline",upd);upd();
+})();
+
+/* ---------- Avtomatik yangilanish xabari (APK tashqarida, GitHub Releases) ---------- */
+(function(){
+  const $=id=>document.getElementById(id);
+  const APP_BUILD=+("__LZBUILD__".replace(/\D/g,""))||0;          // build paytida raqam qo'yiladi
+  try{const sv=$("shVer");if(sv)sv.textContent=APP_BUILD?("1.0."+APP_BUILD):"Android"}catch(_){}
+  const isNat=typeof isNative==="function"?isNative:()=>!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+  const REPO="oybekkjon1994-coder/lazer-app";
+  const UPD_LINK="https://t.me/lazer_uz77_bot?start=ilova_yangilash";   // bot eng yangi APK ni yuboradi
+  function banner(ver,body){
+    let skip="";try{skip=localStorage.getItem("lzUpdSkip")||""}catch(_){}
+    if(skip===String(ver)||$("lzUpd"))return;
+    const nima=(body||"").replace(/\r/g,"").split("\n").map(s=>s.trim()).filter(Boolean).slice(0,3).join(" · ").slice(0,130);
+    document.body.insertAdjacentHTML("beforeend",`<div id="lzUpd" role="dialog" style="position:fixed;left:10px;right:10px;top:10px;z-index:99991;background:#0e1214;color:#fff;border-left:5px solid #ff6a00;border-radius:12px;padding:12px 14px;font:600 14px/1.35 system-ui;box-shadow:0 8px 30px rgba(0,0,0,.45)">
+      <div style="font-size:15px">🎉 Yangi versiya: <b>1.0.${ver}</b></div>
+      ${nima?`<div style="opacity:.82;font-weight:500;margin-top:3px">${nima}</div>`:""}
+      <div style="opacity:.7;font-weight:500;margin-top:4px">Yangi ilovani o‘rnatib oling — buyurtmalaringiz saqlanib qoladi.</div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button type="button" id="lzUpdGo" style="flex:1;min-height:40px;border:0;border-radius:9px;background:#ff6a00;color:#fff;font:700 14px system-ui">O‘rnatish</button><button type="button" id="lzUpdLater" style="min-height:40px;padding:0 14px;border:0;border-radius:9px;background:#2a2f33;color:#fff;font:600 14px system-ui">Keyinroq</button></div></div>`);
+    $("lzUpdGo").onclick=()=>{location.href=UPD_LINK};
+    $("lzUpdLater").onclick=()=>{try{localStorage.setItem("lzUpdSkip",String(ver))}catch(_){}const e=$("lzUpd");if(e)e.remove()};
+  }
+  async function check(force){
+    if(!isNat()||navigator.onLine===false)return;
+    if(!force){let t=0;try{t=+localStorage.getItem("lzUpdChk")||0}catch(_){}if(Date.now()-t<6*36e5)return}
+    try{
+      const r=await fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
+      try{localStorage.setItem("lzUpdChk",String(Date.now()))}catch(_){}
+      if(!r.ok)return;const j=await r.json();
+      const ver=+String(j.tag_name||"").split(".").pop().replace(/\D/g,"");   // "v1.0.57" -> 57
+      if(ver&&ver>APP_BUILD)banner(ver,j.body);
+    }catch(_){}
+  }
+  window.lzCheckUpd=()=>check(true);
+  try{const u=$("shUpd");if(u)u.onclick=async()=>{const s=u.querySelector("span");if(s)s.textContent="…";try{localStorage.removeItem("lzUpdSkip")}catch(_){}
+    if(!isNat()){if(s)s.textContent="faqat ilovada";return}
+    await check(true);setTimeout(()=>{if(s)s.textContent=$("lzUpd")?"✓":"eng so‘nggi ✓"},1500)}}catch(_){}
+  addEventListener("online",()=>check());
+  setTimeout(()=>check(),2500);
 })();
 
 showTab("narx");lzView("home");

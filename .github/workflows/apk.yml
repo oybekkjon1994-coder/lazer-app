@@ -27,6 +27,9 @@ jobs:
       - name: Kutubxonalarni o'rnatish
         run: npm install --no-audit --no-fund
 
+      - name: Web ichiga build raqamini qo'yish (avtomatik yangilanish uchun)
+        run: sed -i "s/__LZBUILD__/${{ github.run_number }}/g" www/index.html
+
       - name: Android loyihasini yaratish
         run: |
           npx cap add android
