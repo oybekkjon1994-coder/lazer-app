@@ -2315,7 +2315,18 @@ function nestOuter(part){if(part._outer)return part._outer;
   const loops=closed.concat(chainLoops(open)).filter(L=>L.length>=3).map(L=>({L,a:shoelace(L)})).sort((x,y)=>y.a-x.a);
   const inPoly=(pt,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi)c=!c}return c};
   const top=[];for(const o of loops)if(!top.some(t=>inPoly(o.L[0],t)))top.push(o.L);
-  part._outer=top.length?top:[[[0,0],[part.w,0],[part.w,part.h],[0,part.h]]];return part._outer}
+  /* tashqi kontur yopilmagan bo‘lsa (chiziqlar orasida tirqish), topilgan halqalar detalni to‘liq qoplamaydi —
+     shunda detallar bir-birining ustiga tushib qolardi. Bunday holda barcha nuqtalarning qavariq qobig‘i olinadi. */
+  let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9;for(const L of top)for(const [x,y] of L){bx0=Math.min(bx0,x);by0=Math.min(by0,y);bx1=Math.max(bx1,x);by1=Math.max(by1,y)}
+  const tol=Math.max(0.5,0.01*Math.max(part.w,part.h));
+  const covers=top.length&&bx0<=tol&&by0<=tol&&bx1>=part.w-tol&&by1>=part.h-tol;
+  part._outer=covers?top:[nestHull(part)];return part._outer}
+function nestHull(part){const pts=[];for(const p of part.paths)for(const q of p.pts)pts.push(q);
+  if(pts.length<3)return [[0,0],[part.w,0],[part.w,part.h],[0,part.h]];
+  pts.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[],up=[];for(const q of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q)}
+  for(let i=pts.length-1;i>=0;i--){const q=pts[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q)}
+  const h=lo.slice(0,-1).concat(up.slice(0,-1));return h.length>=3?h:[[0,0],[part.w,0],[part.w,part.h],[0,part.h]]}
 /* detal shaklini (aylantirilgan holda) katakchalarga aylantirish: har qatorda band oraliqlar */
 function nestMask(part,ang,res,pad){const key=ang+"|"+res+"|"+pad;part._mk=part._mk||{};if(part._mk[key])return part._mk[key];
   const th=ang*Math.PI/180,c=Math.cos(th),s=Math.sin(th),R=nestOuter(part).map(L=>L.map(([x,y])=>[x*c-y*s,x*s+y*c]));
@@ -2327,28 +2338,42 @@ function nestMask(part,ang,res,pad){const key=ang+"|"+res+"|"+pad;part._mk=part.
   for(let j=0;j<mh;j++){const sp=[];let st=-1;for(let i=0;i<=mw;i++){const on=i<mw&&d[4*(j*mw+i)+3]>0;if(on&&st<0)st=i;if(!on&&st>=0){sp.push(st,i-1);cells+=i-st;st=-1}}rows.push(sp)}
   cv.width=cv.height=0;
   const m={ang,mw,mh,rows,cells,ox:-x0,oy:-y0,rw:x1-x0,rh:y1-y0};part._mk[key]=m;return m}
-function nestSheet(Wc,Hc){const pre=[];for(let j=0;j<Hc;j++)pre.push(new Int32Array(Wc+1));return {Wc,Hc,pre,placed:[]}}
+function nestSheet(Wc,Hc){const pre=[];for(let j=0;j<Hc;j++)pre.push(new Int32Array(Wc+1));return {Wc,Hc,pre,placed:[],col:new Int32Array(Wc),hint:new Map()}}
 function nestFits(sh,m,X,Y){for(let j=0;j<m.mh;j++){const sp=m.rows[j];if(!sp.length)continue;const P=sh.pre[Y+j];for(let k=0;k<sp.length;k+=2)if(P[X+sp[k+1]+1]-P[X+sp[k]]>0)return false}return true}
 function nestMark(sh,m,X,Y){for(let j=0;j<m.mh;j++){const sp=m.rows[j];if(!sp.length)continue;const P=sh.pre[Y+j],row=new Uint8Array(sh.Wc);
-    for(let i=0;i<sh.Wc;i++)row[i]=P[i+1]-P[i];for(let k=0;k<sp.length;k+=2)for(let i=X+sp[k];i<=X+sp[k+1];i++)row[i]=1;for(let i=0;i<sh.Wc;i++)P[i+1]=P[i]+row[i]}}
+    for(let i=0;i<sh.Wc;i++)row[i]=P[i+1]-P[i];for(let k=0;k<sp.length;k+=2)for(let i=X+sp[k];i<=X+sp[k+1];i++){if(!row[i]){row[i]=1;sh.col[i]++}}for(let i=0;i<sh.Wc;i++)P[i+1]=P[i]+row[i]}}
 /* eng chapdagi (keyin eng pastdagi) bo‘sh joyni topish */
-function nestFind(sh,m,limitX){const xm=Math.min(sh.Wc-m.mw,limitX);for(let X=0;X<=xm;X++)for(let Y=0;Y<=sh.Hc-m.mh;Y++)if(nestFits(sh,m,X,Y))return {X,Y};return null}
-function runNest(){
+/* Tezlashtirish: (1) to‘liq band ustunlar o‘tkazib yuboriladi; (2) bir xil detal+burchak uchun qidiruv oldingi topilgan joydan
+   davom etadi — list faqat to‘lib boradi, oldin sig‘magan joyga keyin ham sig‘maydi. */
+function nestFind(sh,m,limitX,hk){const xm=Math.min(sh.Wc-m.mw,limitX),H=sh.Hc,col=sh.col,h=hk&&sh.hint.get(hk);
+  let X0=h?h.X:0,Y0=h?h.Y:0;
+  for(let X=X0;X<=xm;X++){if(col[X]>=H){Y0=0;continue}
+    for(let Y=(X===X0?Y0:0);Y<=H-m.mh;Y++)if(nestFits(sh,m,X,Y)){if(hk)sh.hint.set(hk,{X,Y});return {X,Y}}}
+  if(hk&&xm>=X0)sh.hint.set(hk,{X:xm+1,Y:0});return null}
+let nestRun=0;
+/* Nesting endi bo‘laklab bajariladi: har ~30 ms da ekranga navbat beriladi, shuning uchun ko‘p detalda ham ilova qotmaydi.
+   Yangi o‘zgarish kelsa, eski hisob to‘xtatiladi. */
+async function runNest(){
+  const run=++nestRun,tick=()=>new Promise(r=>setTimeout(r,0));
   const SW=nv("sW"),SH=nv("sH"),gap=nv("sGap"),mar=nv("sMar"),step=+(($("sRot")||{}).value||90);
   const items=[];nParts.forEach(p=>{for(let k=0;k<p.qty&&items.length<3000;k++)items.push(p)});
   items.sort((a,b)=>nestOuterArea(b)-nestOuterArea(a)||Math.max(b.w,b.h)-Math.max(a.w,a.h));
   const res=Math.max(1,Math.min(6,Math.sqrt(Math.max(1,(SW-2*mar)*(SH-2*mar))/350000))),pad=gap/2+res*.75,
     Wc=Math.floor((SW-2*mar+2*pad)/res),Hc=Math.floor((SH-2*mar+2*pad)/res),angs=[];for(let a=0;a<360;a+=step)angs.push(a);
-  const sheets=[],unplaced=new Set();
-  if(Wc>2&&Hc>2)for(const it of items){let best=null;
+  const sheets=[],unplaced=new Set(),toast=$("ntoast");let last=performance.now(),done=0,showed=false;
+  if(Wc>2&&Hc>2)for(const it of items){
+    if(performance.now()-last>30){if(items.length>20){toast.textContent=`Joylanmoqda… ${done} / ${items.length}`;showed=true}await tick();if(run!==nestRun)return;last=performance.now()}
+    done++;let best=null;
     const tryOn=(sh,si)=>{for(const a of angs){const m=nestMask(it,a,res,pad);if(m.mw>sh.Wc||m.mh>sh.Hc)continue;
-        const lim=best&&best.si===si?best.X+best.m.mw-m.mw:1e9;if(lim<0)continue;const pos=nestFind(sh,m,lim);if(!pos)continue;
+        const lim=best&&best.si===si?best.X+best.m.mw-m.mw:1e9;if(lim<0)continue;const pos=nestFind(sh,m,lim,it.id+"|"+a);if(!pos)continue;
         const right=pos.X+m.mw;if(!best||best.si!==si||right<best.X+best.m.mw||(right===best.X+best.m.mw&&pos.Y<best.Y))best={si,sh,m,X:pos.X,Y:pos.Y}}};
     for(let si=0;si<sheets.length&&!best;si++)tryOn(sheets[si],si);
     if(!best){const sh=nestSheet(Wc,Hc);tryOn(sh,sheets.length);if(best)sheets.push(sh)}
     if(!best){unplaced.add(it.name);continue}
     const {sh,m,X,Y}=best;nestMark(sh,m,X,Y);
     sh.placed.push({part:it,ang:m.ang,x:mar-pad+X*res+pad+m.ox,y:mar-pad+Y*res+pad+m.oy})}
+  if(run!==nestRun)return;if(showed&&/^Joylanmoqda/.test(toast.textContent))toast.textContent="";
+  sheets.forEach(sh=>{sh.pre=null;sh.col=null;sh.hint=null});
   nest={sheets,unplaced:[...unplaced],SW,SH,mar,capped:items.length>=3000};
   if(nPage>=sheets.length)nPage=Math.max(0,sheets.length-1);
   const placed=sheets.flatMap(s=>s.placed),area=placed.reduce((s,p)=>s+p.part.area,0);
@@ -2399,7 +2424,7 @@ function sheetDXF(sh){let ps=sheetPaths(sh);
     return E.poly(p.pts,p.closed)}).join(""))}
 $("nPrev").addEventListener("click",()=>{nPage=Math.max(0,nPage-1);drawSheet()});
 $("nNext").addEventListener("click",()=>{nPage=Math.min(nest.sheets.length-1,nPage+1);drawSheet()});
-["sW","sH","sGap","sMar"].forEach(id=>$(id).addEventListener("input",runNest));try{const r=localStorage.getItem("lazerNestRot");if(r)$("sRot").value=r}catch(_){}
+["sW","sH","sGap","sMar"].forEach(id=>$(id).addEventListener("input",()=>{clearTimeout(window._nsT);window._nsT=setTimeout(runNest,350)}));try{const r=localStorage.getItem("lazerNestRot");if(r)$("sRot").value=r}catch(_){}
 $("sRot").addEventListener("input",()=>{try{localStorage.setItem("lazerNestRot",$("sRot").value)}catch(_){}$("ntoast").textContent="Joylanmoqda…";setTimeout(()=>{runNest();$("ntoast").textContent=""},30)});
 $("nthk").addEventListener("input",nestPrice);
 $("nSave").addEventListener("click",()=>{if(!nest.sheets.length)return;nest.rapB=0;nest.rapA=0;const t=(tiers.find(x=>x.id===$("nthk").value)||tiers[0]).name;
