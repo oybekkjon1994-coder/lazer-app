@@ -69,3 +69,28 @@ jobs:
           tag_name: v1.0.${{ github.run_number }}
           name: Lazer ${{ github.run_number }}
           files: lazer.apk
+
+      # Egasi (siz) uchun aktivatsiyasiz nusxa. versionCode 3000+N — telefoningizdagi
+      # eski egasi nusxasi (3039) ustiga yangilanish sifatida o'rnatiladi, ma'lumotlar saqlanadi.
+      - name: Egasi APK (aktivatsiyasiz)
+        env:
+          KS_PASS: 2428100b6cb0e76f23824b47c7fbcdb0
+        run: |
+          grep -q 'async function licInit(){if(!isNative()){' www/index.html
+          sed -i 's/async function licInit(){if(!isNative()){/async function licInit(){if(true){/' www/index.html
+          npx cap sync android
+          sed -i "s/versionCode [0-9]*/versionCode $((3000 + ${{ github.run_number }}))/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"egasi-${{ github.run_number }}\"/" android/app/build.gradle
+          (cd android && ./gradlew assembleRelease --no-daemon)
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned-egasi.apk
+          $BT/apksigner sign --ks signing/lazer.jks --ks-key-alias lazer --ks-pass env:KS_PASS --key-pass env:KS_PASS --out lazer-egasi.apk aligned-egasi.apk
+          $BT/apksigner verify lazer-egasi.apk
+
+      - name: Egasi versiyasi — yopiq qoralama (faqat sizga ko'rinadi)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lazer-egasi-${{ github.run_number }}
+          name: "EGASI — Lazer ${{ github.run_number }} (maxfiy)"
+          draft: true
+          files: lazer-egasi.apk
