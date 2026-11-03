@@ -5,7 +5,10 @@ on:
   workflow_dispatch:
 jobs:
   tts:
+    if: "!contains(github.event.head_commit.message, '[ovoz]')"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - run: pip install edge-tts
@@ -20,7 +23,8 @@ jobs:
             done
           done
           ls -la out
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ovoz
-          path: out
+      - name: Ovozni branchga saqlash
+        run: |
+          rm -rf tts/out && mv out tts/out
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add tts/out && git commit -m "[ovoz] tayyor" && git push
