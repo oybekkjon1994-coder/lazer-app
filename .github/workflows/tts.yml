@@ -1,0 +1,26 @@
+name: Ovoz (TTS)
+on:
+  push:
+    branches: [tts]
+  workflow_dispatch:
+jobs:
+  tts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install edge-tts
+      - name: Ovoz yaratish
+        run: |
+          mkdir -p out
+          i=0
+          tr '|' '\n' < tts/matn.txt | while IFS= read -r s; do
+            i=$((i+1)); n=$(printf %02d $i)
+            for v in uz-UZ-SardorNeural uz-UZ-MadinaNeural; do
+              edge-tts --voice $v --rate=+5% --text "$s" --write-media out/${v}_$n.mp3
+            done
+          done
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ovoz
+          path: out
