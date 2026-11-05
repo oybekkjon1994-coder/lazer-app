@@ -17,13 +17,14 @@ T({id:"cone",cat:"y",ic:"cone",name:"Konus yoyilmasi",quick:1,
   const html=`<div class="res">${R("Yoyilma burchagi (har bo'lak)",fmt(deg(th),2),"°",1)}${R("Katta radius R",fmt(R1),"mm")}${R("Kichik radius r",fmt(R2),"mm")}${R("Yasovchi uzunligi",fmt(L),"mm")}${R("Vatar (katta yoy)",fmt(2*R1*Math.sin(th/2)),"mm")}${R("List o'lchami",`${fmt0(b[2]-b[0])}×${fmt0(b[3]-b[1])}`,"mm")}</div>
    <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}
    ${note("Ko'k chiziqlar — press yoki valikda bukish uchun belgilar. Tutashuv chokini hisobga olmagan holda chizilgan; kerak bo'lsa bir tomoniga zaxira qo'shing.")}`;
-  return{html,shape:sh,name:`konus_${v.D}_${v.d}_${v.H}`}}});
+  const M={tris:[],cols:MC};revMesh([[v.D/2,0],[Math.max(v.d,0.01)/2,v.H]],0,M);
+  return{html,shape:sh,name:`konus_${v.D}_${v.d}_${v.H}`,mesh:M}}});
 
 T({id:"cyl",cat:"y",ic:"cyl",name:"Silindr / quvur yoyilmasi",
  desc:"Listdan quvur, bak yoki silindr yasash uchun list o'lchami.",
  fields:()=>[{k:"D",l:"Diametr",u:"mm",v:300},{k:"H",l:"Balandlik",u:"mm",v:500},{k:"t",l:"Qalinlik",u:"mm",v:2},{k:"m",l:"O'lchamlar",v:"o",opts:DIMT}],
  calc(v){const D=neu(v.D,v.t,v.m),C=PI*D;const sh={cut:[[[[0,0],[C,0],[C,v.H],[0,v.H]],true]],bend:[1,2,3,4,5,6,7].map(i=>[[C*i/8,0],[C*i/8,v.H]])};
-  return{html:`<div class="res">${R("List uzunligi",fmt(C),"mm",1)}${R("List eni",fmt(v.H),"mm")}${R("O'rta diametr",fmt(D),"mm")}${R("Og'irligi (po'lat)",fmt(C*v.H*v.t*7.85e-6,2),"kg")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`,shape:sh,name:`silindr_${v.D}x${v.H}`}}});
+  return{html:`<div class="res">${R("List uzunligi",fmt(C),"mm",1)}${R("List eni",fmt(v.H),"mm")}${R("O'rta diametr",fmt(D),"mm")}${R("Og'irligi (po'lat)",fmt(C*v.H*v.t*7.85e-6,2),"kg")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`,shape:sh,name:`silindr_${v.D}x${v.H}`,mesh:(()=>{const M={tris:[],cols:MC};revMesh([[v.D/2,0],[v.D/2,v.H]],0,M);return M})()}}});
 
 T({id:"sq2r",cat:"y",ic:"sq2r",name:"Kvadratdan doiraga o'tish",quick:1,
  desc:"To'rtburchak teshikdan dumaloq trubaga o'tish (perexod) yoyilmasi — ventilyatsiya, bunker, mo'ri uchun. Bitta list, chok tomon o'rtasida.",
@@ -42,7 +43,7 @@ T({id:"sq2r",cat:"y",ic:"sq2r",name:"Kvadratdan doiraga o'tish",quick:1,
   const html=`<div class="res">${R("List o'lchami (taxm.)",`${fmt0(b[2]-b[0])} × ${fmt0(b[3]-b[1])}`,"mm",1)}${R("Chok uzunligi",fmt(Math.hypot(P.T0[0],P.T0[1]+B/2,v.H)),"mm")}${R("Og'irlik (po'lat, taxm.)",fmt(area(sh.cut[0][0])*v.t*7.85e-6,2),"kg")}</div>
    <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}
    ${note("Ko'k chiziqlar — burchaklardan doiraga boruvchi bukish chiziqlari. Burchaklar keskin, doira tomonida silliq bukiladi. Chok to'rtburchakning A tomoni o'rtasida.")}`;
-  return{html,shape:sh,name:`perexod_${v.A}x${v.B}_d${v.d}`}}});
+  return{html,shape:sh,name:`perexod_${v.A}x${v.B}_d${v.d}`,mesh:trisMesh(P,tr,0)}}});
 function area(p){let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];s+=a[0]*b[1]-b[0]*a[1]}return Math.abs(s/2)}
 
 T({id:"hopper",cat:"y",ic:"hopper",name:"Bunker / voronka (to'rtburchak)",
@@ -57,7 +58,7 @@ T({id:"hopper",cat:"y",ic:"hopper",name:"Bunker / voronka (to'rtburchak)",
   const sh={cut:[[[...["b1","b2","b3","b4","B1"].map(x=>pos[x]),...["T1","t4","t3","t2","t1"].map(x=>pos[x])],true]],bend:[["b2","t2"],["b3","t3"],["b4","t4"]].map(([x,y])=>[pos[x],pos[y]])};
   const bb=bbox(sh);const slope=deg(Math.atan2(v.H,(A-a)/2));
   return{html:`<div class="res">${R("List o'lchami (taxm.)",`${fmt0(bb[2]-bb[0])} × ${fmt0(bb[3]-bb[1])}`,"mm",1)}${R("Devor qiyaligi (A tomon)",fmt(slope,1),"°")}${R("Og'irlik (po'lat, taxm.)",fmt(area(sh.cut[0][0])*v.t*7.85e-6,2),"kg")}</div>
-   <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Bitta listdan, chok bir burchakda. Katta bunkerlarni 2 yoki 4 bo'lakdan yasash uchun yoyilmani bukish chiziqlari bo'yicha bo'ling.")}`,shape:sh,name:`bunker_${v.A}x${v.B}_${v.a}x${v.b}`}}});
+   <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Bitta listdan, chok bir burchakda. Katta bunkerlarni 2 yoki 4 bo'lakdan yasash uchun yoyilmani bukish chiziqlari bo'yicha bo'ling.")}`,shape:sh,name:`bunker_${v.A}x${v.B}_${v.a}x${v.b}`,mesh:trisMesh(P,tr,0)}}});
 
 const kDIN=(r,t)=>Math.min(0.5,Math.max(0.25,(0.65+0.5*Math.log10(Math.max(r/t,0.1)))/2));
 T({id:"bend",cat:"y",ic:"bend",name:"List bukish (razvertka)",quick:1,

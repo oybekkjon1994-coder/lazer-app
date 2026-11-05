@@ -35,7 +35,7 @@ function viewTool(id){const t=tool(id);if(!t)return go("");head(t.name,true,t.id
     const run=()=>{const v=readVals(tb,fields);let bad=fields.some(f=>!f.opts&&!f.t&&!isFinite(v[f.k]));Object.assign(sv,v);store.set("v_"+id+"_"+mode,sv);
       const out=$("#out");if(bad){out.innerHTML=note("Barcha maydonlarga son kiriting.","warn");return}
       let r;try{r=t.calc(v,mode)}catch(e){out.innerHTML=note("Hisoblashda xato: "+esc(e.message),"warn");return}
-      if(typeof r==="string")r={html:r};out.innerHTML=r.html;if(r.shape)bindShape(out,r.name||t.id,r.shape);if(r.after)r.after(out)};
+      if(typeof r==="string")r={html:r};out.innerHTML=r.html+(r.mesh?view3dHTML():"");if(r.mesh){const cv=out.querySelector("canvas.v3d");requestAnimationFrame(()=>view3d(cv,r.mesh))}if(r.shape)bindShape(out,r.name||t.id,r.shape);if(r.after)r.after(out)};
     tb.querySelectorAll("input,select").forEach(e=>{e.oninput=run;e.onchange=run});run()};
   draw()}
 

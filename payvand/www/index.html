@@ -224,6 +224,37 @@ function unfold(P,tris){
     const pick=sgn(cand[0])!==sgn(o)?cand[0]:cand[1];pos[nw]=pick;ev.push([nw,pick]);prev=t}
   return{pos,ev};
 }
+
+/* ================= 3D ko'rinish (kutubxonasiz) ================= */
+/* mesh: {tris:[[p1,p2,p3,ci],...], cols:["#rrggbb",...]} p=[x,y,z], z — yuqoriga */
+const V3={sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm:a=>{const l=Math.hypot(...a)||1;return[a[0]/l,a[1]/l,a[2]/l]}};
+function quadMesh(grid,ci,M){/* grid[i][j] nuqtalar to'ri */for(let i=0;i<grid.length-1;i++)for(let j=0;j<grid[i].length-1;j++){const a=grid[i][j],b=grid[i][j+1],c=grid[i+1][j+1],d=grid[i+1][j];M.tris.push([a,b,c,ci],[a,c,d,ci])}}
+const view3dHTML=()=>`<h3 class="sec">3D ko'rinish</h3><div class="svgbox" style="position:relative;touch-action:none"><canvas class="v3d" style="width:100%;height:340px;display:block"></canvas><div style="position:absolute;right:12px;bottom:8px;color:#9aa4b2;font-size:12px">barmoq bilan aylantiring</div></div>`;
+function view3d(cv,mesh){
+  const dpr=Math.min(2,window.devicePixelRatio||1);const W=cv.clientWidth||360,H=cv.clientHeight||340;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext("2d");g.scale(dpr,dpr);
+  let mn=[1e18,1e18,1e18],mx=[-1e18,-1e18,-1e18];mesh.tris.forEach(t=>{for(let k=0;k<3;k++)for(let a=0;a<3;a++){mn[a]=Math.min(mn[a],t[k][a]);mx[a]=Math.max(mx[a],t[k][a])}});
+  const c=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2],rad0=Math.hypot(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||1;
+  const T=mesh.tris.map(t=>{const n=V3.norm(V3.cross(V3.sub(t[1],t[0]),V3.sub(t[2],t[0])));return{p:[0,1,2].map(k=>V3.sub(t[k],c)),n,ci:t[3]}});
+  const rgb=mesh.cols.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+  let yaw=-0.7,pitch=0.5,zoom=1;const L=V3.norm([-0.4,-0.6,0.7]);
+  function draw(){g.clearRect(0,0,W,H);const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);const s=Math.min(W,H)*0.42/rad0*zoom;
+    const R=p=>{const x=p[0]*cy-p[1]*sy,y=p[0]*sy+p[1]*cy,z=p[2];const y2=y*cp-z*sp,z2=y*sp+z*cp;return[x,y2,z2]};
+    const list=T.map(t=>{const q=t.p.map(R);const n=R(t.n);return{q,n,ci:t.ci,d:(q[0][1]+q[1][1]+q[2][1])/3}}).sort((a,b)=>b.d-a.d);
+    for(const t of list){const lam=0.35+0.65*Math.abs(t.n[0]*L[0]+t.n[1]*L[1]+t.n[2]*L[2]);const k=rgb[t.ci];const col=`rgb(${k.map(v=>Math.min(255,Math.round(v*lam))).join(",")})`;
+      g.beginPath();t.q.forEach((p,i)=>{const X=W/2+p[0]*s,Y=H/2-p[2]*s;i?g.lineTo(X,Y):g.moveTo(X,Y)});g.closePath();g.fillStyle=col;g.strokeStyle=col;g.lineWidth=0.6;g.fill();g.stroke()}}
+  const pts=new Map();let d0=0;
+  cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===2){const [a,b]=[...pts.values()];d0=Math.hypot(a[0]-b[0],a[1]-b[1])}};
+  cv.onpointermove=e=>{if(!pts.has(e.pointerId))return;const o=pts.get(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===1){yaw+=(e.clientX-o[0])*0.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-o[1])*0.01))}
+    else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(d0)zoom=Math.max(0.3,Math.min(5,zoom*d/d0));d0=d}draw()};
+  cv.onpointerup=cv.onpointercancel=e=>{pts.delete(e.pointerId);d0=0};
+  cv.onwheel=e=>{e.preventDefault();zoom=Math.max(0.3,Math.min(5,zoom*(e.deltaY<0?1.1:0.9)));draw()};
+  draw();
+}
+
+const MC=["#d9a441","#9aa6b2","#5f9ed8"];
+function revMesh(rings,ci,M,n=48){/* rings: [[r,z],...] */const g=rings.map(([r,z])=>{const row=[];for(let j=0;j<=n;j++){const a=2*PI*j/n;row.push([r*Math.cos(a),r*Math.sin(a),z])}return row});quadMesh(g,ci,M)}
+function trisMesh(P,tr,ci){return{tris:tr.map(t=>[P[t[0]],P[t[1]],P[t[2]],ci]),cols:MC}}
 /* ================= QUVUR ================= */
 const ANG=[["45","45°"],["30","30°"],["60","60°"],["22.5","22,5°"],["11.25","11,25°"],["90","90°"]];
 const ELB=[["lr","Uzun radius tirsak (1,5D)"],["sr","Qisqa radius tirsak (1D)"],["none","Tirsaksiz (to'g'ridan kesish)"]];
@@ -270,7 +301,11 @@ T({id:"branch",cat:"q",ic:"branch",name:"Tarmoq shabloni (vrezka)",quick:1,
    <h3 class="sec">O'lchamlar jadvali</h3>${tbl(["№","Burchak °","Aylana bo'yicha, mm","Balandlik, mm"],rows)}
    <h3 class="sec">Asosiy quvurdagi teshik</h3><div class="svgbox" id="hs">${svgOf(hs)}</div><div class="btns"><button class="btn" id="hdxf">Teshik DXF</button></div>
    ${note("Shablonni 1:1 masshtabda chiqaring (DXF — lazerda yupqa listdan kesish yoki printerda chop etish uchun). Shablon tarmoq quvurning tashqi yuzasiga o'raladi; balandlik 0 bo'lgan nuqta egarning eng chuqur joyi.")}`;
-  return{html,shape,name:`tarmoq_${v.D}x${v.d}_${v.a}gr`,after:root=>{root.querySelector("#hdxf").onclick=()=>saveFile(`teshik_${v.D}x${v.d}.dxf`,dxf(hs))}}}});
+  const Mb={tris:[],cols:MC};const Lh=Math.max(v.D,v.d)*1.4+Math.abs(v.e)+r/Math.tan(Math.max(a,0.3));
+  quadMesh([...Array(25)].map((_,i)=>{const x=-Lh+2*Lh*i/24;const row=[];for(let j=0;j<=48;j++){const q=2*PI*j/48;row.push([x,R0*Math.sin(q),R0*Math.cos(q)])}return row}),1,Mb);
+  const Lb=Math.max(v.D,v.d)*1.2+mx;const u=[Math.cos(a),0,Math.sin(a)],ww=[-Math.sin(a),0,Math.cos(a)];
+  quadMesh([0,1,2,3,4,5,6].map(i=>{const row=[];for(let j=0;j<=48;j++){const f=2*PI*j/48;const tt=t(f)+(Lb-t(f))*i/6;row.push([tt*u[0]+r*Math.cos(f)*ww[0],r*Math.sin(f)+v.e,tt*u[2]+r*Math.cos(f)*ww[2]])}return row}),0,Mb);
+  return{html,shape,name:`tarmoq_${v.D}x${v.d}_${v.a}gr`,mesh:Mb,after:root=>{root.querySelector("#hdxf").onclick=()=>saveFile(`teshik_${v.D}x${v.d}.dxf`,dxf(hs))}}}});
 
 T({id:"miter",cat:"q",ic:"elbow",name:"Segmentli tirsak (kesib yasash)",
  desc:"Quvurni bo'laklarga qiya kesib tirsak yasash: har bo'lakning uzunligi va kesish shabloni.",
@@ -292,7 +327,11 @@ T({id:"miter",cat:"q",ic:"elbow",name:"Segmentli tirsak (kesib yasash)",
    <h3 class="sec">Uchidagi bo'lak shabloni</h3><div class="svgbox">${svgOf(shapeEnd)}</div><div class="btns"><button class="btn p" id="m2">Uch bo'lak DXF</button><button class="btn" id="m3">Saqlab qo'yish</button></div>
    <h3 class="sec">Shablon jadvali (o'rta chiziqdan)</h3>${tbl(["№","Aylana bo'yicha, mm","Yarim uzunlik, mm"],rows)}
    ${note("Har bir kesim burchagi = tirsak burchagi ÷ (2 × (bo'laklar − 1)). Shablon jadvalidagi uzunlik — bo'lak o'rtasidan kesish chizig'igacha.")}`;
-  return{html,after:root=>{const a=root.querySelector("#m1");if(a)a.onclick=()=>saveFile(`tirsak_orta_${v.D}.dxf`,dxf(shapeMid));root.querySelector("#m2").onclick=()=>saveFile(`tirsak_uch_${v.D}.dxf`,dxf(shapeEnd));root.querySelector("#m3").onclick=()=>savePattern(`Tirsak ${v.D} mm, ${v.A}°`,n>2?shapeMid:shapeEnd)}}}});
+  const Me={tris:[],cols:MC};const piece=(am,lo,hi,ci)=>{/* o'q: am burchakdagi urinma; lo/hi: parametr chegaralari funksiyasi */
+    const T_=[-Math.sin(am),Math.cos(am),0],N_=[Math.cos(am),Math.sin(am),0];const rows=[];for(let i=0;i<=4;i++){const row=[];for(let j=0;j<=40;j++){const f=2*PI*j/40;const rho=r*Math.cos(f),z=r*Math.sin(f);const pr=lo(rho)+(hi(rho)-lo(rho))*i/4;
+      row.push([(Rb+rho)*N_[0]+pr*T_[0],(Rb+rho)*N_[1]+pr*T_[1],z])}rows.push(row)}quadMesh(rows,ci,Me)};
+  const A_=rad(v.A);piece(0,()=>-v.s,rho=>(Rb+rho)*Math.tan(al),0);for(let k=1;k<n-1;k++)piece(2*k*al,rho=>-(Rb+rho)*Math.tan(al),rho=>(Rb+rho)*Math.tan(al),k%2?1:0);piece(A_,rho=>-(Rb+rho)*Math.tan(al),()=>v.s,(n-1)%2?1:0);
+  return{html,mesh:Me,after:root=>{const a=root.querySelector("#m1");if(a)a.onclick=()=>saveFile(`tirsak_orta_${v.D}.dxf`,dxf(shapeMid));root.querySelector("#m2").onclick=()=>saveFile(`tirsak_uch_${v.D}.dxf`,dxf(shapeEnd));root.querySelector("#m3").onclick=()=>savePattern(`Tirsak ${v.D} mm, ${v.A}°`,n>2?shapeMid:shapeEnd)}}}});
 
 T({id:"flow",cat:"q",ic:"flow",name:"Oqim va diametr",quick:1,
  desc:"Quvurdan o'tadigan suv/suyuqlik miqdori, yoki kerakli oqim uchun quvur diametri.",
@@ -414,13 +453,14 @@ T({id:"cone",cat:"y",ic:"cone",name:"Konus yoyilmasi",quick:1,
   const html=`<div class="res">${R("Yoyilma burchagi (har bo'lak)",fmt(deg(th),2),"°",1)}${R("Katta radius R",fmt(R1),"mm")}${R("Kichik radius r",fmt(R2),"mm")}${R("Yasovchi uzunligi",fmt(L),"mm")}${R("Vatar (katta yoy)",fmt(2*R1*Math.sin(th/2)),"mm")}${R("List o'lchami",`${fmt0(b[2]-b[0])}×${fmt0(b[3]-b[1])}`,"mm")}</div>
    <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}
    ${note("Ko'k chiziqlar — press yoki valikda bukish uchun belgilar. Tutashuv chokini hisobga olmagan holda chizilgan; kerak bo'lsa bir tomoniga zaxira qo'shing.")}`;
-  return{html,shape:sh,name:`konus_${v.D}_${v.d}_${v.H}`}}});
+  const M={tris:[],cols:MC};revMesh([[v.D/2,0],[Math.max(v.d,0.01)/2,v.H]],0,M);
+  return{html,shape:sh,name:`konus_${v.D}_${v.d}_${v.H}`,mesh:M}}});
 
 T({id:"cyl",cat:"y",ic:"cyl",name:"Silindr / quvur yoyilmasi",
  desc:"Listdan quvur, bak yoki silindr yasash uchun list o'lchami.",
  fields:()=>[{k:"D",l:"Diametr",u:"mm",v:300},{k:"H",l:"Balandlik",u:"mm",v:500},{k:"t",l:"Qalinlik",u:"mm",v:2},{k:"m",l:"O'lchamlar",v:"o",opts:DIMT}],
  calc(v){const D=neu(v.D,v.t,v.m),C=PI*D;const sh={cut:[[[[0,0],[C,0],[C,v.H],[0,v.H]],true]],bend:[1,2,3,4,5,6,7].map(i=>[[C*i/8,0],[C*i/8,v.H]])};
-  return{html:`<div class="res">${R("List uzunligi",fmt(C),"mm",1)}${R("List eni",fmt(v.H),"mm")}${R("O'rta diametr",fmt(D),"mm")}${R("Og'irligi (po'lat)",fmt(C*v.H*v.t*7.85e-6,2),"kg")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`,shape:sh,name:`silindr_${v.D}x${v.H}`}}});
+  return{html:`<div class="res">${R("List uzunligi",fmt(C),"mm",1)}${R("List eni",fmt(v.H),"mm")}${R("O'rta diametr",fmt(D),"mm")}${R("Og'irligi (po'lat)",fmt(C*v.H*v.t*7.85e-6,2),"kg")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`,shape:sh,name:`silindr_${v.D}x${v.H}`,mesh:(()=>{const M={tris:[],cols:MC};revMesh([[v.D/2,0],[v.D/2,v.H]],0,M);return M})()}}});
 
 T({id:"sq2r",cat:"y",ic:"sq2r",name:"Kvadratdan doiraga o'tish",quick:1,
  desc:"To'rtburchak teshikdan dumaloq trubaga o'tish (perexod) yoyilmasi — ventilyatsiya, bunker, mo'ri uchun. Bitta list, chok tomon o'rtasida.",
@@ -439,7 +479,7 @@ T({id:"sq2r",cat:"y",ic:"sq2r",name:"Kvadratdan doiraga o'tish",quick:1,
   const html=`<div class="res">${R("List o'lchami (taxm.)",`${fmt0(b[2]-b[0])} × ${fmt0(b[3]-b[1])}`,"mm",1)}${R("Chok uzunligi",fmt(Math.hypot(P.T0[0],P.T0[1]+B/2,v.H)),"mm")}${R("Og'irlik (po'lat, taxm.)",fmt(area(sh.cut[0][0])*v.t*7.85e-6,2),"kg")}</div>
    <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}
    ${note("Ko'k chiziqlar — burchaklardan doiraga boruvchi bukish chiziqlari. Burchaklar keskin, doira tomonida silliq bukiladi. Chok to'rtburchakning A tomoni o'rtasida.")}`;
-  return{html,shape:sh,name:`perexod_${v.A}x${v.B}_d${v.d}`}}});
+  return{html,shape:sh,name:`perexod_${v.A}x${v.B}_d${v.d}`,mesh:trisMesh(P,tr,0)}}});
 function area(p){let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];s+=a[0]*b[1]-b[0]*a[1]}return Math.abs(s/2)}
 
 T({id:"hopper",cat:"y",ic:"hopper",name:"Bunker / voronka (to'rtburchak)",
@@ -454,7 +494,7 @@ T({id:"hopper",cat:"y",ic:"hopper",name:"Bunker / voronka (to'rtburchak)",
   const sh={cut:[[[...["b1","b2","b3","b4","B1"].map(x=>pos[x]),...["T1","t4","t3","t2","t1"].map(x=>pos[x])],true]],bend:[["b2","t2"],["b3","t3"],["b4","t4"]].map(([x,y])=>[pos[x],pos[y]])};
   const bb=bbox(sh);const slope=deg(Math.atan2(v.H,(A-a)/2));
   return{html:`<div class="res">${R("List o'lchami (taxm.)",`${fmt0(bb[2]-bb[0])} × ${fmt0(bb[3]-bb[1])}`,"mm",1)}${R("Devor qiyaligi (A tomon)",fmt(slope,1),"°")}${R("Og'irlik (po'lat, taxm.)",fmt(area(sh.cut[0][0])*v.t*7.85e-6,2),"kg")}</div>
-   <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Bitta listdan, chok bir burchakda. Katta bunkerlarni 2 yoki 4 bo'lakdan yasash uchun yoyilmani bukish chiziqlari bo'yicha bo'ling.")}`,shape:sh,name:`bunker_${v.A}x${v.B}_${v.a}x${v.b}`}}});
+   <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Bitta listdan, chok bir burchakda. Katta bunkerlarni 2 yoki 4 bo'lakdan yasash uchun yoyilmani bukish chiziqlari bo'yicha bo'ling.")}`,shape:sh,name:`bunker_${v.A}x${v.B}_${v.a}x${v.b}`,mesh:trisMesh(P,tr,0)}}});
 
 const kDIN=(r,t)=>Math.min(0.5,Math.max(0.25,(0.65+0.5*Math.log10(Math.max(r/t,0.1)))/2));
 T({id:"bend",cat:"y",ic:"bend",name:"List bukish (razvertka)",quick:1,
@@ -591,7 +631,7 @@ function viewTool(id){const t=tool(id);if(!t)return go("");head(t.name,true,t.id
     const run=()=>{const v=readVals(tb,fields);let bad=fields.some(f=>!f.opts&&!f.t&&!isFinite(v[f.k]));Object.assign(sv,v);store.set("v_"+id+"_"+mode,sv);
       const out=$("#out");if(bad){out.innerHTML=note("Barcha maydonlarga son kiriting.","warn");return}
       let r;try{r=t.calc(v,mode)}catch(e){out.innerHTML=note("Hisoblashda xato: "+esc(e.message),"warn");return}
-      if(typeof r==="string")r={html:r};out.innerHTML=r.html;if(r.shape)bindShape(out,r.name||t.id,r.shape);if(r.after)r.after(out)};
+      if(typeof r==="string")r={html:r};out.innerHTML=r.html+(r.mesh?view3dHTML():"");if(r.mesh){const cv=out.querySelector("canvas.v3d");requestAnimationFrame(()=>view3d(cv,r.mesh))}if(r.shape)bindShape(out,r.name||t.id,r.shape);if(r.after)r.after(out)};
     tb.querySelectorAll("input,select").forEach(e=>{e.oninput=run;e.onchange=run});run()};
   draw()}
 

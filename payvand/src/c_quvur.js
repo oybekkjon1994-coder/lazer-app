@@ -44,7 +44,11 @@ T({id:"branch",cat:"q",ic:"branch",name:"Tarmoq shabloni (vrezka)",quick:1,
    <h3 class="sec">O'lchamlar jadvali</h3>${tbl(["№","Burchak °","Aylana bo'yicha, mm","Balandlik, mm"],rows)}
    <h3 class="sec">Asosiy quvurdagi teshik</h3><div class="svgbox" id="hs">${svgOf(hs)}</div><div class="btns"><button class="btn" id="hdxf">Teshik DXF</button></div>
    ${note("Shablonni 1:1 masshtabda chiqaring (DXF — lazerda yupqa listdan kesish yoki printerda chop etish uchun). Shablon tarmoq quvurning tashqi yuzasiga o'raladi; balandlik 0 bo'lgan nuqta egarning eng chuqur joyi.")}`;
-  return{html,shape,name:`tarmoq_${v.D}x${v.d}_${v.a}gr`,after:root=>{root.querySelector("#hdxf").onclick=()=>saveFile(`teshik_${v.D}x${v.d}.dxf`,dxf(hs))}}}});
+  const Mb={tris:[],cols:MC};const Lh=Math.max(v.D,v.d)*1.4+Math.abs(v.e)+r/Math.tan(Math.max(a,0.3));
+  quadMesh([...Array(25)].map((_,i)=>{const x=-Lh+2*Lh*i/24;const row=[];for(let j=0;j<=48;j++){const q=2*PI*j/48;row.push([x,R0*Math.sin(q),R0*Math.cos(q)])}return row}),1,Mb);
+  const Lb=Math.max(v.D,v.d)*1.2+mx;const u=[Math.cos(a),0,Math.sin(a)],ww=[-Math.sin(a),0,Math.cos(a)];
+  quadMesh([0,1,2,3,4,5,6].map(i=>{const row=[];for(let j=0;j<=48;j++){const f=2*PI*j/48;const tt=t(f)+(Lb-t(f))*i/6;row.push([tt*u[0]+r*Math.cos(f)*ww[0],r*Math.sin(f)+v.e,tt*u[2]+r*Math.cos(f)*ww[2]])}return row}),0,Mb);
+  return{html,shape,name:`tarmoq_${v.D}x${v.d}_${v.a}gr`,mesh:Mb,after:root=>{root.querySelector("#hdxf").onclick=()=>saveFile(`teshik_${v.D}x${v.d}.dxf`,dxf(hs))}}}});
 
 T({id:"miter",cat:"q",ic:"elbow",name:"Segmentli tirsak (kesib yasash)",
  desc:"Quvurni bo'laklarga qiya kesib tirsak yasash: har bo'lakning uzunligi va kesish shabloni.",
@@ -66,7 +70,11 @@ T({id:"miter",cat:"q",ic:"elbow",name:"Segmentli tirsak (kesib yasash)",
    <h3 class="sec">Uchidagi bo'lak shabloni</h3><div class="svgbox">${svgOf(shapeEnd)}</div><div class="btns"><button class="btn p" id="m2">Uch bo'lak DXF</button><button class="btn" id="m3">Saqlab qo'yish</button></div>
    <h3 class="sec">Shablon jadvali (o'rta chiziqdan)</h3>${tbl(["№","Aylana bo'yicha, mm","Yarim uzunlik, mm"],rows)}
    ${note("Har bir kesim burchagi = tirsak burchagi ÷ (2 × (bo'laklar − 1)). Shablon jadvalidagi uzunlik — bo'lak o'rtasidan kesish chizig'igacha.")}`;
-  return{html,after:root=>{const a=root.querySelector("#m1");if(a)a.onclick=()=>saveFile(`tirsak_orta_${v.D}.dxf`,dxf(shapeMid));root.querySelector("#m2").onclick=()=>saveFile(`tirsak_uch_${v.D}.dxf`,dxf(shapeEnd));root.querySelector("#m3").onclick=()=>savePattern(`Tirsak ${v.D} mm, ${v.A}°`,n>2?shapeMid:shapeEnd)}}}});
+  const Me={tris:[],cols:MC};const piece=(am,lo,hi,ci)=>{/* o'q: am burchakdagi urinma; lo/hi: parametr chegaralari funksiyasi */
+    const T_=[-Math.sin(am),Math.cos(am),0],N_=[Math.cos(am),Math.sin(am),0];const rows=[];for(let i=0;i<=4;i++){const row=[];for(let j=0;j<=40;j++){const f=2*PI*j/40;const rho=r*Math.cos(f),z=r*Math.sin(f);const pr=lo(rho)+(hi(rho)-lo(rho))*i/4;
+      row.push([(Rb+rho)*N_[0]+pr*T_[0],(Rb+rho)*N_[1]+pr*T_[1],z])}rows.push(row)}quadMesh(rows,ci,Me)};
+  const A_=rad(v.A);piece(0,()=>-v.s,rho=>(Rb+rho)*Math.tan(al),0);for(let k=1;k<n-1;k++)piece(2*k*al,rho=>-(Rb+rho)*Math.tan(al),rho=>(Rb+rho)*Math.tan(al),k%2?1:0);piece(A_,rho=>-(Rb+rho)*Math.tan(al),()=>v.s,(n-1)%2?1:0);
+  return{html,mesh:Me,after:root=>{const a=root.querySelector("#m1");if(a)a.onclick=()=>saveFile(`tirsak_orta_${v.D}.dxf`,dxf(shapeMid));root.querySelector("#m2").onclick=()=>saveFile(`tirsak_uch_${v.D}.dxf`,dxf(shapeEnd));root.querySelector("#m3").onclick=()=>savePattern(`Tirsak ${v.D} mm, ${v.A}°`,n>2?shapeMid:shapeEnd)}}}});
 
 T({id:"flow",cat:"q",ic:"flow",name:"Oqim va diametr",quick:1,
  desc:"Quvurdan o'tadigan suv/suyuqlik miqdori, yoki kerakli oqim uchun quvur diametri.",

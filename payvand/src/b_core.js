@@ -131,3 +131,34 @@ function unfold(P,tris){
     const pick=sgn(cand[0])!==sgn(o)?cand[0]:cand[1];pos[nw]=pick;ev.push([nw,pick]);prev=t}
   return{pos,ev};
 }
+
+/* ================= 3D ko'rinish (kutubxonasiz) ================= */
+/* mesh: {tris:[[p1,p2,p3,ci],...], cols:["#rrggbb",...]} p=[x,y,z], z — yuqoriga */
+const V3={sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm:a=>{const l=Math.hypot(...a)||1;return[a[0]/l,a[1]/l,a[2]/l]}};
+function quadMesh(grid,ci,M){/* grid[i][j] nuqtalar to'ri */for(let i=0;i<grid.length-1;i++)for(let j=0;j<grid[i].length-1;j++){const a=grid[i][j],b=grid[i][j+1],c=grid[i+1][j+1],d=grid[i+1][j];M.tris.push([a,b,c,ci],[a,c,d,ci])}}
+const view3dHTML=()=>`<h3 class="sec">3D ko'rinish</h3><div class="svgbox" style="position:relative;touch-action:none"><canvas class="v3d" style="width:100%;height:340px;display:block"></canvas><div style="position:absolute;right:12px;bottom:8px;color:#9aa4b2;font-size:12px">barmoq bilan aylantiring</div></div>`;
+function view3d(cv,mesh){
+  const dpr=Math.min(2,window.devicePixelRatio||1);const W=cv.clientWidth||360,H=cv.clientHeight||340;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext("2d");g.scale(dpr,dpr);
+  let mn=[1e18,1e18,1e18],mx=[-1e18,-1e18,-1e18];mesh.tris.forEach(t=>{for(let k=0;k<3;k++)for(let a=0;a<3;a++){mn[a]=Math.min(mn[a],t[k][a]);mx[a]=Math.max(mx[a],t[k][a])}});
+  const c=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2],rad0=Math.hypot(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||1;
+  const T=mesh.tris.map(t=>{const n=V3.norm(V3.cross(V3.sub(t[1],t[0]),V3.sub(t[2],t[0])));return{p:[0,1,2].map(k=>V3.sub(t[k],c)),n,ci:t[3]}});
+  const rgb=mesh.cols.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+  let yaw=-0.7,pitch=0.5,zoom=1;const L=V3.norm([-0.4,-0.6,0.7]);
+  function draw(){g.clearRect(0,0,W,H);const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);const s=Math.min(W,H)*0.42/rad0*zoom;
+    const R=p=>{const x=p[0]*cy-p[1]*sy,y=p[0]*sy+p[1]*cy,z=p[2];const y2=y*cp-z*sp,z2=y*sp+z*cp;return[x,y2,z2]};
+    const list=T.map(t=>{const q=t.p.map(R);const n=R(t.n);return{q,n,ci:t.ci,d:(q[0][1]+q[1][1]+q[2][1])/3}}).sort((a,b)=>b.d-a.d);
+    for(const t of list){const lam=0.35+0.65*Math.abs(t.n[0]*L[0]+t.n[1]*L[1]+t.n[2]*L[2]);const k=rgb[t.ci];const col=`rgb(${k.map(v=>Math.min(255,Math.round(v*lam))).join(",")})`;
+      g.beginPath();t.q.forEach((p,i)=>{const X=W/2+p[0]*s,Y=H/2-p[2]*s;i?g.lineTo(X,Y):g.moveTo(X,Y)});g.closePath();g.fillStyle=col;g.strokeStyle=col;g.lineWidth=0.6;g.fill();g.stroke()}}
+  const pts=new Map();let d0=0;
+  cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===2){const [a,b]=[...pts.values()];d0=Math.hypot(a[0]-b[0],a[1]-b[1])}};
+  cv.onpointermove=e=>{if(!pts.has(e.pointerId))return;const o=pts.get(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===1){yaw+=(e.clientX-o[0])*0.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-o[1])*0.01))}
+    else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(d0)zoom=Math.max(0.3,Math.min(5,zoom*d/d0));d0=d}draw()};
+  cv.onpointerup=cv.onpointercancel=e=>{pts.delete(e.pointerId);d0=0};
+  cv.onwheel=e=>{e.preventDefault();zoom=Math.max(0.3,Math.min(5,zoom*(e.deltaY<0?1.1:0.9)));draw()};
+  draw();
+}
+
+const MC=["#d9a441","#9aa6b2","#5f9ed8"];
+function revMesh(rings,ci,M,n=48){/* rings: [[r,z],...] */const g=rings.map(([r,z])=>{const row=[];for(let j=0;j<=n;j++){const a=2*PI*j/n;row.push([r*Math.cos(a),r*Math.sin(a),z])}return row});quadMesh(g,ci,M)}
+function trisMesh(P,tr,ci){return{tris:tr.map(t=>[P[t[0]],P[t[1]],P[t[2]],ci]),cols:MC}}
