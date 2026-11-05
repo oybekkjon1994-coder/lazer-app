@@ -1,0 +1,6 @@
+{
+  "appId": "uz.metart.payvand",
+  "appName": "Payvand Usta",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
