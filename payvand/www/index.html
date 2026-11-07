@@ -171,12 +171,14 @@ function dxf(sh){
   p("0","ENDTAB","0","ENDSEC","0","SECTION","2","ENTITIES");
   const n=v=>(Math.round(v*1000)/1000).toString();
   (sh.cut||[]).forEach(([pts,closed])=>{p("0","POLYLINE","8","KESISH","66","1","70",closed?"1":"0");pts.forEach(q=>p("0","VERTEX","8","KESISH","10",n(q[0]),"20",n(q[1])));p("0","SEQEND","8","KESISH")});
+  (sh.line||[]).forEach(([a,b])=>p("0","LINE","8","KESISH","10",n(a[0]),"20",n(a[1]),"11",n(b[0]),"21",n(b[1])));
+  (sh.circ||[]).forEach(([x,y,r])=>p("0","CIRCLE","8","KESISH","10",n(x),"20",n(y),"40",n(r)));
   (sh.bend||[]).forEach(([a,b])=>p("0","LINE","8","BUKISH","10",n(a[0]),"20",n(a[1]),"11",n(b[0]),"21",n(b[1])));
   (sh.text||[]).forEach(([x,y,h,s])=>p("0","TEXT","8","MATN","10",n(x),"20",n(y),"40",n(h),"1",s));
   p("0","ENDSEC","0","EOF");return L.join("\n");
 }
 function bbox(sh){let a=[1e18,1e18,-1e18,-1e18];const add=q=>{a[0]=Math.min(a[0],q[0]);a[1]=Math.min(a[1],q[1]);a[2]=Math.max(a[2],q[0]);a[3]=Math.max(a[3],q[1])};
-  (sh.cut||[]).forEach(([pts])=>pts.forEach(add));(sh.bend||[]).forEach(l=>l.forEach(add));return a}
+  (sh.cut||[]).forEach(([pts])=>pts.forEach(add));(sh.bend||[]).forEach(l=>l.forEach(add));(sh.circ||[]).forEach(([x,y,r])=>{add([x-r,y-r]);add([x+r,y+r])});(sh.line||[]).forEach(l=>l.forEach(add));return a}
 function svgOf(sh,{dims=true}={}){
   const b=bbox(sh),w=b[2]-b[0],h=b[3]-b[1],m=Math.max(w,h)*0.06+1,vb=[b[0]-m,-(b[3]+m),w+2*m,h+2*m];
   const sw=Math.max(w,h)/320;
@@ -184,6 +186,10 @@ function svgOf(sh,{dims=true}={}){
   let s=`<svg viewBox="${vb.map(v=>v.toFixed(2)).join(" ")}" xmlns="http://www.w3.org/2000/svg">`;
   (sh.fill||[]).forEach(pts=>s+=`<polygon points="${P(pts)}" fill="#e8b23a22"/>`);
   (sh.cut||[]).forEach(([pts,cl])=>s+=cl?`<polygon points="${P(pts)}" fill="#e8b23a18" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`:`<polyline points="${P(pts)}" fill="none" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`);
+  (sh.circ||[]).forEach(([x,y,r])=>s+=`<circle cx="${x}" cy="${-y}" r="${r}" fill="none" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`);
+  (sh.line||[]).forEach(([a,c,col])=>s+=`<line x1="${a[0]}" y1="${-a[1]}" x2="${c[0]}" y2="${-c[1]}" stroke="${col||"#e8b23a"}" stroke-width="${sw*2.2}" stroke-linecap="round"/>`);
+  (sh.label||[]).forEach(([x,y,t,col])=>s+=`<text x="${x}" y="${-y}" fill="${col||"#eef1f5"}" font-size="${Math.max(w,h)/24}" text-anchor="middle" font-weight="700">${esc(t)}</text>`);
+  (sh.dot||[]).forEach(([x,y])=>s+=`<circle cx="${x}" cy="${-y}" r="${sw*4}" fill="#4ea3ff"/>`);
   (sh.bend||[]).forEach(([a,c])=>s+=`<line x1="${a[0]}" y1="${-a[1]}" x2="${c[0]}" y2="${-c[1]}" stroke="#4ea3ff" stroke-width="${sw}" stroke-dasharray="${sw*6} ${sw*4}"/>`);
   if(dims)s+=`<text x="${b[0]+w/2}" y="${-(b[1])+m*0.8}" fill="#9aa4b2" font-size="${Math.max(w,h)/26}" text-anchor="middle">${fmt0(w)} × ${fmt0(h)} mm</text>`;
   return s+"</svg>";
@@ -361,7 +367,7 @@ T({id:"hydro",cat:"q",ic:"drop",name:"Gidravlik sinov",quick:1,
    +note(okk?"✔ Sinov bosimida quvur devori xavfsiz chegarada.":"✖ Sinov bosimida devor kuchlanishi juda katta! Qalinroq quvur yoki kichikroq bosim kerak.",okk?"ok":"warn")
    +note("Bosimni sekin, bosqichma-bosqich ko'taring. Sinov bosimida kamida 10 daqiqa ushlab turing (ko'pincha 30 daqiqa–1 soat), keyin ishchi bosimga tushirib, barcha choklarni ko'zdan kechiring. Sinovni faqat suv bilan o'tkazing, havodan foydalanmang. Bu hisob taxminiy: rasmiy obyektlarda loyiha va me'yoriy hujjat talablari amal qiladi.")}});
 
-T({id:"purge",cat:"q",ic:"purge",name:"Argon bilan puflash (purge)",quick:1,
+T({id:"purge",cat:"p",ic:"purge",name:"Argon bilan puflash (purge)",quick:1,
  desc:"Zanglamas quvurni payvandlashdan oldin ichini argon bilan to'ldirish: qancha vaqt va qancha gaz kerak.",
  fields:()=>[{k:"d",l:"Quvur ichki diametri",u:"mm",v:52},{k:"L",l:"Puflanadigan uzunlik",u:"mm",v:500},{k:"q",l:"Gaz sarfi",u:"l/min",v:10},{k:"n",l:"Hajm almashinuvi",v:"5",opts:[["3","3 marta (uglerodli po'lat)"],["5","5 marta (zanglamas, tavsiya)"],["7","7 marta (titan, juda toza)"]]}],
  calc(v){const V=PI*(v.d/2)**2*v.L/1e6;const gas=V*(+v.n);const tm=gas/v.q;
@@ -594,6 +600,244 @@ T({id:"gas",cat:"m",ic:"cyl",name:"Gaz ballon zaxirasi",
  fields:()=>[{k:"V",l:"Ballon hajmi",u:"litr",v:40},{k:"P",l:"Ballondagi bosim",u:"bar",v:150},{k:"q",l:"Gaz sarfi",u:"l/min",v:12},{k:"g",l:"Gaz",v:"ar",opts:[["ar","Argon / aralashma"],["co2","Karbonat (CO₂, suyuq)"]]}],
  calc(v){const gas=v.g==="co2"?v.V*0.6*509:v.V*v.P;const min=gas/v.q;
   return`<div class="res">${R("Yetadi (sof yonish vaqti)",fmt(min/60,1),"soat",1)}${R("Gaz miqdori",fmt0(gas),"litr")}</div>`+note(v.g==="co2"?"40 litrli CO₂ ballonida ~24 kg suyuq karbonat, bu ~12 000 litr gaz. Bosim o'lchagich CO₂ da qolgan miqdorni ko'rsatmaydi — og'irlik bo'yicha tekshiring.":"Argon miqdori = ballon hajmi × bosim. 40 l × 150 bar ≈ 6 m³.")}});
+/* ================= QUVUR — qo'shimchalar ================= */
+/* ASME B16.9 fitinglar: NPS, DN, OD, 90°LR A, 45°LR B, 90°SR A, Tройник C, Reduktor H, Zaglushka E (mm) */
+const FIT=[["1/2",15,21.3,38,16,"—",25,"—",25],["3/4",20,26.7,38,19,"—",29,38,25],["1",25,33.4,38,22,25,38,51,38],["1¼",32,42.2,48,25,32,48,51,38],["1½",40,48.3,57,29,38,57,64,38],
+ ["2",50,60.3,76,35,51,64,76,38],["2½",65,73.0,95,44,64,76,89,38],["3",80,88.9,114,51,76,86,89,51],["4",100,114.3,152,64,102,105,102,64],["5",125,141.3,190,79,127,124,127,76],
+ ["6",150,168.3,229,95,152,143,140,89],["8",200,219.1,305,127,203,178,152,102],["10",250,273.0,381,159,254,216,178,127],["12",300,323.8,457,190,305,254,203,152],
+ ["14",350,355.6,533,222,356,279,330,165],["16",400,406.4,610,254,406,305,356,178],["18",450,457,686,286,457,343,381,203],["20",500,508,762,318,508,381,508,229],["24",600,610,914,381,610,432,508,267]];
+const DNOPT=FIT.map(f=>[String(f[1]),`DN${f[1]} (${f[0]}″) — Ø${f[2]}`]);
+const fit=dn=>FIT.find(f=>String(f[1])===String(dn));
+T({id:"fittings",cat:"q",sub:"Chizma va ma'lumot",ic:"table",name:"Fitinglar o'lchamlari",
+ desc:"Payvandlanadigan fitinglar (ASME B16.9): tirsak, tройник, reduktor va zaglushkaning markazdan uchigacha o'lchami.",
+ calc(){return tbl(["DN (dyuym)","Ø, mm","90° uzun","45° uzun","90° qisqa","Tройник","Reduktor","Zaglushka"],FIT.map(f=>[`DN${f[1]} (${f[0]}″)`,fmt(f[2],1),f[3],f[4],f[5],f[6],f[7],f[8]]))
+  +note("90° va 45° — tirsak markazidan uchigacha (A, B). Tройник — markazdan uchigacha (C). Reduktor — umumiy uzunlik (H). Taxminiy natija — ishdan oldin fitingni o'lchab tekshiring.")}});
+
+T({id:"single",cat:"q",sub:"Tirsak va offset",ic:"elbow",name:"Bitta tirsak (kesib burchak olish)",quick:0,
+ desc:"Tayyor 90° tirsakdan kerakli burchakdagi tirsak kesib olish: tashqi, ichki va o'rta yoy bo'yicha belgilar, tirsak cheki.",
+ fields:()=>[{k:"dn",l:"Quvur o'lchami",v:"100",opts:DNOPT,w:1},{k:"ty",l:"Tirsak turi",v:"lr",opts:[["lr","Uzun radius (1,5D)"],["sr","Qisqa radius (1D)"]]},{k:"a",l:"Kerakli burchak",u:"°",v:30}],
+ calc(v){const f=fit(v.dn);const Rb=v.ty==="lr"?f[3]:(+f[5]||f[3]*2/3),R=f[2]/2,a=rad(v.a);
+  return`<div class="res">${R_("Tirsak cheki (take-out)",fmt(Rb*Math.tan(a/2),1),"mm",1)}${R_("Tashqi yoy bo'yicha belgi",fmt((Rb+R)*a,1),"mm")}${R_("Ichki yoy bo'yicha belgi",fmt((Rb-R)*a,1),"mm")}${R_("O'rta chiziq bo'yicha",fmt(Rb*a,1),"mm")}${R_("Bukish radiusi",fmt(Rb,1),"mm")}</div>`
+  +note("Tirsakning bir uchidan tashqi, ichki va yon tomonlarda yoy bo'ylab belgilarni qo'ying, ularni o'rab chiziq bilan tutashtirib kesing. Kesish chizig'i tirsak markaziga yo'nalgan bo'lishi kerak.")}});
+const R_=R;
+
+T({id:"teeelbow",cat:"q",sub:"Tirsak va offset",ic:"branch",name:"Tройник + tirsak",
+ desc:"Tройникdan chiqib, tirsak bilan nuqtaga borish: ikki quvur bo'lagining kesish uzunligi.",
+ fields:()=>[{k:"dn",l:"Quvur o'lchami",v:"50",opts:DNOPT,w:1},{k:"Y",l:"Asosiy quvurdan maqsadgacha (tik)",u:"mm",v:600},{k:"X",l:"Yonga siljish",u:"mm",v:300},{k:"a",l:"Tirsak burchagi",v:"45",opts:ANG},{k:"g",l:"Payvand tirqishi",u:"mm",v:2}],
+ calc(v){const f=fit(v.dn);const a=rad(+v.a),C=f[6],A=f[3];const to=A*Math.tan(a/2);const h=v.Y-v.X/Math.tan(a);const L1=h-C-to-2*v.g,L2=v.X/Math.sin(a)-to-v.g;
+  return`<div class="res">${R("1-bo'lak (tройникdan tirsakkacha)",fmt(L1,1),"mm",1)}${R("2-bo'lak (tirsakdan keyin, markazgacha)",fmt(L2,1),"mm",1)}${R("Tirsak markazi balandligi",fmt(h,1),"mm")}${R("Tройник C",fmt(C,0),"mm")}${R("Tirsak cheki",fmt(to,1),"mm")}</div>`
+  +(L1<0?note("Balandlik yetarli emas — kichikroq burchak yoki kattaroq balandlik kerak.","warn"):"")+note("2-bo'lak uzunligi maqsad nuqtasigacha (u yerda boshqa fiting bo'lsa, uning chekini ham ayiring).")}});
+
+T({id:"reducer",cat:"q",sub:"Belgilash va kesish",ic:"cone",name:"Reduktor yasash (konsentrik/eksentrik)",
+ desc:"Listdan quvur reduktori (o'tish) yoyilmasi: markazi bir chiziqda yoki bir tomoni tekis (eksentrik). DXF bilan.",
+ fields:()=>[{k:"D",l:"Katta diametr",u:"mm",v:219},{k:"d",l:"Kichik diametr",u:"mm",v:114},{k:"L",l:"Uzunlik",u:"mm",v:200},{k:"ty",l:"Turi",v:"c",opts:[["c","Konsentrik"],["e","Eksentrik (bir tomoni tekis)"]]},{k:"t",l:"Qalinlik",u:"mm",v:3},{k:"m",l:"O'lchamlar",v:"o",opts:DIMT}],
+ calc(v){const R0=neu(v.D,v.t,v.m)/2,r0=neu(v.d,v.t,v.m)/2,e=v.ty==="e"?R0-r0:0,N=48;const P={},tr=[];
+  for(let k=0;k<=N;k++){const f=PI+2*PI*k/N;P["B"+k]=[R0*Math.cos(f),R0*Math.sin(f),0];P["T"+k]=[e+r0*Math.cos(f),r0*Math.sin(f),v.L]}
+  for(let k=0;k<N;k++){tr.push(["B"+k,"T"+k,"B"+(k+1)],["T"+k,"B"+(k+1),"T"+(k+1)])}
+  const {pos}=unfold(P,tr);const bot=[],top=[];for(let k=0;k<=N;k++){bot.push(pos["B"+k]);top.push(pos["T"+k])}
+  const sh={cut:[[[...bot,...top.reverse()],true]],bend:[0,6,12,18,24,30,36,42,48].map(k=>[pos["B"+k],pos["T"+k]])};const b=bbox(sh);
+  return{html:`<div class="res">${R("List o'lchami (taxm.)",`${fmt0(b[2]-b[0])} × ${fmt0(b[3]-b[1])}`,"mm",1)}${R("Siljish (eksentrik)",fmt(e,1),"mm")}${R("Og'irlik (po'lat)",fmt(area(sh.cut[0][0])*v.t*7.85e-6,2),"kg")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Chok katta tomonda joylashgan. Eksentrik reduktorda tekis tomon — chokka qarama-qarshi tomon.")}`,
+   shape:sh,name:`reduktor_${v.D}x${v.d}`,mesh:trisMesh(P,tr,0)}}});
+
+T({id:"elbranch",cat:"q",sub:"Belgilash va kesish",ic:"branch",name:"Tirsakka vrezka shabloni",
+ desc:"Tirsakning tashqi yoki yon tomoniga quvur ulash uchun kesish shabloni (sonli hisob bilan).",
+ fields:()=>[{k:"dn",l:"Tirsak o'lchami",v:"150",opts:DNOPT,w:1},{k:"d",l:"Tarmoq quvur diametri",u:"mm",v:60.3},{k:"pos",l:"Joyi",v:"o",opts:[["o","Tashqi tomon (yoy o'rtasi)"],["s","Yon tomon"]]},{k:"u",l:"Tirsak burchagidagi joyi",u:"°",v:45},{k:"n",l:"Bo'laklar",v:"16",opts:[["8","8"],["16","16"],["24","24"]]}],
+ calc(v){const f=fit(v.dn),Rb=f[3],R0=f[2]/2,r=v.d/2,u0=rad(v.u);if(r>R0)return{html:note("Tarmoq quvur tirsakdan katta bo'lmasin.","warn")};
+  const O=[Rb*Math.cos(u0),Rb*Math.sin(u0),0],rd=[Math.cos(u0),Math.sin(u0),0],tg=[-Math.sin(u0),Math.cos(u0),0],zz=[0,0,1];
+  const ax=v.pos==="o"?rd:zz,e1=v.pos==="o"?zz:rd,e2=tg;
+  const F=q=>{const rr=Math.hypot(q[0],q[1])-Rb;return rr*rr+q[2]*q[2]-R0*R0};
+  const Q=(t,ph)=>[0,1,2].map(i=>O[i]+t*ax[i]+r*(Math.cos(ph)*e1[i]+Math.sin(ph)*e2[i]));
+  const tOf=ph=>{let hi=R0*2+r,lo=hi;while(lo>-R0*2&&F(Q(lo,ph))>0)lo-=0.5;if(lo<=-R0*2)return NaN;for(let i=0;i<40;i++){const m=(lo+hi)/2;F(Q(m,ph))>0?hi=m:lo=m}return(lo+hi)/2};
+  const M=144,ts=[];for(let i=0;i<=M;i++)ts.push(tOf(2*PI*i/M));if(ts.some(isNaN))return{html:note("Bu joyda quvur tirsakka to'liq tushmaydi — o'lchamni tekshiring.","warn")};
+  const mn=Math.min(...ts),mx=Math.max(...ts),C=2*PI*r,top=mx-mn+40;const pts=ts.map((t,i)=>[r*2*PI*i/M,t-mn]);
+  const sh={cut:[[[...pts,[C,top],[0,top]],true]],bend:[]};const N=+v.n,rows=[];for(let k=0;k<N;k++){const i=Math.round(k*M/N);rows.push([k+1,fmt(pts[i][0],1),fmt(pts[i][1],1)]);sh.bend.push([pts[i],[pts[i][0],top]])}
+  const Mb={tris:[],cols:MC};const UA=rad(90);quadMesh([...Array(19)].map((_,i)=>{const uu=UA*i/18;const row=[];for(let j=0;j<=36;j++){const vv=2*PI*j/36;const rr=Rb+R0*Math.cos(vv);row.push([rr*Math.cos(uu),rr*Math.sin(uu),R0*Math.sin(vv)])}return row}),1,Mb);
+  const Lb=mx+R0*1.2;quadMesh([0,1,2,3,4].map(s=>{const row=[];for(let i=0;i<=M;i+=4){const t=ts[i]+(Lb-ts[i])*s/4;row.push(Q(t,2*PI*i/M))}return row}),0,Mb);
+  return{html:`<div class="res">${R("Shablon uzunligi",fmt(C,1),"mm",1)}${R("Egar chuqurligi",fmt(mx-mn,1),"mm")}${R("Tirsak radiusi",fmt(Rb,0),"mm")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${tbl(["№","Aylana bo'yicha, mm","Balandlik, mm"],rows)}`,shape:sh,name:`tirsak_vrezka_DN${v.dn}_${v.d}`,mesh:Mb}}});
+
+T({id:"tubebend",cat:"q",sub:"Belgilash va kesish",ic:"bend",name:"Trubani bukish (trubagib)",
+ desc:"Bir necha bukishli truba: kesish uzunligi va har bir bukish boshlanadigan belgi.",
+ fields:()=>[{k:"L",l:"To'g'ri qismlar (kesishgan nuqtalar orasi, vergul bilan)",v:"300, 500, 300",t:"text",w:1},{k:"A",l:"Bukish burchaklari (vergul bilan)",v:"90, 90",t:"text",w:1},{k:"R",l:"Bukish radiusi (CLR)",u:"mm",v:60}],
+ calc(v){const L=String(v.L).split(/[,;\s]+/).map(Number).filter(x=>x>0),A=String(v.A).split(/[,;\s]+/).map(Number).filter(x=>x>0);
+  if(A.length!==L.length-1)return note("Burchaklar soni to'g'ri qismlardan bitta kam bo'lsin.","warn");
+  const Tn=A.map(a=>v.R*Math.tan(rad(a)/2)),arc=A.map(a=>v.R*rad(a));let pos=0;const rows=[];
+  for(let i=0;i<A.length;i++){const straight=L[i]-(i>0?Tn[i-1]:0)-Tn[i];pos+=straight;rows.push([i+1,fmt(A[i],0)+"°",fmt(pos,1),fmt(pos+arc[i],1)]);pos+=arc[i]}
+  const last=L[L.length-1]-Tn[Tn.length-1];const total=pos+last;
+  return`<div class="res">${R("Kesish uzunligi",fmt(total,1),"mm",1)}${R("Bukishlar soni",A.length)}${R("Tejalish (yig'indi)",fmt(L.reduce((s,x)=>s+x,0)-total,1),"mm")}</div>`+tbl(["Bukish","Burchak","Boshlanish belgisi, mm","Tugash, mm"],rows)+note("Belgilar truba boshidan o'lchanadi. Bukilgandan keyin truba biroz orqaga qaytadi (springback) — 1–3° ortiqcha buking.")}});
+
+/* Flanetslar EN 1092-1 PN16: DN, D, K, boltlar soni, M, qalinlik (taxm.) */
+const FLG=[[15,95,65,4,12,16],[20,105,75,4,12,18],[25,115,85,4,12,18],[32,140,100,4,16,18],[40,150,110,4,16,18],[50,165,125,4,16,18],[65,185,145,8,16,18],[80,200,160,8,16,20],[100,220,180,8,16,20],[125,250,210,8,16,22],[150,285,240,8,20,22],[200,340,295,12,20,24],[250,405,355,12,24,26],[300,460,410,12,24,28],[350,520,470,16,24,30],[400,580,525,16,27,32]];
+const TQ={12:79,16:195,20:380,24:660,27:970},PITCH={12:1.75,16:2,20:2.5,24:3,27:3};
+const ORDER=n=>{const o={4:[1,3,2,4],8:[1,5,3,7,2,6,4,8],12:[1,7,4,10,2,8,5,11,3,9,6,12],16:[1,9,5,13,3,11,7,15,2,10,6,14,4,12,8,16]};return o[n]||[...Array(n)].map((_,i)=>i+1)};
+const pipeOD=dn=>{const f=FIT.find(x=>x[1]===dn);const g=PIPES.find(p=>p[0]===dn);return g?g[2]:f?f[2]:dn};
+T({id:"flbolt",cat:"q",sub:"Flanetslar",ic:"gauge",name:"Flanets boltlari",
+ desc:"PN16 flanets: boltlar soni va o'lchami, bolt uzunligi, tortish momenti va tartibi. Tekis flanets DXF (lazer uchun).",
+ fields:()=>[{k:"dn",l:"Flanets DN",v:"100",opts:FLG.map(f=>[String(f[0]),"DN"+f[0]]),w:1},{k:"g",l:"Prokladka qalinligi",u:"mm",v:3},{k:"t",l:"Flanets qalinligi (0 — jadvaldan)",u:"mm",v:0}],
+ calc(v){const f=FLG.find(x=>String(x[0])===String(v.dn));const [dn,D,K,n,M]=f;const t=v.t>0?v.t:f[5];const hole=M+(M>=27?3:2);
+  const Lb=Math.ceil((2*t+v.g+0.8*M+3*PITCH[M])/5)*5;const od=pipeOD(dn);
+  const sh={circ:[[0,0,D/2],[0,0,od/2+0.5],...[...Array(n)].map((_,i)=>{const a=2*PI*i/n+PI/n;return[K/2*Math.cos(a),K/2*Math.sin(a),hole/2]})]};
+  return{html:`<div class="res">${R("Boltlar",`${n} × M${M}`,"",1)}${R("Bolt uzunligi (gayka bilan)",fmt0(Lb),"mm")}${R("Tortish momenti (8.8, moylangan)",`≈ ${fmt0(TQ[M]*0.7)}–${fmt0(TQ[M])}`,"N·m")}${R("Teshik diametri",fmt0(hole),"mm")}${R("Boltlar aylanasi K",fmt0(K),"mm")}${R("Tashqi diametr D",fmt0(D),"mm")}</div>
+   <h3 class="sec">Tortish tartibi (yulduzcha)</h3><div class="card" style="font-size:18px;font-weight:700;letter-spacing:1px">${ORDER(n).join(" → ")}</div>
+   <div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${note("Boltlarni 3 bosqichda torting: 30% → 70% → 100%, har safar yulduzcha tartibida, oxirida aylana bo'yicha bir marta tekshiring. Moment prokladka turiga qarab o'zgaradi — prokladka ishlab chiqaruvchisi ko'rsatmasiga amal qiling.")}`,shape:sh,name:`flanets_PN16_DN${dn}`}}});
+
+T({id:"flgasket",cat:"q",sub:"Flanetslar",ic:"cyl",name:"Flanets prokladkasi",
+ desc:"PN16 flanets uchun prokladka o'lchamlari: ichki (boltlar ichida) yoki to'liq yuzali (teshikli). DXF — lazer yoki plotterda kesish uchun.",
+ fields:()=>[{k:"dn",l:"Flanets DN",v:"100",opts:FLG.map(f=>[String(f[0]),"DN"+f[0]]),w:1},{k:"ty",l:"Turi",v:"i",opts:[["i","Boltlar ichida (IBC)"],["f","To'liq yuzali (teshikli)"]]}],
+ calc(v){const f=FLG.find(x=>String(x[0])===String(v.dn));const [dn,D,K,n,M]=f;const hole=M+(M>=27?3:2);const id=pipeOD(dn)+1;const od=v.ty==="i"?K-hole:D;
+  const sh={circ:[[0,0,od/2],[0,0,id/2]]};if(v.ty==="f")for(let i=0;i<n;i++){const a=2*PI*i/n+PI/n;sh.circ.push([K/2*Math.cos(a),K/2*Math.sin(a),hole/2])}
+  return{html:`<div class="res">${R("Tashqi diametr",fmt0(od),"mm",1)}${R("Ichki diametr",fmt0(id),"mm")}${v.ty==="f"?R("Teshiklar",`${n} × Ø${hole}`)+R("Teshiklar aylanasi",fmt0(K),"mm"):""}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`,shape:sh,name:`prokladka_DN${dn}_${v.ty}`}}});
+
+T({id:"bank",cat:"q",sub:"Chizma va ma'lumot",ic:"offset",name:"Parallel quvurlar (pipe bank)",
+ desc:"Bir nechta parallel quvur birga offset qilinganda har bir quvur offseti qancha oldin/keyin boshlanishi.",
+ fields:()=>[{k:"n",l:"Quvurlar soni",v:4},{k:"S",l:"Quvurlar orasi (markazdan)",u:"mm",v:200},{k:"a",l:"Offset burchagi",v:"45",opts:ANG},{k:"H",l:"Offset (siljish)",u:"mm",v:500}],
+ calc(v){const a=rad(+v.a),k=v.S*Math.tan(a/2),n=Math.max(1,Math.round(v.n));const rows=[];for(let i=0;i<n;i++)rows.push([i+1,fmt(i*k,1),fmt(v.H/Math.sin(a),1)]);
+  return`<div class="res">${R("Har keyingi quvur siljishi",fmt(k,1),"mm",1)}${R("Qiya uzunlik (barchasida)",fmt(v.H/Math.sin(a),1),"mm")}</div>`+tbl(["Quvur","Boshlanishi siljiydi, mm","Qiya uzunlik, mm"],rows)+note("1-quvur — burilishning ichki tomonidagisi. Har bir keyingi quvurning offset boshlanishi va tugashi ko'rsatilgan masofaga suriladi, shunda quvurlar orasi bir xil qoladi.")}});
+
+T({id:"jacket",cat:"q",sub:"Chizma va ma'lumot",ic:"cyl",name:"G'ilofli quvur (truba ichida truba)",
+ desc:"Ichki quvur g'ilof (tashqi quvur) ichida: oraliq, markazlash tayanchi balandligi va oraliq hajmi.",
+ fields:()=>[{k:"d",l:"Ichki quvur tashqi diametri",u:"mm",v:57},{k:"D",l:"G'ilof tashqi diametri",u:"mm",v:108},{k:"t",l:"G'ilof devori",u:"mm",v:4},{k:"L",l:"Uzunlik",u:"m",v:6}],
+ calc(v){const Di=v.D-2*v.t,gap=(Di-v.d)/2;const A=PI*(Di*Di-v.d*v.d)/4/1e6;
+  return`<div class="res">${R("Oraliq (har tomondan)",fmt(gap,1),"mm",1)}${R("Tayanch balandligi",fmt(gap-1,1),"mm")}${R("Oraliq hajmi 1 m",fmt(A*1000,2),"l/m")}${R("Jami oraliq hajmi",fmt(A*1000*v.L,1),"litr")}${R("Tayanchlar oralig'i (taxm.)",fmt0(Math.min(3000,Math.max(1000,v.d*25))),"mm")}</div>`
+  +(gap<5?note("Oraliq juda kichik — suyuqlik yaxshi aylanmaydi.","warn"):"")+note("Markazlash tayanchlarini aylanaga 3–4 tadan (120° yoki 90°) payvandlang, tayanch balandligi oraliqdan 1 mm kam bo'lsin.")}});
+
+/* ---- jurnallar (sinov, chok) ---- */
+function makeLog(id,cat,sub,ic,name,desc,fields,csvName){
+  T({id,cat,sub,ic,name,desc,custom:1,render(root){const key="log_"+id;const L=store.get(key,[]);const today=new Date().toISOString().slice(0,10);
+    root.innerHTML=`<div class="card"><h4>Yangi yozuv</h4>${form(fields.map(f=>f.k==="sana"?{...f,v:today}:f),{})}<div class="btns"><button class="btn p" id="add">Qo'shish</button><button class="btn" id="csv">CSV yuklab olish</button></div></div>
+     <h3 class="sec">Yozuvlar (${L.length})</h3>${L.length?L.map((r,i)=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(r[fields[0].k]||"")}</b><button class="btn" style="flex:none;min-width:0;padding:6px 12px" data-x="${i}">✕</button></div><div class="desc" style="margin:6px 0 0">${fields.slice(1).map(f=>`${esc(f.l)}: <b style="color:var(--tx)">${esc(r[f.k]??"")}</b>`).join(" · ")}</div></div>`).join(""):`<div class="empty">Hali yozuv yo'q</div>`}`;
+    root.querySelector("#add").onclick=()=>{const v=readVals(root,fields.map(f=>({...f,t:"text"})));L.unshift(v);store.set(key,L);toast("Yozuv qo'shildi");this.render(root)};
+    root.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{L.splice(+b.dataset.x,1);store.set(key,L);this.render(root)});
+    root.querySelector("#csv").onclick=()=>{const q=s=>`"${String(s??"").replace(/"/g,'""')}"`;saveFile(csvName,"﻿"+[fields.map(f=>q(f.l)).join(";"),...L.map(r=>fields.map(f=>q(r[f.k])).join(";"))].join("\n"))}}});
+}
+makeLog("testlog","q","Sinov va hisob","table","Sinov jurnali","Gidravlik sinovlar qaydnomasi: liniya, bosim, vaqt, natija. Telefonda saqlanadi, CSV (Excel) qilib yuboriladi.",
+ [{k:"liniya",l:"Liniya / obyekt",v:"",t:"text",w:1},{k:"sana",l:"Sana",v:"",t:"date"},{k:"bosim",l:"Sinov bosimi, bar",v:"",t:"text"},{k:"vaqt",l:"Ushlab turish, daqiqa",v:"30",t:"text"},{k:"natija",l:"Natija",v:"O'tdi",opts:[["O'tdi","O'tdi"],["O'tmadi","O'tmadi"]]},{k:"izoh",l:"Izoh",v:"",t:"text",w:1}],"sinov_jurnali.csv");
+/* ================= PAYVAND — qo'shimchalar ================= */
+const GAS={
+ "mig-cs":["82% Ar + 18% CO₂ (yoki 100% CO₂ — arzon, ko'proq sachraydi)","12–18"],"mig-ss":["98% Ar + 2% CO₂ (yoki 98% Ar + 2% O₂)","12–16"],"mig-al":["100% argon (qalin alyuminiyda Ar + 25–50% He)","15–20"],
+ "mig-cu":["100% argon (qalinda Ar + He)","15–20"],"mig-ti":["100% argon, yuqori tozalik","15–20"],
+ "tig-cs":["100% argon","6–10"],"tig-ss":["100% argon (+ quvur ichini puflash)","6–10"],"tig-al":["100% argon","8–12"],"tig-cu":["100% argon yoki Ar + He","8–12"],"tig-ti":["100% argon + orqa himoya (trailing shield)","10–14"],
+ "fc-cs":["Gazli flyus sim: 100% CO₂ yoki 75% Ar + 25% CO₂; o'zi himoyalanadigan sim — gazsiz","15–20"],"fc-ss":["75% Ar + 25% CO₂ yoki 100% CO₂ (sim turiga qarang)","15–20"],"fc-al":["Bu jarayon alyuminiyga ishlatilmaydi","—"],"fc-cu":["Ishlatilmaydi","—"],"fc-ti":["Ishlatilmaydi","—"]};
+T({id:"gassel",cat:"p",sub:"Sozlash",ic:"purge",name:"Gaz tanlash va sarfi",
+ desc:"Jarayon va metall bo'yicha himoya gazi va ballon sarfi.",
+ fields:()=>[{k:"p",l:"Jarayon",v:"mig",opts:[["mig","Yarim avtomat (MIG/MAG)"],["tig","Argon (TIG)"],["fc","Flyusli sim (FCAW)"]],w:1},{k:"m",l:"Metall",v:"cs",opts:[["cs","Qora po'lat"],["ss","Zanglamas"],["al","Alyuminiy"],["cu","Mis"],["ti","Titan"]],w:1},{k:"w",l:"Shamol / ochiq joy",v:"0",opts:[["0","Yo'q (xona ichida)"],["1","Bor (ochiq havoda)"]]}],
+ calc(v){const g=GAS[v.p+"-"+v.m];return`<div class="list"><div class="r big"><div class="l">Gaz</div><div class="v" style="font-size:20px;line-height:1.35">${g[0]}</div></div><div class="r"><div class="l">Gaz sarfi</div><div class="v">${g[1]}<small>l/min</small></div></div></div>`
+  +note(v.w==="1"?"Ochiq havoda gaz shamolda uchib ketadi: to'siq qo'ying yoki o'zi himoyalanadigan flyusli sim / elektrod ishlating. Sarfni oshirish yordam bermaydi.":"Sarf juda ko'p bo'lsa ham yomon — havo aralashib g'ovaklik paydo bo'ladi. Soplo diametri (mm) × 1 ≈ l/min — oddiy qoida.")}});
+
+const DEF=[
+ ["por","G'ovaklik (teshikchalar)",["Gaz kam yoki ko'p, shamol","Metall iflos, zang, moy, bo'yoq","Elektrod nam (quritilmagan)","Yoy juda uzun"],["Gaz sarfini 12–16 l/min qiling, shamoldan to'sing","Chok joyini yaltiroq qilib tozalang","Elektrodni 250–350°C da 1 soat quriting (UONI)","Yoyni qisqa tuting"]],
+ ["crack","Yoriqlar",["Metall tez soviydi (qalin/sovuq)","Uglerodi ko'p po'lat","Chok oxirida krater qoldi","Noto'g'ri elektrod/sim"],["Oldindan qizdiring, sekin soviting","Kam vodorodli elektrod (UONI-13/55)","Chok oxirida krater to'ldiring","Metallga mos elektrod tanlang («Metallar mosligi»)"]],
+ ["lof","Chala erish / chala payvand",["Tok past","Tezlik katta","Elektrod burchagi noto'g'ri","Chetlar kesilmagan, tirqish kichik"],["Tokni 10–15% oshiring","Sekinroq yuring","Elektrodni 70–80° ushlang","Qalin metallda V-kesim va 1,5–3 mm tirqish qoldiring"]],
+ ["uc","Chok cheti o'yilishi (podrez)",["Tok juda baland","Yoy uzun","Elektrod burchagi noto'g'ri","Tezlik katta"],["Tokni kamaytiring","Yoyni qisqartiring","Chetlarda biroz to'xtab o'ting","Tezlikni kamaytiring"]],
+ ["sp","Sachrash ko'p",["Tok yoki kuchlanish noto'g'ri","100% CO₂ gaz","Yoy uzun","Metall iflos"],["Kuchlanishni sozlang (MIG)","Ar + CO₂ aralashmasiga o'ting","Simning chiqishi 10–15 mm","Tozalang, sachrashga qarshi sprey"]],
+ ["bt","Kuyib teshilish",["Tok baland","Tirqish katta","Yupqa metall","Sekin yurish"],["Tokni kamaytiring","Tirqishni kichraytiring, mis tagliq qo'ying","Uzlukli (nuqtali) payvand qiling","Tezroq yuring"]],
+ ["sl","Shlak qolib ketishi",["Qatlamlar orasida tozalanmagan","Tok past","Elektrod burchagi"],["Har qatlamdan keyin bolg'acha va cho'tka","Tokni oshiring","Shlak yoy oldiga o'tmasin"]],
+ ["dist","Payvanddan qiyshayish",["Bir tomonlama payvand","Ko'p issiqlik","Mahkamlanmagan"],["Qarama-qarshi tomonlarni navbatma-navbat payvandlang","Qisqa choklar, «teskari qadam» usuli","Qisqichlar va tirgaklar bilan mahkamlang, oldindan teskari egib qo'ying"]],
+ ["stick","Elektrod yopishib qoladi",["Tok past","Elektrod nam","Yoy boshlash noto'g'ri"],["Tokni oshiring","Elektrodni quriting","Gugurt chaqqandek chizib boshlang"]],
+ ["arc","Yoy uziladi / bir tekis emas",["Massa (yer) kabeli yomon ulangan","Kabel ingichka yoki uzun","Sim uzatish notekis (MIG)"],["Massa qisqichini toza metallga ulang","Kabelni tekshiring, ulanishlarni tortib qo'ying","Rolik bosimi va sim kanalini tekshiring"]]];
+T({id:"diag",cat:"p",sub:"Tushunish",ic:"search",name:"Nuqsonlar diagnostikasi",
+ desc:"Choqda nuqson chiqdimi? Tanlang — sabablari va tuzatish yo'llari chiqadi.",
+ fields:()=>[{k:"d",l:"Nuqson",v:"por",opts:DEF.map(x=>[x[0],x[1]]),w:1}],
+ calc(v){const d=DEF.find(x=>x[0]===v.d);return`<div class="card"><h4>Sabablari</h4>${d[2].map(x=>`<div style="margin:6px 0">• ${x}</div>`).join("")}</div><div class="card"><h4>Nima qilish kerak</h4>${d[3].map(x=>`<div style="margin:6px 0">✔ ${x}</div>`).join("")}</div>`}});
+
+T({id:"shrink",cat:"p",sub:"Tushunish",ic:"conv",name:"Chok qisqarishi",
+ desc:"Uchma-uch payvanddan keyin detal qancha qisqaradi — oldindan zaxira qo'yish uchun.",
+ fields:()=>[{k:"t",l:"Qalinlik",u:"mm",v:10},{k:"a",l:"Kesim burchagi (umumiy)",u:"°",v:60},{k:"g",l:"Tirqish",u:"mm",v:2},{k:"c",l:"Tomon to'mtoqligi",u:"mm",v:1.5},{k:"ty",l:"Kesim turi",v:"v",opts:[["v","V (bir tomonlama)"],["x","X (ikki tomonlama)"],["i","Kesimsiz (I)"]]},{k:"n",l:"Bir chiziqdagi choklar soni",v:1}],
+ calc(v){const h=v.t-v.c,ta=Math.tan(rad(v.a)/2);const Aw=v.ty==="i"?v.g*v.t+v.t*1.5:v.ty==="x"?v.g*v.t+2*(h/2)**2*ta:v.g*v.t+h*h*ta;const S=0.2*Aw/v.t+0.05*v.g;
+  return`<div class="res">${R("Bitta chok qisqarishi",fmt(S,2),"mm",1)}${R(`${Math.round(v.n)} ta chok`,fmt(S*Math.round(v.n),1),"mm")}${R("Chok kesim yuzasi",fmt(Aw,1),"mm²")}</div>`+note("Spraragen–Ettinger taxminiy formulasi: qisqarish = 0,2 × chok yuzasi ÷ qalinlik + 0,05 × tirqish. Uzun konstruksiyalarda shu qiymatni zaxira sifatida qo'shing. X-kesim V ga nisbatan kam qisqaradi va kam qiyshayadi.")}});
+
+/* ISO 5817: [nomi, t>… izoh, D, C, B (funksiya qiymat mm yoki matn)] */
+const ISO=[
+ ["crack","Yoriq (100)",()=>["Mumkin emas","Mumkin emas","Mumkin emas"]],
+ ["por","Sirtdagi g'ovak (2017), t>3",v=>[`d ≤ 0,3·s, maks 3 → ${fmt(Math.min(0.3*v.s,3),1)}`,`d ≤ 0,2·s, maks 2 → ${fmt(Math.min(0.2*v.s,2),1)}`,"Mumkin emas"]],
+ ["uc","Chok cheti o'yilishi (5011), t>3",v=>[`h ≤ 0,2·t, maks 1 → ${fmt(Math.min(0.2*v.t,1),2)}`,`h ≤ 0,1·t, maks 0,5 → ${fmt(Math.min(0.1*v.t,0.5),2)}`,`h ≤ 0,05·t, maks 0,5 → ${fmt(Math.min(0.05*v.t,0.5),2)}`]],
+ ["exb","Ortiqcha bo'rtiq — uchma-uch (502)",v=>[`h ≤ 1 + 0,25·b, maks 10 → ${fmt(Math.min(1+0.25*v.b,10),1)}`,`h ≤ 1 + 0,15·b, maks 7 → ${fmt(Math.min(1+0.15*v.b,7),1)}`,`h ≤ 1 + 0,1·b, maks 5 → ${fmt(Math.min(1+0.1*v.b,5),1)}`]],
+ ["exf","Ortiqcha bo'rtiq — burchakli chok (503)",v=>[`h ≤ 1 + 0,25·b, maks 5 → ${fmt(Math.min(1+0.25*v.b,5),1)}`,`h ≤ 1 + 0,15·b, maks 4 → ${fmt(Math.min(1+0.15*v.b,4),1)}`,`h ≤ 1 + 0,1·b, maks 3 → ${fmt(Math.min(1+0.1*v.b,3),1)}`]],
+ ["mis","Chetlar siljishi — list (507), t>3",v=>[`h ≤ 0,25·t, maks 5 → ${fmt(Math.min(0.25*v.t,5),1)}`,`h ≤ 0,15·t, maks 4 → ${fmt(Math.min(0.15*v.t,4),1)}`,`h ≤ 0,1·t, maks 3 → ${fmt(Math.min(0.1*v.t,3),1)}`]],
+ ["root","Ildiz chala payvandi (4021)",v=>[`Qisqa: h ≤ 0,2·t, maks 2 → ${fmt(Math.min(0.2*v.t,2),1)}`,"Mumkin emas","Mumkin emas"]],
+ ["rc","Ildiz botiqligi (515), t>3",v=>[`h ≤ 0,2·t, maks 2 → ${fmt(Math.min(0.2*v.t,2),1)}`,`h ≤ 0,1·t, maks 1 → ${fmt(Math.min(0.1*v.t,1),1)}`,`h ≤ 0,05·t, maks 0,5 → ${fmt(Math.min(0.05*v.t,0.5),2)}`]],
+ ["asym","Burchakli chok assimetriyasi (512)",v=>[`h ≤ 2 + 0,2·a → ${fmt(2+0.2*v.a,1)}`,`h ≤ 2 + 0,15·a → ${fmt(2+0.15*v.a,1)}`,`h ≤ 1,5 + 0,15·a → ${fmt(1.5+0.15*v.a,1)}`]]];
+T({id:"iso5817",cat:"p",sub:"Nazorat",ic:"table",name:"ISO 5817 — qabul me'yorlari",
+ desc:"Chok nuqsonining ruxsat etilgan o'lchami sifat darajalari bo'yicha: D (oddiy), C (o'rta), B (yuqori).",
+ fields:()=>[{k:"k",l:"Nuqson turi",v:"uc",opts:ISO.map(x=>[x[0],x[1]]),w:1},{k:"t",l:"Metall qalinligi t",u:"mm",v:8},{k:"b",l:"Chok eni b",u:"mm",v:12},{k:"a",l:"Burchakli chok kateti/qalinligi a",u:"mm",v:5},{k:"s",l:"Chok qalinligi s",u:"mm",v:6}],
+ calc(v){const x=ISO.find(i=>i[0]===v.k);const L=x[2](v);return tbl(["Daraja","Ruxsat (mm)"],[["D — oddiy",L[0]],["C — o'rta",L[1]],["B — yuqori",L[2]]])+note("Qisqartirilgan jadval, taxminiy natija. Rasmiy qabul uchun ISO 5817 standartining to'liq matnidan foydalaning. Darajani buyurtmachi yoki loyiha belgilaydi.")}});
+
+T({id:"spacing",cat:"p",sub:"Belgilash",ic:"bump",name:"Uzlukli chok joylashuvi",
+ desc:"Uzun chokni bo'lak-bo'lak payvandlash: choklar soni, oralig'i va belgilar.",
+ fields:()=>[{k:"L",l:"Umumiy uzunlik",u:"mm",v:1000},{k:"l",l:"Bitta chok uzunligi",u:"mm",v:50},{k:"p",l:"Qadam (chok boshidan keyingisigacha)",u:"mm",v:150},{k:"ty",l:"Turi",v:"z",opts:[["z","Zanjir (ikki tomon bir joyda)"],["s","Shaxmat (navbatma-navbat)"]]}],
+ calc(v){const n=Math.floor((v.L-v.l)/v.p)+1;const used=(n-1)*v.p+v.l;const st=(v.L-used)/2;const rows=[];for(let i=0;i<n;i++){const a=st+i*v.p;rows.push([i+1,fmt(a,0),fmt(a+v.l,0),v.ty==="s"?(i%2?"Orqa":"Old"):"Ikkala"])}
+  return`<div class="res">${R("Choklar soni",n,"",1)}${R("Jami chok uzunligi",fmt(n*v.l*(v.ty==="z"?2:1),0),"mm")}${R("Bo'sh oraliq",fmt(v.p-v.l,0),"mm")}${R("Chetlardan",fmt(st,1),"mm")}</div>`+tbl(["№","Boshi, mm","Oxiri, mm","Tomon"],rows)+note("Choklar uchlarda bo'lishi shart — chetdagi bo'sh joy chok uzunligidan katta bo'lsa, qadamni kamaytiring.")}});
+
+makeLog("trace","p","Kuzatish","table","Chok jurnali","Har bir chok: raqami, payvandchi, sana, elektrod/sim, nazorat natijasi. CSV (Excel) qilib yuboriladi.",
+ [{k:"chok",l:"Chok raqami",v:"",t:"text"},{k:"sana",l:"Sana",v:"",t:"date"},{k:"usta",l:"Payvandchi",v:"",t:"text"},{k:"material",l:"Elektrod / sim",v:"",t:"text"},{k:"nazorat",l:"Nazorat",v:"Ko'zdan",opts:[["Ko'zdan","Ko'zdan (VT)"],["Rentgen","Rentgen (RT)"],["UZK","UZK (UT)"],["Kapillyar","Kapillyar (PT)"]]},{k:"natija",l:"Natija",v:"Yaroqli",opts:[["Yaroqli","Yaroqli"],["Tuzatish","Tuzatish kerak"]]},{k:"izoh",l:"Izoh",v:"",t:"text",w:1}],"chok_jurnali.csv");
+/* ================= YOYILMA — qo'shimchalar ================= */
+T({id:"shell",cat:"y",sub:"Yoyilmalar",ic:"cyl",name:"Bak / rezervuar obechaykasi",
+ desc:"Katta silindr bak devorini listlardan yig'ish: har qatordagi listlar soni, oxirgi list uzunligi, choklarni siljitish.",
+ fields:()=>[{k:"D",l:"Bak ichki diametri",u:"mm",v:3000},{k:"H",l:"Bak balandligi",u:"mm",v:4000},{k:"t",l:"List qalinligi",u:"mm",v:5},{k:"pl",l:"List uzunligi",u:"mm",v:6000},{k:"pw",l:"List eni",u:"mm",v:1500}],
+ calc(v){const C=PI*(v.D+v.t),n=Math.ceil(C/v.pl),last=C-(n-1)*v.pl,rows=Math.ceil(v.H/v.pw),lastW=v.H-(rows-1)*v.pw;const kg=C*v.H*v.t*7.85e-6;
+  const sh={cut:[],bend:[]};for(let r=0;r<rows;r++){const y0=r*v.pw,h=r===rows-1?lastW:v.pw,off=(r%2)*v.pl/2;let x=-off;sh.cut.push([[[0,y0],[C,y0],[C,y0+h],[0,y0+h]],true]);
+    for(let k=1;k<=n+1;k++){x+=v.pl;if(x>0&&x<C)sh.bend.push([[x,y0],[x,y0+h]])}}
+  return{html:`<div class="res">${R("Yoyilma uzunligi (aylana)",fmt(C,0),"mm",1)}${R("Qatorlar soni",rows)}${R("Har qatorda listlar",`${n} (oxirgisi ${fmt0(last)} mm)`)}${R("Oxirgi qator eni",fmt0(lastW),"mm")}${R("Devor og'irligi",fmt(kg,0),"kg")}${R("Kerakli listlar (taxm.)",Math.ceil(C*v.H/(v.pl*v.pw)))}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}`
+   +note("Ko'k chiziqlar — tik choklar. Qo'shni qatorlarning tik choklari yarim listga surilgan (bir chiziqda bo'lmasligi kerak, kamida 5×qalinlik)."),shape:sh,name:`bak_${v.D}x${v.H}`,mesh:(()=>{const M={tris:[],cols:MC};revMesh([[v.D/2,0],[v.D/2,v.H]],0,M);return M})()}}});
+
+T({id:"elements",cat:"y",sub:"Belgilash",ic:"cyl",name:"Element chiziqlari (qiya kesik)",
+ desc:"Quvurni qiya tekislik bo'yicha kesish uchun yasovchi chiziqlar uzunligi va o'rash shabloni.",
+ fields:()=>[{k:"D",l:"Quvur tashqi diametri",u:"mm",v:108},{k:"a",l:"Kesik burchagi (to'g'ri kesimdan)",u:"°",v:30},{k:"L",l:"Eng qisqa tomon uzunligi",u:"mm",v:100},{k:"n",l:"Bo'laklar",v:"16",opts:[["8","8"],["12","12"],["16","16"],["24","24"]]}],
+ calc(v){const r=v.D/2,ta=Math.tan(rad(v.a)),N=+v.n,C=2*PI*r;const Lf=f=>v.L+r*(1-Math.cos(f))*ta;const M=144,pts=[];for(let i=0;i<=M;i++){const f=2*PI*i/M;pts.push([r*f,Lf(f)])}
+  const sh={cut:[[[[0,0],...pts.map(p=>p).slice(0,1).map(()=>[0,0]),[C,0],...pts.reverse()],true]],bend:[]};const rows=[];for(let k=0;k<N;k++){const f=2*PI*k/N;rows.push([k+1,fmt(r*f,1),fmt(Lf(f),1)]);sh.bend.push([[r*f,0],[r*f,Lf(f)]])}
+  const Me={tris:[],cols:MC};quadMesh([0,1].map(s=>{const row=[];for(let j=0;j<=48;j++){const f=2*PI*j/48;row.push([r*Math.cos(f),r*Math.sin(f),s?Lf(f):0])}return row}),0,Me);
+  return{html:`<div class="res">${R("Eng uzun tomon",fmt(Lf(PI),1),"mm",1)}${R("Shablon uzunligi",fmt(C,1),"mm")}${R("Kesik ellips uzun o'qi",fmt(v.D/Math.cos(rad(v.a)),1),"mm")}</div><div class="svgbox">${svgOf(sh)}</div>${shapeButtons()}${tbl(["№","Aylana bo'yicha, mm","Uzunlik, mm"],rows)}`,shape:sh,name:`qiya_kesik_${v.D}_${v.a}`,mesh:Me}}});
+
+const VC={cs:[22,"Qora po'lat"],ss:[10,"Zanglamas"],ci:[18,"Cho'yan"],al:[70,"Alyuminiy"],cu:[40,"Mis / latun"]};
+T({id:"drill",cat:"y",sub:"Belgilash",ic:"laser",name:"Parmalash rejimi",
+ desc:"Parma diametri va metall bo'yicha aylanish tezligi, uzatish va dastlabki (pilot) teshik.",
+ fields:()=>[{k:"d",l:"Parma diametri",u:"mm",v:12},{k:"m",l:"Metall",v:"cs",opts:Object.entries(VC).map(([k,x])=>[k,x[1]])},{k:"tl",l:"Parma turi",v:"1",opts:[["1","Tezkesar (HSS)"],["2.5","Qattiq qotishma / kobalt"]]}],
+ calc(v){const vc=VC[v.m][0]*(+v.tl);const n=1000*vc/(PI*v.d);const f=Math.max(0.03,0.018*v.d)*(v.m==="ss"?0.7:v.m==="al"?1.4:1);
+  return`<div class="res">${R("Aylanish tezligi",fmt0(n),"ayl/min",1)}${R("Kesish tezligi",fmt0(vc),"m/min")}${R("Uzatish",fmt(f,2),"mm/ayl")}${R("Pilot teshik",v.d>10?fmt(Math.max(4,v.d*0.35),1)+" mm":"Shart emas")}</div>`+note(v.m==="ss"?"Zanglamas po'latda sekin aylantirib, kuchli bosib parmalang, to'xtamang — aks holda metall qotib qoladi. Moylovchi suyuqlik ishlating.":"10 mm dan katta teshikni avval kichik parma bilan oching. Po'latni moylovchi suyuqlik bilan parmalang.")}});
+
+/* ================= ISO (izometrik) eskiz ================= */
+const DIRS={U:["↑ Yuqori",[0,0,1]],D:["↓ Past",[0,0,-1]],N:["Shimol",[0,1,0]],S:["Janub",[0,-1,0]],E:["Sharq",[1,0,0]],W:["G'arb",[-1,0,0]]};
+const isoP=p=>[(p[0]-p[1])*0.866,(p[0]+p[1])*0.5+p[2]];
+function isoCalc(st){const f=fit(st.dn)||FIT[5];const A=f[3];let p=[0,0,0];const pts=[p],segs=[];let elbows=0;
+  st.segs.forEach((s,i)=>{const d=DIRS[s.d][1];const q=[p[0]+d[0]*s.L,p[1]+d[1]*s.L,p[2]+d[2]*s.L];segs.push({a:p,b:q,s});pts.push(q);p=q});
+  const cut=segs.map((g,i)=>{const prevTurn=i>0&&segs[i-1].s.d!==g.s.d,nextTurn=i<segs.length-1&&segs[i+1].s.d!==g.s.d;if(nextTurn)elbows++;return g.s.L-(prevTurn?A:0)-(nextTurn?A:0)});
+  const bad=st.segs.some((s,i)=>i>0&&DIRS[s.d][1].every((x,k)=>x===-DIRS[st.segs[i-1].d][1][k]));
+  return{segs,cut,elbows,total:st.segs.reduce((a,s)=>a+s.L,0),A,bad}}
+function isoShape(st,c){const sh={line:[],label:[],dot:[]};c.segs.forEach((g,i)=>{const a=isoP(g.a),b=isoP(g.b);sh.line.push([a,b]);sh.label.push([(a[0]+b[0])/2,(a[1]+b[1])/2+20,fmt0(g.s.L)]);if(i<c.segs.length-1)sh.dot.push(b)});return sh}
+T({id:"iso",cat:"q",sub:"Chizma va ma'lumot",ic:"offset",name:"ISO eskiz (izometriya)",custom:1,quick:0,
+ desc:"Quvur liniyasini yo'nalish va uzunlik bilan kiriting — izometrik chizma, tirsaklar soni va har bo'lakning kesish uzunligi chiqadi.",
+ render(root){const st=store.get("iso_cur",{name:"Liniya 1",dn:"50",segs:[{d:"E",L:1500},{d:"U",L:800},{d:"N",L:1200}]});let dir=st.lastDir||"E";
+  const save=()=>store.set("iso_cur",st);
+  const draw=()=>{const c=isoCalc(st);const sh=isoShape(st,c);
+   root.innerHTML=`<div class="card"><div class="f">${`<div class="fld w"><label>Nomi</label><div class="in"><input id="nm" type="text" value="${esc(st.name)}"></div></div>`}<div class="fld w"><label>Quvur o'lchami</label><div class="in"><select id="dn">${DNOPT.map(o=>`<option value="${o[0]}"${o[0]===st.dn?" selected":""}>${o[1]}</option>`).join("")}</select></div></div></div></div>
+    <div class="card"><h4>Bo'lak qo'shish</h4><div class="seg">${Object.entries(DIRS).map(([k,x])=>`<button data-d="${k}" class="${k===dir?"on":""}">${x[0]}</button>`).join("")}</div>
+     <div class="f"><div class="fld"><label>Uzunlik (markazdan markazga)</label><div class="in"><input id="len" type="number" inputmode="decimal" value="1000"><span class="u">mm</span></div></div><div class="fld"><label>&nbsp;</label><button class="btn p" id="add" style="margin:0">+ Qo'shish</button></div></div></div>
+    <div class="svgbox">${st.segs.length?svgOf(sh,{dims:false}):""}</div>
+    <div class="res" style="margin-top:12px">${R("Umumiy uzunlik (markazlar)",fmt0(c.total),"mm",1)}${R("90° tirsaklar",c.elbows,"dona")}${R("Kesiladigan quvur",fmt0(c.cut.reduce((a,x)=>a+x,0)),"mm")}${R("Tirsak cheki (A)",fmt0(c.A),"mm")}</div>
+    ${c.bad?note("Ketma-ket ikki bo'lak qarama-qarshi yo'nalishda — bunday bo'lishi mumkin emas.","warn"):""}
+    <h3 class="sec">Bo'laklar</h3>${tbl(["№","Yo'nalish","Markazlar, mm","Kesish, mm",""],st.segs.map((s,i)=>[i+1,DIRS[s.d][0],fmt0(s.L),fmt0(c.cut[i]),`<button class="btn" style="min-width:0;padding:4px 10px" data-x="${i}">✕</button>`]))}
+    <div class="btns"><button class="btn p" id="sv">Saqlash</button><button class="btn" id="dx">DXF</button><button class="btn" id="nw">Yangi</button></div>`;
+   root.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{dir=b.dataset.d;st.lastDir=dir;save();draw()});
+   root.querySelector("#add").onclick=()=>{const L=parseFloat(root.querySelector("#len").value);if(!(L>0))return toast("Uzunlikni kiriting");const last=st.segs[st.segs.length-1];if(last&&last.d===dir)last.L+=L;else st.segs.push({d:dir,L});save();draw()};
+   root.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{st.segs.splice(+b.dataset.x,1);save();draw()});
+   root.querySelector("#nm").onchange=e=>{st.name=e.target.value;save()};root.querySelector("#dn").onchange=e=>{st.dn=e.target.value;save();draw()};
+   root.querySelector("#sv").onclick=()=>{const L=store.get("iso_plans",[]);L.unshift({...JSON.parse(JSON.stringify(st)),at:Date.now()});store.set("iso_plans",L.slice(0,50));toast("Saqlandi: "+st.name)};
+   root.querySelector("#dx").onclick=()=>{const s2={cut:sh.line.map(l=>[l,false]),text:sh.label.map(l=>[l[0],l[1],40,l[2]])};saveFile(st.name.replace(/[^\w\-]+/g,"_")+"_iso.dxf",dxf(s2))};
+   root.querySelector("#nw").onclick=()=>{st.segs=[];st.name="Liniya "+(store.get("iso_plans",[]).length+1);save();draw()};};
+  draw()}});
+T({id:"isoplans",cat:"q",sub:"Chizma va ma'lumot",ic:"folder",name:"Mening ISO chizmalarim",custom:1,
+ desc:"Saqlangan izometrik eskizlar. Ochish — davom ettirish uchun.",
+ render(root){const L=store.get("iso_plans",[]);if(!L.length){root.innerHTML=`<div class="empty">Hali saqlangan chizma yo'q.</div>`;return}
+  root.innerHTML=L.map((p,i)=>{const c=isoCalc(p);return`<div class="card"><h4>${esc(p.name)} · DN${p.dn}</h4><div class="desc">${new Date(p.at).toLocaleString("uz-UZ")} · ${fmt0(c.total)} mm · ${c.elbows} tirsak</div><div class="svgbox">${svgOf(isoShape(p,c),{dims:false})}</div><div class="btns"><button class="btn p" data-o="${i}">Ochish</button><button class="btn" data-x="${i}">O'chirish</button></div></div>`}).join("");
+  root.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{const p=L[+b.dataset.o];store.set("iso_cur",{name:p.name,dn:p.dn,segs:p.segs});go("t/iso")});
+  root.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{L.splice(+b.dataset.x,1);store.set("iso_plans",L);this.render(root)})}});
+
+/* ---- bo'lim ichidagi guruhlar ---- */
+const SUBS={offset:"Tirsak va offset",miter:"Belgilash va kesish",branch:"Belgilash va kesish",flow:"Sinov va hisob",pipew:"Sinov va hisob",hydro:"Sinov va hisob",
+ mma:"Sozlash",mig:"Sozlash",tig:"Sozlash",purge:"Sozlash",compat:"Tushunish",heat:"Tushunish",preheat:"Tushunish",
+ cone:"Yoyilmalar",cyl:"Yoyilmalar",sq2r:"Yoyilmalar",hopper:"Yoyilmalar",bend:"Yoyilmalar",bump:"Yoyilmalar",mypat:"Yoyilmalar",mitre:"Belgilash",frame:"Belgilash",laser:"Belgilash",
+ weight:"Metall",pipes:"Jadvallar",pres:"Birliklar",inch:"Birliklar",gas:"Gaz"};
+TOOLS.forEach(t=>{if(!t.sub&&SUBS[t.id])t.sub=SUBS[t.id]});
+const SUBORDER={q:["Chizma va ma'lumot","Tirsak va offset","Belgilash va kesish","Flanetslar","Sinov va hisob"],p:["Sozlash","Tushunish","Nazorat","Belgilash","Kuzatish"],y:["Yoyilmalar","Belgilash"],m:["Metall","Jadvallar","Birliklar","Gaz"]};
 /* ================= ilova ================= */
 const catOf=id=>CATS.find(c=>c.id===id);
 const pins=()=>store.get("pins",TOOLS.filter(t=>t.quick).slice(0,6).map(t=>t.id));
@@ -617,8 +861,9 @@ function viewHome(){head("",false);nav("home");const app=$("#app");
   const q=$("#q");q.oninput=()=>{const s=q.value.trim().toLowerCase();$("#hm").style.display=s?"none":"block";
     const r=s?TOOLS.filter(t=>(t.name+" "+t.desc).toLowerCase().includes(s)):[];$("#sr").innerHTML=s?(r.length?`<div class="list">${r.map(rowHTML).join("")}</div>`:`<div class="empty">Topilmadi</div>`):"";bindRows($("#sr"))}}
 
-function viewCat(cid){const c=catOf(cid);head(c.full,false);nav(cid);$("#app").innerHTML=`<div class="list" style="margin-top:6px">${TOOLS.filter(t=>t.cat===cid).map(rowHTML).join("")}</div>`;bindRows($("#app"))}
-
+function viewCat(cid){const c=catOf(cid);head(c.full,false);nav(cid);const L=TOOLS.filter(t=>t.cat===cid);const order=(typeof SUBORDER!=="undefined"&&SUBORDER[cid])||[];
+  const subs=[...order.filter(s=>L.some(t=>t.sub===s)),...[...new Set(L.map(t=>t.sub||"Boshqa"))].filter(s=>!order.includes(s))];
+  $("#app").innerHTML=subs.map(s=>`<h3 class="sec">${esc(s)}</h3><div class="list">${L.filter(t=>(t.sub||"Boshqa")===s).map(rowHTML).join("")}</div>`).join("");bindRows($("#app"))}
 function viewTool(id){const t=tool(id);if(!t)return go("");head(t.name,true,t.id);nav(t.cat);
   const rec=store.get("recent",[]).filter(x=>x!==id);rec.unshift(id);store.set("recent",rec.slice(0,8));
   const app=$("#app");app.innerHTML=`<p class="desc">${esc(t.desc)}</p><div id="tb"></div>`;const tb=$("#tb");

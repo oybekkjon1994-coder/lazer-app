@@ -21,8 +21,9 @@ function viewHome(){head("",false);nav("home");const app=$("#app");
   const q=$("#q");q.oninput=()=>{const s=q.value.trim().toLowerCase();$("#hm").style.display=s?"none":"block";
     const r=s?TOOLS.filter(t=>(t.name+" "+t.desc).toLowerCase().includes(s)):[];$("#sr").innerHTML=s?(r.length?`<div class="list">${r.map(rowHTML).join("")}</div>`:`<div class="empty">Topilmadi</div>`):"";bindRows($("#sr"))}}
 
-function viewCat(cid){const c=catOf(cid);head(c.full,false);nav(cid);$("#app").innerHTML=`<div class="list" style="margin-top:6px">${TOOLS.filter(t=>t.cat===cid).map(rowHTML).join("")}</div>`;bindRows($("#app"))}
-
+function viewCat(cid){const c=catOf(cid);head(c.full,false);nav(cid);const L=TOOLS.filter(t=>t.cat===cid);const order=(typeof SUBORDER!=="undefined"&&SUBORDER[cid])||[];
+  const subs=[...order.filter(s=>L.some(t=>t.sub===s)),...[...new Set(L.map(t=>t.sub||"Boshqa"))].filter(s=>!order.includes(s))];
+  $("#app").innerHTML=subs.map(s=>`<h3 class="sec">${esc(s)}</h3><div class="list">${L.filter(t=>(t.sub||"Boshqa")===s).map(rowHTML).join("")}</div>`).join("");bindRows($("#app"))}
 function viewTool(id){const t=tool(id);if(!t)return go("");head(t.name,true,t.id);nav(t.cat);
   const rec=store.get("recent",[]).filter(x=>x!==id);rec.unshift(id);store.set("recent",rec.slice(0,8));
   const app=$("#app");app.innerHTML=`<p class="desc">${esc(t.desc)}</p><div id="tb"></div>`;const tb=$("#tb");

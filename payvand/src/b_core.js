@@ -78,12 +78,14 @@ function dxf(sh){
   p("0","ENDTAB","0","ENDSEC","0","SECTION","2","ENTITIES");
   const n=v=>(Math.round(v*1000)/1000).toString();
   (sh.cut||[]).forEach(([pts,closed])=>{p("0","POLYLINE","8","KESISH","66","1","70",closed?"1":"0");pts.forEach(q=>p("0","VERTEX","8","KESISH","10",n(q[0]),"20",n(q[1])));p("0","SEQEND","8","KESISH")});
+  (sh.line||[]).forEach(([a,b])=>p("0","LINE","8","KESISH","10",n(a[0]),"20",n(a[1]),"11",n(b[0]),"21",n(b[1])));
+  (sh.circ||[]).forEach(([x,y,r])=>p("0","CIRCLE","8","KESISH","10",n(x),"20",n(y),"40",n(r)));
   (sh.bend||[]).forEach(([a,b])=>p("0","LINE","8","BUKISH","10",n(a[0]),"20",n(a[1]),"11",n(b[0]),"21",n(b[1])));
   (sh.text||[]).forEach(([x,y,h,s])=>p("0","TEXT","8","MATN","10",n(x),"20",n(y),"40",n(h),"1",s));
   p("0","ENDSEC","0","EOF");return L.join("\n");
 }
 function bbox(sh){let a=[1e18,1e18,-1e18,-1e18];const add=q=>{a[0]=Math.min(a[0],q[0]);a[1]=Math.min(a[1],q[1]);a[2]=Math.max(a[2],q[0]);a[3]=Math.max(a[3],q[1])};
-  (sh.cut||[]).forEach(([pts])=>pts.forEach(add));(sh.bend||[]).forEach(l=>l.forEach(add));return a}
+  (sh.cut||[]).forEach(([pts])=>pts.forEach(add));(sh.bend||[]).forEach(l=>l.forEach(add));(sh.circ||[]).forEach(([x,y,r])=>{add([x-r,y-r]);add([x+r,y+r])});(sh.line||[]).forEach(l=>l.forEach(add));return a}
 function svgOf(sh,{dims=true}={}){
   const b=bbox(sh),w=b[2]-b[0],h=b[3]-b[1],m=Math.max(w,h)*0.06+1,vb=[b[0]-m,-(b[3]+m),w+2*m,h+2*m];
   const sw=Math.max(w,h)/320;
@@ -91,6 +93,10 @@ function svgOf(sh,{dims=true}={}){
   let s=`<svg viewBox="${vb.map(v=>v.toFixed(2)).join(" ")}" xmlns="http://www.w3.org/2000/svg">`;
   (sh.fill||[]).forEach(pts=>s+=`<polygon points="${P(pts)}" fill="#e8b23a22"/>`);
   (sh.cut||[]).forEach(([pts,cl])=>s+=cl?`<polygon points="${P(pts)}" fill="#e8b23a18" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`:`<polyline points="${P(pts)}" fill="none" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`);
+  (sh.circ||[]).forEach(([x,y,r])=>s+=`<circle cx="${x}" cy="${-y}" r="${r}" fill="none" stroke="#e8b23a" stroke-width="${sw*1.6}"/>`);
+  (sh.line||[]).forEach(([a,c,col])=>s+=`<line x1="${a[0]}" y1="${-a[1]}" x2="${c[0]}" y2="${-c[1]}" stroke="${col||"#e8b23a"}" stroke-width="${sw*2.2}" stroke-linecap="round"/>`);
+  (sh.label||[]).forEach(([x,y,t,col])=>s+=`<text x="${x}" y="${-y}" fill="${col||"#eef1f5"}" font-size="${Math.max(w,h)/24}" text-anchor="middle" font-weight="700">${esc(t)}</text>`);
+  (sh.dot||[]).forEach(([x,y])=>s+=`<circle cx="${x}" cy="${-y}" r="${sw*4}" fill="#4ea3ff"/>`);
   (sh.bend||[]).forEach(([a,c])=>s+=`<line x1="${a[0]}" y1="${-a[1]}" x2="${c[0]}" y2="${-c[1]}" stroke="#4ea3ff" stroke-width="${sw}" stroke-dasharray="${sw*6} ${sw*4}"/>`);
   if(dims)s+=`<text x="${b[0]+w/2}" y="${-(b[1])+m*0.8}" fill="#9aa4b2" font-size="${Math.max(w,h)/26}" text-anchor="middle">${fmt0(w)} × ${fmt0(h)} mm</text>`;
   return s+"</svg>";

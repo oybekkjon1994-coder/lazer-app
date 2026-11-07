@@ -104,7 +104,7 @@ T({id:"hydro",cat:"q",ic:"drop",name:"Gidravlik sinov",quick:1,
    +note(okk?"✔ Sinov bosimida quvur devori xavfsiz chegarada.":"✖ Sinov bosimida devor kuchlanishi juda katta! Qalinroq quvur yoki kichikroq bosim kerak.",okk?"ok":"warn")
    +note("Bosimni sekin, bosqichma-bosqich ko'taring. Sinov bosimida kamida 10 daqiqa ushlab turing (ko'pincha 30 daqiqa–1 soat), keyin ishchi bosimga tushirib, barcha choklarni ko'zdan kechiring. Sinovni faqat suv bilan o'tkazing, havodan foydalanmang. Bu hisob taxminiy: rasmiy obyektlarda loyiha va me'yoriy hujjat talablari amal qiladi.")}});
 
-T({id:"purge",cat:"q",ic:"purge",name:"Argon bilan puflash (purge)",quick:1,
+T({id:"purge",cat:"p",ic:"purge",name:"Argon bilan puflash (purge)",quick:1,
  desc:"Zanglamas quvurni payvandlashdan oldin ichini argon bilan to'ldirish: qancha vaqt va qancha gaz kerak.",
  fields:()=>[{k:"d",l:"Quvur ichki diametri",u:"mm",v:52},{k:"L",l:"Puflanadigan uzunlik",u:"mm",v:500},{k:"q",l:"Gaz sarfi",u:"l/min",v:10},{k:"n",l:"Hajm almashinuvi",v:"5",opts:[["3","3 marta (uglerodli po'lat)"],["5","5 marta (zanglamas, tavsiya)"],["7","7 marta (titan, juda toza)"]]}],
  calc(v){const V=PI*(v.d/2)**2*v.L/1e6;const gas=V*(+v.n);const tm=gas/v.q;
