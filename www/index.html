@@ -340,7 +340,7 @@ body.shop .kpi b{font-size:20px}
 .lz-time small{color:var(--muted);font:12px var(--mono);margin-left:auto;text-align:right}
 .lz-time>span,.lz-time>b{white-space:nowrap}
 .lz-time[hidden]{display:none}
-@media (max-width:760px){body.shop .actions>label.chk{grid-column:1/-1;order:-2;min-height:0;text-align:left}}
+@media (max-width:760px){body.shop .actions>label:not(.btn){grid-column:1/-1;order:-2;min-height:0;text-align:left}}
 .lz-spd{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
 .lz-spd span{font-family:var(--mono);font-size:14px}
 .lz-spd .h{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
