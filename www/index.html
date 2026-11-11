@@ -253,6 +253,61 @@ body.shop .card{border-radius:16px}
 .sh-nav button[aria-current="page"]{color:var(--sh-ink);font-weight:600}
 .sh-nav button[aria-current="page"] svg{stroke-width:2.2}
 .sh-nav .bd{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--sh-or);color:#fff;font:700 11px/18px var(--body);text-align:center}
+/* ---------- yengil interfeys: ixcham bosh sahifa, pastki narx paneli, tez tanlash ---------- */
+body.shop .sh-home{gap:14px}
+body.shop .sh-search input{padding:12px 16px 12px 46px;font-size:16px}
+body.shop .sh-promo{font-size:14px;padding:10px 14px;border-radius:10px}
+body.shop .sh-hero{aspect-ratio:3.7/1}
+body.shop .sh-sec{margin-top:0}
+body.shop .sh-sec h3{font-size:22px}
+body.shop .sh-sec button{font-size:15px;padding:4px 0}
+body.shop .sh-grid{gap:10px}
+body.shop .sh-tile{aspect-ratio:1/.74;border-radius:16px}
+body.shop .sh-tile .ill{left:auto;right:5%;top:9%;width:50%}
+body.shop .sh-tile .tl{left:12px;top:11px;font-size:10.5px;letter-spacing:.1em}
+body.shop .sh-tile .tn{left:12px;right:12px;bottom:12px;font-size:clamp(16px,4.6vw,20px)}
+body.shop .sh-tile .ta{display:none}
+body.shop .sh-fab{width:52px;height:52px;bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+body.shop .sh-fab svg{width:24px;height:24px}
+body.shop:not([data-v="home"]) .sh-fab{display:none}
+body.shop .sh-nav button{font-size:13px;gap:2px}
+body.shop .sh-nav button svg{width:26px;height:26px}
+@media (max-width:760px){
+  body.shop .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  body.shop .actions>*{min-height:46px;text-align:center}
+  body.shop .actions>.primary{grid-column:1/-1;order:-1;min-height:50px;font-size:16px}
+  body.shop .actions>:only-child,body.shop .actions>:last-child:nth-child(even):not(.primary){grid-column:1/-1}
+}
+.lz-bar{position:fixed;left:0;right:0;bottom:calc(71px + env(safe-area-inset-bottom,0px));z-index:43;display:flex;align-items:center;gap:10px;
+  padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));background:var(--sh-card);border-top:1px solid var(--sh-line);box-shadow:0 -6px 18px rgba(0,0,0,.08)}
+.lz-bar[hidden]{display:none}
+.lz-bar .lb-sum{flex:1;min-width:0;border:0;background:transparent;padding:0;text-align:left;display:flex;flex-direction:column;line-height:1.15;color:var(--fg)}
+.lz-bar .lb-sum small{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lz-bar .lb-sum b{font:800 22px var(--display);color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lz-bar .lb-go{flex:none;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 15px var(--body)}
+body.shop[data-bar="1"]{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.lz-tk{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px}
+.lz-tk button{min-height:50px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;font:600 14px var(--body);background:var(--bg)}
+.lz-tk button small{font:500 11px var(--mono);color:var(--muted)}
+.lz-tk button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.lz-tk button[aria-pressed="true"] small{color:inherit;opacity:.85}
+select.lz-hid{position:absolute!important;width:1px!important;height:1px!important;opacity:0;pointer-events:none;padding:0;border:0}
+.lz-step{display:grid;grid-template-columns:46px 1fr 46px;gap:6px}
+.lz-step button{padding:0;min-height:46px;font:600 22px var(--body);line-height:1}
+.lz-step input{text-align:center}
+#p-narx .row:has(.lz-tk){grid-template-columns:1fr}
+.lz-fold>.lz-fh{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:0;min-height:30px;text-align:left;color:var(--fg);font:600 15px var(--body)}
+.lz-fold>.lz-fh small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:2px}
+.lz-fold>.lz-fh svg{flex:none;transition:transform .15s}
+.lz-fold.open>.lz-fh svg{transform:rotate(90deg)}
+.lz-fold:not(.open)>:not(.lz-fh){display:none!important}
+.lz-add{width:100%;min-height:52px;border-radius:12px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 16px var(--body)}
+#p-buy.lz-closed #oform{display:none}
+#p-buy:not(.lz-closed) .lz-add{display:none}
+.lz-fx{float:right;border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:4px 0 4px 12px}
+body.shop .kpis{gap:8px}
+body.shop .kpi{padding:10px 12px}
+body.shop .kpi b{font-size:20px}
 </style>
 
 <div class="wrap">
@@ -2480,7 +2535,7 @@ function renderOrders(){
   let list=orders.filter(o=>oFilter==="hammasi"?true:oFilter==="faol"?o.holat!=="topshirildi":oFilter==="qarz"?debt(o)>0:o.holat===oFilter);
   if(q)list=list.filter(o=>[o.mijoz,o.telefon,o.detal,o.izoh,"#"+o.n].join(" ").toLowerCase().includes(q));
   $("oEmpty").hidden=list.length>0;
-  $("oEmpty").textContent=orders.length?"Bu filtrda buyurtma yo‘q.":"Hali buyurtma yo‘q. O‘ngdagi formani to‘ldiring yoki “Narx” va “Nesting” bo‘limidan “Buyurtma qilish” tugmasini bosing.";
+  $("oEmpty").textContent=orders.length?"Bu filtrda buyurtma yo‘q.":"Hali buyurtma yo‘q. “+ Yangi buyurtma” tugmasini bosing yoki “Narx” va “Nesting” bo‘limidan “Buyurtma qilish” tugmasini bosing.";
   $("olist").innerHTML=list.map(o=>`<article class="ocard${o.id===editId?" sel":""}" data-id="${esc(o.id)}">
     <div class="otop"><b>#${esc(o.n)} · ${esc(o.mijoz||"Mijoz")}</b><span class="pill s-${esc(o.holat)}">${STATUS[o.holat]||""}</span></div>
     <div class="odet">${esc(o.detal)}${o.qalinlik?` · ${esc(o.qalinlik)}`:""}${o.soni?` · ${esc(o.soni)} dona`:""}</div>
@@ -3453,11 +3508,11 @@ function badge(){const n=ordN(),b=$("shBd");b.hidden=!n;b.textContent=n>99?"99+"
 let cur="home",prev="home";
 function setNav(v){document.querySelectorAll(".sh-nav button").forEach(b=>b.toggleAttribute("aria-current",false));
   const t=v==="buy"?"buy":VIEWS.includes(v)?v:"kat";const b=document.querySelector(`.sh-nav [data-nv="${t}"]`);if(b)b.setAttribute("aria-current","page")}
-function view(v){if(cur!==v)prev=cur;cur=v;
+function view(v){if(cur!==v)prev=cur;cur=v;document.body.dataset.v=v;
   VIEWS.forEach(k=>$("p-"+k).hidden=k!==v);
   if(VIEWS.includes(v)){TABS.forEach(k=>$("p-"+k).hidden=true);if(v==="home")grid();if(v==="kat")$("p-kat").innerHTML=SEC.map(row).join("")}
   const top=$("shTop");top.hidden=v==="home";$("shTitle").textContent=v==="kat"?"Katalog":v==="prof"?"Profil":NM[v]||"";
-  setNav(v);badge()}
+  setNav(v);badge();document.dispatchEvent(new Event("lzview"))}
 const base=showTab;showTab=function(t){VIEWS.forEach(k=>$("p-"+k).hidden=true);base(t);view(t)};
 $("shBack").onclick=()=>{const p=prev&&prev!==cur?prev:"home";VIEWS.includes(p)?view(p):showTab(p)};
 document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){const [t,pp]=g.dataset.go.split(":");showTab(t);if(pp&&window.lzPick){lzPick(pp);$("shTitle").textContent=g.dataset.nm||""}return}
@@ -3744,6 +3799,77 @@ const upd=()=>{$("lzOff").hidden=navigator.onLine!==false};addEventListener("onl
   addEventListener("online",()=>check());
   setTimeout(()=>check(),2500);
 })();
+
+/* ---------- yengil interfeys: pastki narx paneli, qalinlik tugmalari, +/- soni, yig'iladigan bloklar ---------- */
+(()=>{try{
+const q=id=>document.getElementById(id);
+const fire=el=>{el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}))};
+const CH='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+
+/* 1. Qalinlik: ochiladigan ro'yxat o'rniga bir bosishda tanlanadigan tugmalar */
+function chips(selId){const sel=q(selId);if(!sel)return;
+  const box=document.createElement("div");box.className="lz-tk";box.setAttribute("role","group");box.setAttribute("aria-label","Qalinlik");
+  sel.classList.add("lz-hid");sel.tabIndex=-1;sel.insertAdjacentElement("afterend",box);
+  const draw=()=>{box.innerHTML=[...sel.options].map(o=>{const [a,b]=o.textContent.split(" — ");
+    return `<button type="button" data-v="${o.value}" aria-pressed="${o.value===sel.value}">${a}${b?`<small>${b.replace(" so‘m/m","")}</small>`:""}</button>`}).join("")};
+  const sync=()=>box.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===sel.value));
+  box.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;sel.value=b.dataset.v;fire(sel);sync()});
+  new MutationObserver(draw).observe(sel,{childList:true,subtree:true,characterData:true});
+  sel.addEventListener("input",sync);draw();return sync}
+const syncs=[chips("thk"),chips("nthk")].filter(Boolean);
+
+/* 2. Soni: − va + tugmalari */
+function stepper(id){const el=q(id);if(!el||el.closest(".lz-step"))return;
+  const w=document.createElement("div");w.className="lz-step";el.insertAdjacentElement("beforebegin",w);
+  const mk=(t,d,l)=>{const b=document.createElement("button");b.type="button";b.textContent=t;b.setAttribute("aria-label",l);
+    b.addEventListener("click",()=>{const min=parseFloat(el.min);const v=Math.max(isNaN(min)?0:min,(parseInt(el.value)||0)+d);el.value=v;fire(el)});return b};
+  w.append(mk("−",-1,"Kamaytirish"),el,mk("+",1,"Ko‘paytirish"))}
+["qty","mqty"].forEach(stepper);
+
+/* 3. Kam ishlatiladigan bloklar yig'ilgan holda turadi */
+function fold(card,title,sub){if(!card)return;const lab=card.querySelector(":scope>.label");
+  const h=document.createElement("button");h.type="button";h.className="lz-fh";h.setAttribute("aria-expanded","false");
+  h.innerHTML=`<span>${title}<small></small></span>${CH}`;
+  if(lab)lab.replaceWith(h);else card.prepend(h);card.classList.add("lz-fold");
+  const set=()=>{try{h.querySelector("small").textContent=sub?sub():""}catch(_){}};
+  h.addEventListener("click",()=>{const o=card.classList.toggle("open");h.setAttribute("aria-expanded",o)});set();return set}
+const ratesCard=q("rates")&&q("rates").closest(".card");
+const ratesSub=fold(ratesCard,"Narxlarni o‘zgartirish",()=>tiers.map(t=>fmt(t.rate)).join(" · ")+" so‘m/m");
+if(ratesCard&&ratesSub)ratesCard.addEventListener("input",ratesSub);
+
+/* 4. Buyurtmalar: forma faqat kerak bo'lganda ochiladi */
+const pb=q("p-buy"),form=q("oform");
+if(pb&&form&&typeof fillForm==="function"){
+  const add=document.createElement("button");add.type="button";add.className="lz-add";add.textContent="+ Yangi buyurtma";
+  const kp=pb.querySelector(".kpis");(kp||pb.firstElementChild).insertAdjacentElement("afterend",add);
+  const x=document.createElement("button");x.type="button";x.className="lz-fx";x.textContent="Yopish ✕";
+  const top=form.querySelector(".otop");if(top)top.append(x);
+  const open=(o,focus)=>{pb.classList.toggle("lz-closed",!o);if(o&&focus){form.scrollIntoView({behavior:"smooth",block:"start"});if(focus===true)setTimeout(()=>{try{q("o-mijoz").focus({preventScroll:true})}catch(_){}} ,250)}};
+  const ff=fillForm;fillForm=function(o){ff(o);open(!!o,o?"scroll":false)};
+  if(typeof startOrder==="function"){const so=startOrder;startOrder=function(p){so(p);open(true,true)}}
+  add.addEventListener("click",()=>{fillForm(null);open(true,true)});
+  q("oNew").addEventListener("click",()=>open(true,true));
+  x.addEventListener("click",()=>fillForm(null));
+  open(false);
+}
+
+/* 5. Pastki panel: jami narx va asosiy tugma doim ko'z oldida */
+const BAR={narx:{sum:"sum",go:"toOrder",t:"Jami narx"},nest:{sum:"nSum",go:"nOrder",t:"Jami kesish narxi"},metal:{sum:"mSum",go:"mOrder",t:"Metall narxi"}};
+document.body.insertAdjacentHTML("beforeend",`<div class="lz-bar" id="lzBar" hidden><button type="button" class="lb-sum" id="lzBarSum" aria-label="Hisobga o‘tish"><small></small><b></b></button><button type="button" class="lb-go" id="lzBarGo">Buyurtma qilish</button></div>`);
+const bar=q("lzBar");const seen={};
+const cur=()=>document.body.dataset.v||"";
+function barShow(){const c=BAR[cur()];let on=false;
+  if(c){const el=q(c.sum),txt=(el&&el.textContent||"").trim();on=!!el&&!seen[c.sum]&&/[1-9]/.test(txt);
+    if(on){bar.querySelector("small").textContent=c.t;bar.querySelector("b").textContent=txt}}
+  bar.hidden=!on;if(on)document.body.dataset.bar="1";else delete document.body.dataset.bar}
+if("IntersectionObserver" in window){
+  const io=new IntersectionObserver(es=>{es.forEach(e=>seen[e.target.id]=e.isIntersecting);barShow()},{rootMargin:"0px 0px -150px 0px"});
+  Object.values(BAR).forEach(c=>{const el=q(c.sum);if(!el)return;io.observe(el);new MutationObserver(barShow).observe(el,{childList:true,characterData:true,subtree:true})});
+  q("lzBarSum").addEventListener("click",()=>{const c=BAR[cur()];if(c)q(c.sum).scrollIntoView({behavior:"smooth",block:"center"})});
+  q("lzBarGo").addEventListener("click",()=>{const c=BAR[cur()];if(c&&q(c.go))q(c.go).click()});
+  document.addEventListener("lzview",()=>{syncs.forEach(f=>f());barShow()});
+}
+}catch(e){console.error("yengil interfeys",e)}})();
 
 showTab("narx");lzView("home");
 </script>
