@@ -334,6 +334,17 @@ body.shop .kpi b{font-size:20px}
 .lz-mk button{padding:6px 12px;font-size:13px;border-radius:99px;min-height:36px}
 .lz-res{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--line);padding-top:12px}
 #lzPForm[hidden]{display:none}
+/* ---------- kesish vaqti ---------- */
+.lz-time{display:flex;align-items:center;gap:8px;margin-top:6px;padding:8px 12px;border-radius:8px;background:var(--bg);font:500 14px var(--body);color:var(--fg)}
+.lz-time b{font:700 16px var(--display);font-variant-numeric:tabular-nums}
+.lz-time small{color:var(--muted);font:12px var(--mono);margin-left:auto;text-align:right}
+.lz-time>span,.lz-time>b{white-space:nowrap}
+.lz-time[hidden]{display:none}
+@media (max-width:760px){body.shop .actions>label.chk{grid-column:1/-1;order:-2;min-height:0;text-align:left}}
+.lz-spd{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.lz-spd span{font-family:var(--mono);font-size:14px}
+.lz-spd .h{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lz-spd input{padding:7px 10px;font-size:15px}
 </style>
 
 <div class="wrap">
@@ -4032,6 +4043,35 @@ function openProd(){let list=pLoad(),edit=null,delArm=null;
 window.lzProducts=openProd;
 document.addEventListener("click",e=>{const g=e.target.closest('[data-go="prod"]');if(!g)return;e.stopImmediatePropagation();e.preventDefault();openProd()},true);
 }catch(e){console.error("faktura/narxnoma",e)}})();
+
+/* ---------- kesish vaqti: metr va pirsing soniga qarab taxminiy vaqt ---------- */
+(()=>{try{
+const q=id=>document.getElementById(id);
+const DEF=[[6,.5],[3,1],[1.8,2],[1,4]];           // m/daq, 1 pirsing uchun soniya — taxminiy, sozlamada o'zgartiriladi
+const IDLE=1.15;                                   // bo'sh yurish va burilishlar uchun +15%
+let sp={};try{sp=JSON.parse(localStorage.getItem("lazerSpeed")||"{}")||{}}catch(_){}
+const get=t=>{const i=Math.max(0,tiers.indexOf(t)),d=DEF[Math.min(i,DEF.length-1)],v=sp[t.id]||{};return {v:+v.v>0?+v.v:d[0],p:+v.p>=0&&v.p!==""&&v.p!=null?+v.p:d[1]}};
+const mins=(m,pier,t)=>{const s=get(t);return (m/s.v+pier*s.p/60)*IDLE};
+const human=x=>{if(!(x>0))return"";if(x<1)return"1 daqiqadan kam";const r=Math.round(x);if(r<60)return r+" daqiqa";const h=Math.floor(r/60),m=r%60;return h+" soat"+(m?" "+m+" daq":"")};
+window.lzCutMinutes=(m,pier,tierId)=>mins(m,pier,tiers.find(x=>x.id===tierId)||tiers[0]);
+const mk=(after,id)=>{const a=q(after);if(!a)return null;a.insertAdjacentHTML("afterend",`<span class="lz-time" id="${id}" hidden><span>Kesish vaqti ≈</span><b></b><small></small></span>`);return q(id)};
+const e1=mk("calc","lzTm1"),e2=mk("nCalc","lzTm2");
+const put=(el,m,pier,t)=>{if(!el)return;const x=m>0?mins(m,pier,t):0;el.hidden=!(x>0);if(x>0){el.querySelector("b").textContent=human(x);el.querySelector("small").textContent=`${get(t).v} m/daq · ${pier} pirsing`}};
+function upd(){try{
+  const t1=tiers.find(x=>x.id===q("thk").value)||tiers[0],n=Math.max(0,parseInt(q("qty").value)||0);
+  put(e1,(parseFloat(q("len").value)||0)*n,(parseInt(q("sPier").textContent)||0)*n,t1);
+  const t2=tiers.find(x=>x.id===q("nthk").value)||tiers[0];
+  put(e2,parseFloat(q("nLen").textContent)||0,parseInt(q("nPier").textContent)||0,t2)}catch(_){}}
+["sum","nSum","sPier","nLen"].forEach(id=>{const el=q(id);if(el)new MutationObserver(upd).observe(el,{childList:true,characterData:true,subtree:true})});
+/* sozlama: "Narxlarni o'zgartirish" bloki ichida */
+const rates=q("rates");
+if(rates){const box=document.createElement("div");box.className="lz-spd";rates.insertAdjacentElement("afterend",box);
+  const draw=()=>{box.innerHTML=`<span class="h">Kesish tezligi</span><span class="h">m/daq</span><span class="h">Pirsing, soniya</span>`+tiers.map(t=>{const s=get(t);
+    return `<span>${t.name}</span><input type="number" min="0.1" step="0.1" inputmode="decimal" data-t="${t.id}" data-k="v" value="${s.v}" aria-label="${t.name} tezligi"><input type="number" min="0" step="0.5" inputmode="decimal" data-t="${t.id}" data-k="p" value="${s.p}" aria-label="${t.name} pirsing vaqti">`}).join("")};
+  box.addEventListener("input",e=>{const i=e.target;if(!i.dataset.t)return;e.stopPropagation();(sp[i.dataset.t]=sp[i.dataset.t]||{})[i.dataset.k]=i.value;try{localStorage.setItem("lazerSpeed",JSON.stringify(sp))}catch(_){}upd()});
+  draw();box.insertAdjacentHTML("afterend",`<p class="note">Tezlik stanok quvvati va gazga bog‘liq — o‘z stanogingizdagi haqiqiy tezlikni yozing. Vaqtga bo‘sh yurish uchun 15% qo‘shiladi.</p>`)}
+upd();
+}catch(e){console.error("kesish vaqti",e)}})();
 
 showTab("narx");lzView("home");
 </script>
