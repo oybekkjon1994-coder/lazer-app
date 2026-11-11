@@ -253,6 +253,98 @@ body.shop .card{border-radius:16px}
 .sh-nav button[aria-current="page"]{color:var(--sh-ink);font-weight:600}
 .sh-nav button[aria-current="page"] svg{stroke-width:2.2}
 .sh-nav .bd{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--sh-or);color:#fff;font:700 11px/18px var(--body);text-align:center}
+/* ---------- yengil interfeys: ixcham bosh sahifa, pastki narx paneli, tez tanlash ---------- */
+body.shop .sh-home{gap:14px}
+body.shop .sh-search input{padding:12px 16px 12px 46px;font-size:16px}
+body.shop .sh-promo{font-size:14px;padding:10px 14px;border-radius:10px}
+body.shop .sh-hero{aspect-ratio:3.7/1}
+body.shop .sh-sec{margin-top:0}
+body.shop .sh-sec h3{font-size:22px}
+body.shop .sh-sec button{font-size:15px;padding:4px 0}
+body.shop .sh-grid{gap:10px}
+body.shop .sh-tile{aspect-ratio:1/.74;border-radius:16px}
+body.shop .sh-tile .ill{left:auto;right:5%;top:9%;width:50%}
+body.shop .sh-tile .tl{left:12px;top:11px;font-size:10.5px;letter-spacing:.1em}
+body.shop .sh-tile .tn{left:12px;right:12px;bottom:12px;font-size:clamp(16px,4.6vw,20px)}
+body.shop .sh-tile .ta{display:none}
+body.shop .sh-fab{width:52px;height:52px;bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+body.shop .sh-fab svg{width:24px;height:24px}
+body.shop:not([data-v="home"]) .sh-fab{display:none}
+body.shop .sh-nav button{font-size:13px;gap:2px}
+body.shop .sh-nav button svg{width:26px;height:26px}
+@media (max-width:760px){
+  body.shop .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  body.shop .actions>*{min-height:46px;text-align:center}
+  body.shop .actions>.primary{grid-column:1/-1;order:-1;min-height:50px;font-size:16px}
+  body.shop .actions>:only-child,body.shop .actions>:last-child:nth-child(even):not(.primary){grid-column:1/-1}
+}
+.lz-bar{position:fixed;left:0;right:0;bottom:calc(71px + env(safe-area-inset-bottom,0px));z-index:43;display:flex;align-items:center;gap:10px;
+  padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));background:var(--sh-card);border-top:1px solid var(--sh-line);box-shadow:0 -6px 18px rgba(0,0,0,.08)}
+.lz-bar[hidden]{display:none}
+.lz-bar .lb-sum{flex:1;min-width:0;border:0;background:transparent;padding:0;text-align:left;display:flex;flex-direction:column;line-height:1.15;color:var(--fg)}
+.lz-bar .lb-sum small{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lz-bar .lb-sum b{font:800 22px var(--display);color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lz-bar .lb-go{flex:none;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 15px var(--body)}
+body.shop[data-bar="1"]{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.lz-tk{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px}
+.lz-tk button{min-height:50px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;font:600 14px var(--body);background:var(--bg)}
+.lz-tk button small{font:500 11px var(--mono);color:var(--muted)}
+.lz-tk button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.lz-tk button[aria-pressed="true"] small{color:inherit;opacity:.85}
+select.lz-hid{position:absolute!important;width:1px!important;height:1px!important;opacity:0;pointer-events:none;padding:0;border:0}
+.lz-step{display:grid;grid-template-columns:46px 1fr 46px;gap:6px}
+.lz-step button{padding:0;min-height:46px;font:600 22px var(--body);line-height:1}
+.lz-step input{text-align:center}
+#p-narx .row:has(.lz-tk){grid-template-columns:1fr}
+.lz-fold>.lz-fh{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:0;min-height:30px;text-align:left;color:var(--fg);font:600 15px var(--body)}
+.lz-fold>.lz-fh small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:2px}
+.lz-fold>.lz-fh svg{flex:none;transition:transform .15s}
+.lz-fold.open>.lz-fh svg{transform:rotate(90deg)}
+.lz-fold:not(.open)>:not(.lz-fh){display:none!important}
+.lz-add{width:100%;min-height:52px;border-radius:12px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 16px var(--body)}
+#p-buy.lz-closed #oform{display:none}
+#p-buy:not(.lz-closed) .lz-add{display:none}
+.lz-fx{float:right;border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:4px 0 4px 12px}
+body.shop .kpis{gap:8px}
+body.shop .kpi{padding:10px 12px}
+body.shop .kpi b{font-size:20px}
+/* ---------- hisob-faktura va tayyor mahsulotlar narxnomasi ---------- */
+.oact{grid-template-columns:repeat(3,1fr)}
+.oact select{grid-column:1/-1}
+.oact button{min-height:40px;padding:6px 4px}
+.lz-ov{overflow-y:auto;display:block;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lz-ov .lo-top{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:44px 1fr;align-items:center;gap:6px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) 14px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:#111;color:#fff}
+.lz-ov .lo-top h2{margin:0;font:700 20px var(--display)}
+.lz-ov .lo-top button{width:44px;height:44px;padding:0;border:0;background:transparent;color:#fff;display:grid;place-items:center;border-radius:50%}
+.lz-ov .lo-body{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+#lzInvCv{width:100%;height:auto;aspect-ratio:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
+.lz-plist{display:flex;flex-direction:column;gap:8px}
+.lz-p{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.lz-p .pt{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lz-p .pt b{font:600 16px var(--body);min-width:0;overflow-wrap:anywhere}
+.lz-p .pt span{font:800 18px var(--display);color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lz-p .pm{display:flex;flex-wrap:wrap;gap:4px 12px;font:13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.lz-p .pm .ok{color:var(--s-ok)}.lz-p .pm .bad{color:var(--accent)}
+.lz-p .pi{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.lz-p .pa{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lz-p .pa button{min-height:40px;padding:6px 4px;font-size:13px}
+.lz-pk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lz-mk{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lz-mk span{font-size:12px;color:var(--muted)}
+.lz-mk button{padding:6px 12px;font-size:13px;border-radius:99px;min-height:36px}
+.lz-res{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--line);padding-top:12px}
+#lzPForm[hidden]{display:none}
+/* ---------- kesish vaqti ---------- */
+.lz-time{display:flex;align-items:center;gap:8px;margin-top:6px;padding:8px 12px;border-radius:8px;background:var(--bg);font:500 14px var(--body);color:var(--fg)}
+.lz-time b{font:700 16px var(--display);font-variant-numeric:tabular-nums}
+.lz-time small{color:var(--muted);font:12px var(--mono);margin-left:auto;text-align:right}
+.lz-time>span,.lz-time>b{white-space:nowrap}
+.lz-time[hidden]{display:none}
+@media (max-width:760px){body.shop .actions>label:not(.btn){grid-column:1/-1;order:-2;min-height:0;text-align:left}}
+.lz-spd{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.lz-spd span{font-family:var(--mono);font-size:14px}
+.lz-spd .h{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lz-spd input{padding:7px 10px;font-size:15px}
 </style>
 
 <div class="wrap">
@@ -2480,7 +2572,7 @@ function renderOrders(){
   let list=orders.filter(o=>oFilter==="hammasi"?true:oFilter==="faol"?o.holat!=="topshirildi":oFilter==="qarz"?debt(o)>0:o.holat===oFilter);
   if(q)list=list.filter(o=>[o.mijoz,o.telefon,o.detal,o.izoh,"#"+o.n].join(" ").toLowerCase().includes(q));
   $("oEmpty").hidden=list.length>0;
-  $("oEmpty").textContent=orders.length?"Bu filtrda buyurtma yo‘q.":"Hali buyurtma yo‘q. O‘ngdagi formani to‘ldiring yoki “Narx” va “Nesting” bo‘limidan “Buyurtma qilish” tugmasini bosing.";
+  $("oEmpty").textContent=orders.length?"Bu filtrda buyurtma yo‘q.":"Hali buyurtma yo‘q. “+ Yangi buyurtma” tugmasini bosing yoki “Narx” va “Nesting” bo‘limidan “Buyurtma qilish” tugmasini bosing.";
   $("olist").innerHTML=list.map(o=>`<article class="ocard${o.id===editId?" sel":""}" data-id="${esc(o.id)}">
     <div class="otop"><b>#${esc(o.n)} · ${esc(o.mijoz||"Mijoz")}</b><span class="pill s-${esc(o.holat)}">${STATUS[o.holat]||""}</span></div>
     <div class="odet">${esc(o.detal)}${o.qalinlik?` · ${esc(o.qalinlik)}`:""}${o.soni?` · ${esc(o.soni)} dona`:""}</div>
@@ -3402,6 +3494,8 @@ plaque:`<rect x="18" y="46" width="164" height="108" rx="14" fill="${D}"/><rect 
 stair:`<path d="M10 186V158H52V130H94V102H136V74H178V186Z" fill="${D}"/><path d="M22 150 172 66V16L22 100Z" fill="${L}" stroke="${D}" stroke-width="6" stroke-linejoin="round"/>
 ${[0,1,2,3,4].map(i=>`<circle cx="${42+i*30}" cy="${116-i*16.8}" r="9" fill="none" stroke="${O}" stroke-width="4"/>`).join("")}<path d="M22 100V156M172 16V72" stroke="${D}" stroke-width="7" stroke-linecap="round"/><path d="M14 98 180 6" stroke="${O}" stroke-width="7" stroke-linecap="round"/>`
 };
+ILL.prod=`<rect x="30" y="26" width="140" height="156" rx="12" fill="${L}" stroke="${D}" stroke-width="5"/><rect x="76" y="14" width="48" height="26" rx="8" fill="${D}"/>
+${[0,1,2].map(i=>`<rect x="46" y="${64+i*36}" width="22" height="22" rx="5" fill="${i===1?O:D}"/><path d="M78 ${75+i*36}h44" stroke="${D}" stroke-width="5" stroke-linecap="round"/><path d="M132 ${75+i*36}h24" stroke="${O}" stroke-width="6" stroke-linecap="round"/>`).join("")}`;
 const ill=k=>`<svg viewBox="0 0 200 200" aria-hidden="true">${ILL[k]}</svg>`;
 const TG_BOT="https://t.me/lazer_uz77_bot",TG_ME="https://t.me/lazekametal",IG="https://instagram.com/metart_shop";
 const ordN=()=>{try{const a=JSON.parse(localStorage.getItem("lazerOrders")||"[]");return Array.isArray(a)?a.length:0}catch(_){return 0}};
@@ -3411,6 +3505,7 @@ const SEC=[
   {k:"dxf",s:"DXF yasash",n:"DXF yasash",d:"O‘lchamdan detal, matn, naqsh",kw:"dxf chizish detal shablon matn naqsh girih soat kozirok kronshteyn",tl:()=>`${Object.keys(PARTS).length} detal`},
   {k:"nest",s:"Nesting",n:"Nesting",d:"Detallarni listga joylash",kw:"nesting list joylash 1250 2500",tl:()=>"1250×2500"},
   {k:"buy",s:"Buyurtma",n:"Buyurtmalar",d:"Mijozlar, to‘lov, holat",kw:"buyurtma mijoz tolov qarz",tl:()=>`${ordN()} buyurtma`},
+  {k:"prod",s:"Mahsulotlar",n:"Mahsulotlar narxnomasi",d:"Tayyor buyumlar: tannarx, foyda, sotuv narxi",kw:"mahsulot narxnoma tannarx foyda urna mangal stellaj tayyor buyum prays",tl:()=>`${window.lzProdCount?lzProdCount():0} mahsulot`},
   {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`},
   {k:"gate2",part:"gatek",s:"Darvoza",n:"Darvoza / panjara",d:"Naqshli panel, truba ro‘yxati va narx",kw:"darvoza panjara kalitka tabaqa profil truba to‘siq",tl:()=>"konstruktor"},
   {k:"plaque",part:"plaque",s:"Uy raqami",n:"Uy raqami / tablichka",d:"Ko‘cha nomi va raqam, naqshli hoshiya",kw:"uy raqami tablichka manzil ko‘cha belgi yozuv",tl:()=>"tablichka"},
@@ -3453,11 +3548,11 @@ function badge(){const n=ordN(),b=$("shBd");b.hidden=!n;b.textContent=n>99?"99+"
 let cur="home",prev="home";
 function setNav(v){document.querySelectorAll(".sh-nav button").forEach(b=>b.toggleAttribute("aria-current",false));
   const t=v==="buy"?"buy":VIEWS.includes(v)?v:"kat";const b=document.querySelector(`.sh-nav [data-nv="${t}"]`);if(b)b.setAttribute("aria-current","page")}
-function view(v){if(cur!==v)prev=cur;cur=v;
+function view(v){if(cur!==v)prev=cur;cur=v;document.body.dataset.v=v;
   VIEWS.forEach(k=>$("p-"+k).hidden=k!==v);
   if(VIEWS.includes(v)){TABS.forEach(k=>$("p-"+k).hidden=true);if(v==="home")grid();if(v==="kat")$("p-kat").innerHTML=SEC.map(row).join("")}
   const top=$("shTop");top.hidden=v==="home";$("shTitle").textContent=v==="kat"?"Katalog":v==="prof"?"Profil":NM[v]||"";
-  setNav(v);badge()}
+  setNav(v);badge();document.dispatchEvent(new Event("lzview"))}
 const base=showTab;showTab=function(t){VIEWS.forEach(k=>$("p-"+k).hidden=true);base(t);view(t)};
 $("shBack").onclick=()=>{const p=prev&&prev!==cur?prev:"home";VIEWS.includes(p)?view(p):showTab(p)};
 document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){const [t,pp]=g.dataset.go.split(":");showTab(t);if(pp&&window.lzPick){lzPick(pp);$("shTitle").textContent=g.dataset.nm||""}return}
@@ -3744,6 +3839,239 @@ const upd=()=>{$("lzOff").hidden=navigator.onLine!==false};addEventListener("onl
   addEventListener("online",()=>check());
   setTimeout(()=>check(),2500);
 })();
+
+/* ---------- yengil interfeys: pastki narx paneli, qalinlik tugmalari, +/- soni, yig'iladigan bloklar ---------- */
+(()=>{try{
+const q=id=>document.getElementById(id);
+const fire=el=>{el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}))};
+const CH='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+
+/* 1. Qalinlik: ochiladigan ro'yxat o'rniga bir bosishda tanlanadigan tugmalar */
+function chips(selId){const sel=q(selId);if(!sel)return;
+  const box=document.createElement("div");box.className="lz-tk";box.setAttribute("role","group");box.setAttribute("aria-label","Qalinlik");
+  sel.classList.add("lz-hid");sel.tabIndex=-1;sel.insertAdjacentElement("afterend",box);
+  const draw=()=>{box.innerHTML=[...sel.options].map(o=>{const [a,b]=o.textContent.split(" — ");
+    return `<button type="button" data-v="${o.value}" aria-pressed="${o.value===sel.value}">${a}${b?`<small>${b.replace(" so‘m/m","")}</small>`:""}</button>`}).join("")};
+  const sync=()=>box.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===sel.value));
+  box.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;sel.value=b.dataset.v;fire(sel);sync()});
+  new MutationObserver(draw).observe(sel,{childList:true,subtree:true,characterData:true});
+  sel.addEventListener("input",sync);draw();return sync}
+const syncs=[chips("thk"),chips("nthk")].filter(Boolean);
+
+/* 2. Soni: − va + tugmalari */
+function stepper(id){const el=q(id);if(!el||el.closest(".lz-step"))return;
+  const w=document.createElement("div");w.className="lz-step";el.insertAdjacentElement("beforebegin",w);
+  const mk=(t,d,l)=>{const b=document.createElement("button");b.type="button";b.textContent=t;b.setAttribute("aria-label",l);
+    b.addEventListener("click",()=>{const min=parseFloat(el.min);const v=Math.max(isNaN(min)?0:min,(parseInt(el.value)||0)+d);el.value=v;fire(el)});return b};
+  w.append(mk("−",-1,"Kamaytirish"),el,mk("+",1,"Ko‘paytirish"))}
+["qty","mqty"].forEach(stepper);
+
+/* 3. Kam ishlatiladigan bloklar yig'ilgan holda turadi */
+function fold(card,title,sub){if(!card)return;const lab=card.querySelector(":scope>.label");
+  const h=document.createElement("button");h.type="button";h.className="lz-fh";h.setAttribute("aria-expanded","false");
+  h.innerHTML=`<span>${title}<small></small></span>${CH}`;
+  if(lab)lab.replaceWith(h);else card.prepend(h);card.classList.add("lz-fold");
+  const set=()=>{try{h.querySelector("small").textContent=sub?sub():""}catch(_){}};
+  h.addEventListener("click",()=>{const o=card.classList.toggle("open");h.setAttribute("aria-expanded",o)});set();return set}
+const ratesCard=q("rates")&&q("rates").closest(".card");
+const ratesSub=fold(ratesCard,"Narxlarni o‘zgartirish",()=>tiers.map(t=>fmt(t.rate)).join(" · ")+" so‘m/m");
+if(ratesCard&&ratesSub)ratesCard.addEventListener("input",ratesSub);
+
+/* 4. Buyurtmalar: forma faqat kerak bo'lganda ochiladi */
+const pb=q("p-buy"),form=q("oform");
+if(pb&&form&&typeof fillForm==="function"){
+  const add=document.createElement("button");add.type="button";add.className="lz-add";add.textContent="+ Yangi buyurtma";
+  const kp=pb.querySelector(".kpis");(kp||pb.firstElementChild).insertAdjacentElement("afterend",add);
+  const x=document.createElement("button");x.type="button";x.className="lz-fx";x.textContent="Yopish ✕";
+  const top=form.querySelector(".otop");if(top)top.append(x);
+  const open=(o,focus)=>{pb.classList.toggle("lz-closed",!o);if(o&&focus){form.scrollIntoView({behavior:"smooth",block:"start"});if(focus===true)setTimeout(()=>{try{q("o-mijoz").focus({preventScroll:true})}catch(_){}} ,250)}};
+  const ff=fillForm;fillForm=function(o){ff(o);open(!!o,o?"scroll":false)};
+  if(typeof startOrder==="function"){const so=startOrder;startOrder=function(p){so(p);open(true,true)}}
+  add.addEventListener("click",()=>{fillForm(null);open(true,true)});
+  q("oNew").addEventListener("click",()=>open(true,true));
+  x.addEventListener("click",()=>fillForm(null));
+  open(false);
+}
+
+/* 5. Pastki panel: jami narx va asosiy tugma doim ko'z oldida */
+const BAR={narx:{sum:"sum",go:"toOrder",t:"Jami narx"},nest:{sum:"nSum",go:"nOrder",t:"Jami kesish narxi"},metal:{sum:"mSum",go:"mOrder",t:"Metall narxi"}};
+document.body.insertAdjacentHTML("beforeend",`<div class="lz-bar" id="lzBar" hidden><button type="button" class="lb-sum" id="lzBarSum" aria-label="Hisobga o‘tish"><small></small><b></b></button><button type="button" class="lb-go" id="lzBarGo">Buyurtma qilish</button></div>`);
+const bar=q("lzBar");const seen={};
+const cur=()=>document.body.dataset.v||"";
+function barShow(){const c=BAR[cur()];let on=false;
+  if(c){const el=q(c.sum),txt=(el&&el.textContent||"").trim();on=!!el&&!seen[c.sum]&&/[1-9]/.test(txt);
+    if(on){bar.querySelector("small").textContent=c.t;bar.querySelector("b").textContent=txt}}
+  bar.hidden=!on;if(on)document.body.dataset.bar="1";else delete document.body.dataset.bar}
+if("IntersectionObserver" in window){
+  const io=new IntersectionObserver(es=>{es.forEach(e=>seen[e.target.id]=e.isIntersecting);barShow()},{rootMargin:"0px 0px -150px 0px"});
+  Object.values(BAR).forEach(c=>{const el=q(c.sum);if(!el)return;io.observe(el);new MutationObserver(barShow).observe(el,{childList:true,characterData:true,subtree:true})});
+  q("lzBarSum").addEventListener("click",()=>{const c=BAR[cur()];if(c)q(c.sum).scrollIntoView({behavior:"smooth",block:"center"})});
+  q("lzBarGo").addEventListener("click",()=>{const c=BAR[cur()];if(c&&q(c.go))q(c.go).click()});
+  document.addEventListener("lzview",()=>{syncs.forEach(f=>f());barShow()});
+}
+}catch(e){console.error("yengil interfeys",e)}})();
+
+/* ---------- hisob-faktura (buyurtmadan rasm) va tayyor mahsulotlar narxnomasi ---------- */
+(()=>{try{
+const q=id=>document.getElementById(id);
+const BACK='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+function overlay(id,title,body){let o=q(id);if(o)o.remove();
+  document.body.insertAdjacentHTML("beforeend",`<div class="zov lz-ov" id="${id}" role="dialog" aria-label="${title}"><div class="lo-top"><button type="button" aria-label="Orqaga">${BACK}</button><h2>${title}</h2></div><div class="lo-body">${body}</div></div>`);
+  o=q(id);o._close=()=>o.remove();o.querySelector(".lo-top button").onclick=o._close;return o}
+async function saveBlob(name,blob,toast){
+  if(typeof isNative==="function"&&isNative())return nativeShare(name,blob,toast);
+  const dl=await (window.claude?.use?.("downloads")??Promise.resolve(null)).catch(()=>null);
+  if(dl){try{await dl.save({filename:name,data:blob});toast.textContent=name+" saqlandi."}catch(e){toast.textContent=e&&e.code==="declined"?"Saqlash bekor qilindi.":"Rasmni saqlab bo‘lmadi."}return}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast.textContent=name+" yuklab olindi."}catch(_){toast.textContent="Rasmni bosib turib saqlang."}}
+const brand=()=>{try{return mockSt}catch(_){return {brand:"",phone:""}}};
+const brandSave=()=>{try{localStorage.setItem("lazerMock",JSON.stringify(mockSt))}catch(_){}};
+
+/* ===== 1. Hisob-faktura ===== */
+const logo=new Image();logo.src="img/logo.png";
+function wrapText(c,t,w){const out=[];String(t||"").split(/\n/).forEach(par=>{let line="";par.split(/\s+/).forEach(word=>{const tr=line?line+" "+word:word;if(c.measureText(tr).width>w&&line){out.push(line);line=word}else line=tr});out.push(line)});return out}
+function drawInv(cv,o){const W=1080,P=64,F='"IBM Plex Sans",system-ui,sans-serif',FD='"Archivo","IBM Plex Sans",system-ui,sans-serif';
+  const b=brand(),sum=+o.summa||0,paid=+o.tolangan||0,due=Math.max(0,sum-paid);
+  const c=cv.getContext("2d");c.font=`500 34px ${F}`;
+  const dl=wrapText(c,o.detal||"Lazer kesish",W-2*P-40);c.font=`400 28px ${F}`;const il=o.izoh?wrapText(c,"Izoh: "+o.izoh,W-2*P):[];
+  const H=200+150+170+90+dl.length*46+70+60+3*64+40+(o.muddat?56:0)+il.length*38+(il.length?24:0)+150;
+  cv.width=W;cv.height=H;c.fillStyle="#fff";c.fillRect(0,0,W,H);
+  c.fillStyle="#16181a";c.fillRect(0,0,W,200);c.fillStyle="#ff6a00";c.fillRect(0,200,W,8);
+  let x=P;if(!drawInv.noLogo&&logo.complete&&logo.naturalWidth){c.save();c.beginPath();c.roundRect(P,50,100,100,20);c.clip();c.drawImage(logo,P,50,100,100);c.restore();x=P+124}
+  c.textBaseline="alphabetic";c.fillStyle="#fff";c.font=`800 52px ${FD}`;let nm=b.brand||"Lazer ustaxona";while(c.measureText(nm).width>W-x-P&&nm.length>4)nm=nm.slice(0,-2);
+  c.fillText(nm,x,b.phone?104:118);if(b.phone){c.fillStyle="#ffd21f";c.font=`500 30px ${F}`;c.fillText(b.phone,x,150)}
+  let y=290;c.fillStyle="#16181a";c.font=`800 46px ${FD}`;c.fillText("HISOB-FAKTURA",P,y);
+  c.textAlign="right";c.fillStyle="#ff6a00";c.fillText("№ "+(o.n??""),W-P,y);
+  y+=46;c.fillStyle="#6b7280";c.font=`400 28px ${F}`;c.fillText("Sana: "+(fDate(o.sana)||fDate(new Date().toISOString())),W-P,y);c.textAlign="left";
+  y+=44;c.fillStyle="#f4f4f1";c.beginPath();c.roundRect(P,y,W-2*P,130,18);c.fill();
+  c.fillStyle="#6b7280";c.font=`600 22px ${F}`;c.fillText("MIJOZ",P+28,y+44);
+  c.fillStyle="#16181a";c.font=`700 36px ${F}`;c.fillText(o.mijoz||"—",P+28,y+94);
+  if(o.telefon){c.textAlign="right";c.font=`500 30px ${F}`;c.fillStyle="#374151";c.fillText(o.telefon,W-P-28,y+94);c.textAlign="left"}
+  y+=130+70;c.fillStyle="#6b7280";c.font=`600 22px ${F}`;c.fillText("BUYURTMA",P,y);y+=20;c.fillStyle="#e5e7eb";c.fillRect(P,y,W-2*P,2);y+=52;
+  c.fillStyle="#16181a";c.font=`500 34px ${F}`;dl.forEach(l=>{c.fillText(l,P,y);y+=46});
+  c.fillStyle="#6b7280";c.font=`400 28px ${F}`;c.fillText([o.qalinlik&&("Qalinlik: "+o.qalinlik),o.soni&&("Soni: "+o.soni+" dona"),+o.metr&&("Kesish: "+(+o.metr).toFixed(2)+" m/dona")].filter(Boolean).join("   ·   "),P,y+6);
+  y+=50;c.fillStyle="#e5e7eb";c.fillRect(P,y,W-2*P,2);y+=60;
+  const row=(k,v,col,big)=>{c.fillStyle="#374151";c.font=`${big?700:400} ${big?36:30}px ${F}`;c.textAlign="left";c.fillText(k,P,y);c.textAlign="right";c.fillStyle=col||"#16181a";c.font=`${big?800:600} ${big?44:32}px ${FD}`;c.fillText(v,W-P,y);c.textAlign="left";y+=64};
+  row("Jami summa",fmt(sum)+" so‘m");row("To‘langan",fmt(paid)+" so‘m");
+  due>0?row("Qoldiq",fmt(due)+" so‘m","#d9481a",true):row("Holat","To‘liq to‘langan","#2f855a",true);
+  y+=10;if(o.muddat){c.fillStyle="#16181a";c.font=`500 30px ${F}`;c.fillText("Tayyor bo‘lish sanasi: "+fDate(o.muddat),P,y);y+=56}
+  if(il.length){c.fillStyle="#6b7280";c.font=`400 28px ${F}`;il.forEach(l=>{c.fillText(l,P,y);y+=38});y+=24}
+  c.fillStyle="#f4f4f1";c.fillRect(0,H-110,W,110);c.fillStyle="#374151";c.font=`500 28px ${F}`;c.textAlign="center";
+  c.fillText("Buyurtmangiz uchun rahmat!"+(b.phone?"   ·   "+b.phone:""),W/2,H-46);c.textAlign="left"}
+function openInv(o){const b=brand();
+  const ov=overlay("lzInv","Hisob-faktura",`<canvas id="lzInvCv" width="1080" height="1400" aria-label="Hisob-faktura rasmi"></canvas>
+    <div class="card"><div class="params"><div class="field"><label class="label" for="lzIB">Ustaxona nomi</label><input id="lzIB" type="text" style="font-family:var(--body)" placeholder="masalan, Lazer Metal"></div>
+      <div class="field"><label class="label" for="lzIP">Telefon</label><input id="lzIP" type="tel" inputmode="tel" placeholder="+998 …"></div></div>
+      <div class="actions"><button type="button" class="primary" id="lzISave">Rasmni saqlash / yuborish</button><button type="button" id="lzICopy">Matnini nusxalash</button></div>
+      <div class="toast" id="lzIT" aria-live="polite"></div></div>`);
+  const cv=q("lzInvCv"),draw=()=>drawInv(cv,o);q("lzIB").value=b.brand||"";q("lzIP").value=b.phone||"";
+  let tm;[["lzIB","brand"],["lzIP","phone"]].forEach(([id,k])=>q(id).addEventListener("input",e=>{b[k]=e.target.value;brandSave();clearTimeout(tm);tm=setTimeout(draw,200)}));
+  draw();if(!logo.complete)logo.addEventListener("load",()=>{if(q("lzInvCv")===cv)draw()},{once:true});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(q("lzInvCv")===cv)draw()});
+  q("lzISave").onclick=()=>{const go=()=>cv.toBlob(bl=>{if(bl)saveBlob(`hisob_${o.n||""}_${safeName(o.mijoz||"mijoz")||"mijoz"}.png`,bl,q("lzIT"))},"image/png");
+    try{go()}catch(_){drawInv.noLogo=true;draw();try{go()}catch(e){q("lzIT").textContent="Rasmni saqlab bo‘lmadi."}}};
+  q("lzICopy").onclick=()=>{const sum=+o.summa||0,paid=+o.tolangan||0,due=Math.max(0,sum-paid);
+    const t=`${b.brand||"Lazer ustaxona"}\nHisob-faktura № ${o.n}  (${fDate(o.sana)})\nMijoz: ${o.mijoz||"—"}\n${o.detal||"Lazer kesish"}${o.qalinlik?" · "+o.qalinlik:""}${o.soni?" · "+o.soni+" dona":""}\nJami: ${fmt(sum)} so‘m\nTo‘langan: ${fmt(paid)} so‘m\n${due>0?"Qoldiq: "+fmt(due)+" so‘m":"To‘liq to‘langan"}`+(o.muddat?`\nTayyor bo‘ladi: ${fDate(o.muddat)}`:"")+(b.phone?`\nTel: ${b.phone}`:"");
+    navigator.clipboard.writeText(t).then(()=>q("lzIT").textContent="Nusxalandi — Telegramga joylashingiz mumkin.").catch(()=>q("lzIT").textContent=t)}}
+window.lzInvoice=openInv;
+if(typeof renderOrders==="function"&&q("olist")){
+  const ro=renderOrders;renderOrders=function(){ro();q("olist").querySelectorAll(".oact").forEach(a=>{if(a.querySelector('[data-act="inv"]'))return;
+    const b=document.createElement("button");b.dataset.act="inv";b.textContent="Hisob";a.insertBefore(b,a.querySelector('[data-act="ed"]'))})};
+  q("olist").addEventListener("click",e=>{const b=e.target.closest('button[data-act="inv"]');if(!b)return;const o=orders.find(x=>x.id===b.closest(".ocard").dataset.id);if(o)openInv(o)});
+  renderOrders();
+}
+
+/* ===== 2. Tayyor mahsulotlar narxnomasi ===== */
+const PK="lazerProducts",num=v=>Math.max(0,parseFloat(v)||0);
+const pLoad=()=>{try{const a=JSON.parse(localStorage.getItem(PK)||"[]");return Array.isArray(a)?a:[]}catch(_){return[]}};
+const pStore=a=>{try{localStorage.setItem(PK,JSON.stringify(a))}catch(_){}};
+const cost=p=>num(p.mat)+num(p.kes)+num(p.ish)+num(p.bosh);
+window.lzProdCount=()=>pLoad().length;
+function openProd(){let list=pLoad(),edit=null,delArm=null;
+  const ov=overlay("lzProd","Mahsulotlar narxnomasi",`
+    <button type="button" class="lz-add" id="lzPAdd" style="display:block">+ Yangi mahsulot</button>
+    <form class="card" id="lzPForm" hidden novalidate>
+      <div class="otop"><span class="label" id="lzPTitle">Yangi mahsulot</span><button type="button" class="lz-fx" id="lzPX">Yopish ✕</button></div>
+      <div class="field"><label class="label" for="lzPn">Nomi</label><input id="lzPn" type="text" style="font-family:var(--body)" placeholder="masalan, Urna 400×400×1000" autocomplete="off"></div>
+      <div class="label">Tannarx, so‘m</div>
+      <div class="params">
+        <div class="field"><label class="label" for="lzPmat">Metall va material</label><input id="lzPmat" type="number" min="0" step="1000" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="lzPkes">Lazer kesish</label><input id="lzPkes" type="number" min="0" step="1000" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="lzPish">Payvand, yig‘ish, ish haqi</label><input id="lzPish" type="number" min="0" step="1000" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="lzPbosh">Bo‘yoq va boshqa</label><input id="lzPbosh" type="number" min="0" step="1000" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label class="label" for="lzPnarx">Sotuv narxi, so‘m</label><input id="lzPnarx" type="number" min="0" step="1000" inputmode="numeric"></div>
+      <div class="lz-mk"><span>Tannarxga ustama:</span><button type="button" data-m="30">+30%</button><button type="button" data-m="50">+50%</button><button type="button" data-m="70">+70%</button><button type="button" data-m="100">+100%</button></div>
+      <div class="lz-res"><div class="stat"><span class="label">Tannarx</span><b id="lzPc">0</b></div><div class="stat"><span class="label">Foyda</span><b id="lzPf">0</b></div><div class="stat"><span class="label">Ustama</span><b id="lzPm">—</b></div></div>
+      <div class="field"><label class="label" for="lzPizoh">Izoh (o‘lcham, material, muddat)</label><input id="lzPizoh" type="text" style="font-family:var(--body)"></div>
+      <div class="actions"><button type="submit" class="primary">Saqlash</button><button type="button" id="lzPDel" hidden>O‘chirish</button></div>
+    </form>
+    <input id="lzPQ" type="search" placeholder="Mahsulot nomi bo‘yicha qidirish" aria-label="Qidirish" style="font-family:var(--body);font-size:15px">
+    <div class="lz-plist" id="lzPList"></div>
+    <p class="note" id="lzPEmpty"></p>
+    <div class="actions"><button type="button" id="lzPCopy">Narxnomani nusxalash (mijozlar uchun)</button></div>
+    <div class="toast" id="lzPT" aria-live="polite"></div>`);
+  const F=["mat","kes","ish","bosh","narx"],form=q("lzPForm"),T=q("lzPT");
+  const cl=ov._close;ov._close=()=>{cl();try{if(document.body.dataset.v==="home"&&window.lzView)lzView("home")}catch(_){}};ov.querySelector(".lo-top button").onclick=ov._close;
+  const cur=()=>{const p={nom:q("lzPn").value.trim(),izoh:q("lzPizoh").value.trim()};F.forEach(k=>p[k]=num(q("lzP"+k).value));return p};
+  const res=()=>{const p=cur(),c=cost(p),f=p.narx-c;q("lzPc").textContent=fmt(c);q("lzPf").textContent=p.narx?fmt(f):"—";q("lzPf").style.color=p.narx&&f<0?"var(--accent)":"";q("lzPm").textContent=p.narx&&c?Math.round(f/c*100)+"%":"—"};
+  const show=p=>{edit=p?p.id:null;delArm=null;form.hidden=false;q("lzPAdd").style.display="none";q("lzPTitle").textContent=p?"Mahsulotni tahrirlash":"Yangi mahsulot";
+    q("lzPn").value=p?p.nom:"";q("lzPizoh").value=p?p.izoh||"":"";F.forEach(k=>q("lzP"+k).value=p&&p[k]?p[k]:"");q("lzPDel").hidden=!p;q("lzPDel").textContent="O‘chirish";res();
+    form.scrollIntoView({behavior:"smooth",block:"start"})};
+  const hide=()=>{form.hidden=true;q("lzPAdd").style.display="block";edit=null};
+  const render=()=>{const s=q("lzPQ").value.trim().toLowerCase();const L=list.filter(p=>!s||(p.nom+" "+(p.izoh||"")).toLowerCase().includes(s)).sort((a,b)=>a.nom.localeCompare(b.nom));
+    q("lzPEmpty").hidden=L.length>0;q("lzPEmpty").textContent=list.length?"Topilmadi.":"Hali mahsulot yo‘q. Urna, mangal, stellaj kabi tayyor buyumlaringizni qo‘shing — tannarx, foyda va sotuv narxi bitta joyda turadi.";
+    q("lzPQ").hidden=list.length<4;q("lzPCopy").hidden=!list.length;
+    q("lzPList").innerHTML=L.map(p=>{const c=cost(p),f=num(p.narx)-c;return `<article class="lz-p" data-id="${esc(p.id)}"><div class="pt"><b>${esc(p.nom)}</b><span>${p.narx?fmt(p.narx)+" so‘m":"—"}</span></div>
+      <div class="pm"><span>tannarx ${fmt(c)}</span>${p.narx&&c?`<span class="${f<0?"bad":"ok"}">foyda ${fmt(f)} (${Math.round(f/c*100)}%)</span>`:""}</div>${p.izoh?`<div class="pi">${esc(p.izoh)}</div>`:""}
+      <div class="pa"><button type="button" data-a="ord">Buyurtma</button><button type="button" data-a="cp">Nusxalash</button><button type="button" data-a="ed">Tahrirlash</button></div></article>`}).join("")};
+  form.addEventListener("input",res);
+  form.querySelector(".lz-mk").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const c=cost(cur());if(!c){T.textContent="Avval tannarxni kiriting.";return}
+    q("lzPnarx").value=Math.ceil(c*(1+b.dataset.m/100)/1000)*1000;res()});
+  q("lzPAdd").onclick=()=>{show(null);setTimeout(()=>{try{q("lzPn").focus({preventScroll:true})}catch(_){}},250)};q("lzPX").onclick=hide;
+  form.addEventListener("submit",e=>{e.preventDefault();const p=cur();if(!p.nom){T.textContent="Mahsulot nomini kiriting.";q("lzPn").focus();return}
+    if(edit){list=list.map(x=>x.id===edit?{...x,...p}:x)}else{p.id=Math.random().toString(36).slice(2);list.push(p)}
+    pStore(list);T.textContent=`“${p.nom}” saqlandi.`;hide();render()});
+  q("lzPDel").onclick=()=>{if(!edit)return;if(delArm!==edit){delArm=edit;q("lzPDel").textContent="Ha, o‘chirilsin";return}list=list.filter(x=>x.id!==edit);pStore(list);T.textContent="Mahsulot o‘chirildi.";hide();render()};
+  q("lzPQ").addEventListener("input",render);
+  q("lzPList").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const p=list.find(x=>x.id===b.closest(".lz-p").dataset.id);if(!p)return;
+    if(b.dataset.a==="ed")show(p);
+    if(b.dataset.a==="cp"){const t=`${p.nom}${p.izoh?"\n"+p.izoh:""}\nNarxi: ${fmt(num(p.narx))} so‘m`;navigator.clipboard.writeText(t).then(()=>T.textContent="Nusxalandi — mijozga yuborishingiz mumkin.").catch(()=>T.textContent=t)}
+    if(b.dataset.a==="ord"&&typeof startOrder==="function"){ov._close();startOrder({detal:p.nom,soni:1,metr:"",summa:num(p.narx)||null,izoh:p.izoh||""});try{q("o-qalinlik").selectedIndex=-1}catch(_){}}});
+  q("lzPCopy").onclick=()=>{const b=brand();const t=(b.brand?b.brand+" — narxnoma\n\n":"Narxnoma\n\n")+list.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).filter(p=>p.narx).map(p=>`${p.nom} — ${fmt(p.narx)} so‘m`).join("\n")+(b.phone?`\n\nTel: ${b.phone}`:"");
+    navigator.clipboard.writeText(t).then(()=>T.textContent="Narxnoma nusxalandi (tannarxsiz, faqat sotuv narxlari).").catch(()=>T.textContent=t)};
+  render()}
+window.lzProducts=openProd;
+document.addEventListener("click",e=>{const g=e.target.closest('[data-go="prod"]');if(!g)return;e.stopImmediatePropagation();e.preventDefault();openProd()},true);
+}catch(e){console.error("faktura/narxnoma",e)}})();
+
+/* ---------- kesish vaqti: metr va pirsing soniga qarab taxminiy vaqt ---------- */
+(()=>{try{
+const q=id=>document.getElementById(id);
+const DEF=[[6,.5],[3,1],[1.8,2],[1,4]];           // m/daq, 1 pirsing uchun soniya — taxminiy, sozlamada o'zgartiriladi
+const IDLE=1.15;                                   // bo'sh yurish va burilishlar uchun +15%
+let sp={};try{sp=JSON.parse(localStorage.getItem("lazerSpeed")||"{}")||{}}catch(_){}
+const get=t=>{const i=Math.max(0,tiers.indexOf(t)),d=DEF[Math.min(i,DEF.length-1)],v=sp[t.id]||{};return {v:+v.v>0?+v.v:d[0],p:+v.p>=0&&v.p!==""&&v.p!=null?+v.p:d[1]}};
+const mins=(m,pier,t)=>{const s=get(t);return (m/s.v+pier*s.p/60)*IDLE};
+const human=x=>{if(!(x>0))return"";if(x<1)return"1 daqiqadan kam";const r=Math.round(x);if(r<60)return r+" daqiqa";const h=Math.floor(r/60),m=r%60;return h+" soat"+(m?" "+m+" daq":"")};
+window.lzCutMinutes=(m,pier,tierId)=>mins(m,pier,tiers.find(x=>x.id===tierId)||tiers[0]);
+const mk=(after,id)=>{const a=q(after);if(!a)return null;a.insertAdjacentHTML("afterend",`<span class="lz-time" id="${id}" hidden><span>Kesish vaqti ≈</span><b></b><small></small></span>`);return q(id)};
+const e1=mk("calc","lzTm1"),e2=mk("nCalc","lzTm2");
+const put=(el,m,pier,t)=>{if(!el)return;const x=m>0?mins(m,pier,t):0;el.hidden=!(x>0);if(x>0){el.querySelector("b").textContent=human(x);el.querySelector("small").textContent=`${get(t).v} m/daq · ${pier} pirsing`}};
+function upd(){try{
+  const t1=tiers.find(x=>x.id===q("thk").value)||tiers[0],n=Math.max(0,parseInt(q("qty").value)||0);
+  put(e1,(parseFloat(q("len").value)||0)*n,(parseInt(q("sPier").textContent)||0)*n,t1);
+  const t2=tiers.find(x=>x.id===q("nthk").value)||tiers[0];
+  put(e2,parseFloat(q("nLen").textContent)||0,parseInt(q("nPier").textContent)||0,t2)}catch(_){}}
+["sum","nSum","sPier","nLen"].forEach(id=>{const el=q(id);if(el)new MutationObserver(upd).observe(el,{childList:true,characterData:true,subtree:true})});
+/* sozlama: "Narxlarni o'zgartirish" bloki ichida */
+const rates=q("rates");
+if(rates){const box=document.createElement("div");box.className="lz-spd";rates.insertAdjacentElement("afterend",box);
+  const draw=()=>{box.innerHTML=`<span class="h">Kesish tezligi</span><span class="h">m/daq</span><span class="h">Pirsing, soniya</span>`+tiers.map(t=>{const s=get(t);
+    return `<span>${t.name}</span><input type="number" min="0.1" step="0.1" inputmode="decimal" data-t="${t.id}" data-k="v" value="${s.v}" aria-label="${t.name} tezligi"><input type="number" min="0" step="0.5" inputmode="decimal" data-t="${t.id}" data-k="p" value="${s.p}" aria-label="${t.name} pirsing vaqti">`}).join("")};
+  box.addEventListener("input",e=>{const i=e.target;if(!i.dataset.t)return;e.stopPropagation();(sp[i.dataset.t]=sp[i.dataset.t]||{})[i.dataset.k]=i.value;try{localStorage.setItem("lazerSpeed",JSON.stringify(sp))}catch(_){}upd()});
+  draw();box.insertAdjacentHTML("afterend",`<p class="note">Tezlik stanok quvvati va gazga bog‘liq — o‘z stanogingizdagi haqiqiy tezlikni yozing. Vaqtga bo‘sh yurish uchun 15% qo‘shiladi.</p>`)}
+upd();
+}catch(e){console.error("kesish vaqti",e)}})();
 
 showTab("narx");lzView("home");
 </script>
