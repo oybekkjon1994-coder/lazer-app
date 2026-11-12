@@ -1956,6 +1956,87 @@ PARTS.perila={group:"tpl",name:"Zinapoya perilasi",gal:"pt",rerender:["pt","inf"
     const items=laser.concat(Array.from({length:nPost},()=>({s:fp,w:fs,h:fs})));
     this.warn=info.join(" ");this._m3=M;return rowDXF(items,25).s},
   label:p=>`Perila ${p.zs==="L"?"L ":p.zs==="U"?"U ":""}${p.L}×${p.Hs}`};
+/* ---------- 22b. perila naqsh paneli (PERILA NAQSH chizmasi asosida, xatolari to‘g‘rilangan) ---------- */
+function perilaNaqsh(p){
+  const W=p.nW,H=p.nH,t=p.nt,bs=p.nb>0?p.nb:0,ti=8,ex=40,fl=20,tr=24;
+  if(!(W>=600&&W<=6000))throw"Panel eni 600–6000 mm oralig‘ida bo‘lsin.";
+  if(!(H>=500&&H<=2500))throw"Umumiy balandlik 500–2500 mm oralig‘ida bo‘lsin.";
+  if(!(t>=10&&t<=80))throw"Tashqi rama eni 10–80 mm oralig‘ida bo‘lsin.";
+  if(bs&&bs<50)throw"O‘rama hoshiya eni kamida 50 mm bo‘lsin (yoki 0 = hoshiyasiz).";
+  const sx=Math.max(.45,Math.min(1,W/2360)),sv=.55+.45*sx,half=W/2;
+  const Hb=H-224*sv,railY=Hb+85*sv,shY=Hb+156*sv,e0=577*sx,e1=645*sx;
+  const inn=t+(bs?bs+ti:0),xi0=ex+inn,yi0=inn;
+  if(half-xi0<120||Hb-yi0<200)throw"Panel juda kichik — hoshiyani kamaytiring yoki o‘lchamni kattalashtiring.";
+  const sm=u=>u<=0?0:u>=1?1:u*u*(3-2*u),mir=x=>Math.min(x,W-x);
+  const yT=x=>{x=mir(x);if(x<=e0)return railY;if(x<e1)return railY+(shY-railY)*sm((x-e0)/(e1-e0));const u=(half-x)/(half-e1);return shY+(H-shY)*(1-u*u)};
+  const sc=W>=1700,xs=400*sx,rs=110*sx,dp=55,Rc=(rs*rs+dp*dp)/(2*dp),xst=530*sx,xr=600*sx,xr2=xr+fl;
+  const yB=x=>{x=mir(x);let y=Hb+fl;if(sc){if(Math.abs(x-xs)<rs)y-=Math.sqrt(Rc*Rc-(x-xs)**2)-(Rc-dp);if(x>xst)y+=27*sv}return y};
+  const F=x=>mir(x)>=xr2?yT(x)-tr:yB(x)-fl;
+  const Rd=(railY-Hb-fl)/2,cxd=ex+Rd+8,cyd=Hb+fl+Rd,rc=Math.max(0,Math.min(88*sv,inn-8));
+  const arc=(cx,cy,r,a0,a1,n=20)=>Array.from({length:n+1},(_,i)=>{const a=(a0+(a1-a0)*i/n)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+  const xsamp=(a,b,st)=>{const s=new Set([a,b]);for(const v of [e0,e1,xs-rs,xs+rs,xst,xr,xr2,W-e0,W-e1,W-xs+rs,W-xs-rs,W-xst,W-xr,W-xr2,half])if(v>a&&v<b){s.add(v);s.add(v-.01);s.add(v+.01)}for(let v=a;v<b;v+=st)s.add(v);return [...s].filter(v=>v>=a&&v<=b).sort((u,v)=>u-v)};
+  /* tashqi kontur — aniq chiziqlar bilan */
+  const O=[[ex+rc,0],[W-ex-rc,0]];
+  if(rc>0)O.push(...arc(W-ex,0,rc,180,90).slice(1));
+  O.push([W-ex,Hb],[W,Hb],[W,Hb+fl],...arc(W-cxd,cyd,Rd,-90,90));
+  xsamp(cxd,W-cxd,5).reverse().slice(1,-1).forEach(x=>O.push([x,yT(x)]));
+  O.push(...arc(cxd,cyd,Rd,90,270),[0,Hb+fl],[0,Hb],[ex,Hb]);
+  if(rc>0)O.push(...arc(ex,0,rc,90,0));
+  const hw=half-xi0,Fc=F(half),fh=Fc-yi0,cx=half,cy=yi0+fh*.435,R=Math.min(.277*fh,hw-30);
+  const ring=p.nring!=="yoq"&&R>=70,gul=ring&&p.ngul!=="yoq",pat=p.npt&&p.npt!=="yoq",cw=1.65*R;
+  const lat=pat&&(!ring||hw>cw+180),info=[];
+  const r=rcut(W,H,T=>{const x=T.x,X=T.X,Y=T.Y,k=T.sc,both=f=>{f(v=>v);f(v=>W-v)};
+    const wline=(pts,w)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.lineJoin="round";x.lineCap="round";x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(X(a),Y(b)):x.moveTo(X(a),Y(b)));x.stroke()};
+    const wcirc=(a,b,rr,w)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.beginPath();x.arc(X(a),Y(b),rr*k,0,2*Math.PI);x.stroke()};
+    const bead=(a,b,ro,rh)=>{T.metal(T.circ(a,b,ro));if(rh>0)T.cut(T.circ(a,b,rh))};
+    /* 2. ichki maydon: panjara naqshi */
+    const ch=Math.min(30,hw*.2),fp=[[xi0+ch,yi0],[W-xi0-ch,yi0],[W-xi0,yi0+ch]];xsamp(xi0,W-xi0,5).reverse().forEach(v=>fp.push([v,F(v)]));fp.push([xi0,yi0+ch]);
+    const zone=T.poly(fp);
+    if(lat)T.pattern(zone,{pat:p.npt,s:p.nps,w:p.npw,mg:ti,box:[xi0,yi0,W-xi0,Fc]});else T.cut(zone);
+    /* 1. poruchen bilan rama orasidagi ochiq joy va chetdagi halqa (burama) */
+    both(m=>{const xx=xsamp(cxd,xr,4),lo=xx.map(v=>[m(v),yB(v)]),up=xx.map(v=>[m(v),Math.max(yB(v),yT(v)-tr)]).reverse();T.cut(T.poly(lo.concat(up)));
+      T.metal(T.circ(m(cxd),cyd,Rd));if(Rd>=14)T.cut(T.circ(m(cxd),cyd,Rd-11))});
+    if(ring){
+      if(lat){/* o‘rtadagi ochiq “bulut” maydoni, cheti 8 mm hoshiya bilan */
+        const bp=[[cx-cw,yi0],[cx+cw,yi0]];xsamp(cx-cw,cx+cw,5).reverse().forEach(v=>bp.push([v,F(v)]));
+        const lr=.62*R,ps=[T.poly(bp),T.circ(cx-cw*1.04,yi0+lr,lr),T.circ(cx+cw*1.04,yi0+lr,lr)];
+        x.save();x.clip(zone);x.strokeStyle="#fff";x.lineWidth=2*ti*k;x.lineJoin="round";ps.forEach(q=>x.stroke(q));ps.forEach(q=>T.cut(q));x.restore()}
+      /* halqani ramaga ulaydigan ko‘priklar — asl chizmada halqa hech narsaga ulanmagan edi */
+      const bx=lat?cw+ti:hw+4,br=[[[cx,cy+R-4],[cx,Fc+4]],[[cx,cy-R+4],[cx,yi0-4]],[[cx-R+4,cy],[cx-bx,cy]],[[cx+R-4,cy],[cx+bx,cy]]];
+      br.forEach(([a,b])=>{wline([a,b],10);const L=Math.hypot(b[0]-a[0],b[1]-a[1])-0;if(L>110)bead((a[0]+b[0])/2,(a[1]+b[1])/2,15,7)});
+      const g=R>=150?30:R*.16,r1=R-4,r2=R-8-g-4;wcirc(cx,cy,r1,8);wcirc(cx,cy,r2,8);
+      const rm=R-8-g/2,nb=Math.max(8,4*Math.round(2*Math.PI*rm/(g*2.2)/4));for(let i=0;i<nb;i++){const a=2*Math.PI*(i+.5)/nb;bead(cx+rm*Math.cos(a),cy+rm*Math.sin(a),g/2+2,g/2-5)}
+      if(gul){const ri=r2-4,r0=.17*ri,q=(rr,a)=>[X(cx+rr*Math.cos(a)),Y(cy+rr*Math.sin(a))];x.strokeStyle="#fff";x.lineWidth=7*k;x.lineJoin="round";x.lineCap="round";
+        for(let i=0;i<8;i++){const a=i*Math.PI/4,d=.42;x.beginPath();x.moveTo(...q(r0,a));x.quadraticCurveTo(...q(.66*ri,a+d),...q(ri+2,a));x.quadraticCurveTo(...q(.66*ri,a-d),...q(r0,a));x.stroke();
+          const a2=a+Math.PI/8;x.beginPath();x.moveTo(...q(r0,a2));x.lineTo(...q(.5*ri,a2));x.stroke();bead(cx+.5*ri*Math.cos(a2),cy+.5*ri*Math.sin(a2),9,0)}
+        wcirc(cx,cy,r0,7)}}
+    /* 3. o‘rama (braid) hoshiya: yon va pastki tasmalar */
+    if(bs){const a0=bs/2-1,sw=7,strip=(P0,P1)=>{const L=Math.hypot(P1[0]-P0[0],P1[1]-P0[1]),n=Math.max(1,Math.round(L/(bs*1.7))),ux=(P1[0]-P0[0])/L,uy=(P1[1]-P0[1])/L,N=Math.ceil(L/3);
+        const pt=(s,o)=>[P0[0]+ux*s-uy*o,P0[1]+uy*s+ux*o];
+        T.cut(T.poly([pt(0,-bs/2),pt(L,-bs/2),pt(L,bs/2),pt(0,bs/2)]));
+        for(const sg of [1,-1]){const l=[];for(let i=0;i<=N;i++){const s=L*i/N;l.push(pt(s,sg*a0*Math.sin(2*Math.PI*n*s/L)))}wline(l,sw)}
+        for(let i=0;i<=2*n;i++){const c=pt(L*i/(2*n),0);bead(c[0],c[1],11,i&&i<2*n?5:0)}};
+      strip([ex+t+bs/2,yi0],[ex+t+bs/2,Hb-6]);strip([W-ex-t-bs/2,yi0],[W-ex-t-bs/2,Hb-6]);strip([xi0,t+bs/2],[W-xi0,t+bs/2]);
+      /* burchakdagi yaproq */
+      const av=Math.SQRT2*inn-rc,ry=av/2-24;if(ry>=6){const d=(rc+av/2)/Math.SQRT2;both(m=>{const pth=new Path2D(),sg=m(0)?-1:1;pth.ellipse(X(m(ex+d)),Y(d),ry*1.2*k,ry*k,sg*Math.PI/4,0,2*Math.PI);T.cut(pth)})}}
+  },{min:4});
+  info.push(`Perila naqsh paneli: umumiy ${Math.round(W)}×${Math.round(H)} mm, asosiy qism ${Math.round(W-2*ex)}×${Math.round(Hb)} mm, poruchen yoyi o‘rtada ${Math.round(H-Hb)} mm ko‘tariladi.`);
+  if(ring)info.push(`Halqa Ø${Math.round(2*R)} mm, ramaga 4 ta ko‘prik bilan ulangan.`);
+  if(pat&&!lat)info.push("Panel tor — panjara naqshi sig‘madi, maydon ochiq qoldirildi.");
+  info.push(`Ichki konturlar: ${r.n} ta.`);
+  this.warn=info.join(" ");return E.poly(O)+r.out}
+(()=>{const P=PARTS.perila,isN=p=>p.tur==="naqsh";
+  P.fields.forEach(f=>{const o=f[5];f[5]=q=>!isN(q)&&(!o||o(q))});
+  P.fields.unshift(["tur","Perila turi","zina","select",[["zina","Zinapoya perilasi (stoyka, poruchen)"],["naqsh","Naqsh paneli — balkon, ayvon, to‘siq"]]]);
+  P.fields.push(["nW","Panel eni — umumiy (mm)",2360,"num",null,isN],["nH","Umumiy balandlik (mm)",950,"num",null,isN],["nt","Tashqi rama eni (mm)",20,"num",null,isN],
+    ["nb","O‘rama hoshiya eni (0 = yo‘q, mm)",100,"num",null,isN],["npt","Panjara naqshi","g:488_45","select",PAT_OPTS(),isN],
+    ["nps","Naqsh / teshik o‘lchami (mm)",50,"num",null,q=>isN(q)&&q.npt!=="yoq"],["npw","Chiziq / oraliq qalinligi (mm)",8,"num",null,q=>isN(q)&&q.npt!=="yoq"],
+    ["nring","O‘rtadagi halqa","ha","select",[["ha","Ha — ko‘priklar bilan ulangan"],["yoq","Yo‘q"]],isN],["ngul","Halqa ichida gul","ha","select",[["ha","Ha — 8 bargli gul"],["yoq","Yo‘q — halqa ichi ochiq"]],q=>isN(q)&&q.nring!=="yoq"]);
+  P.rerender.push("tur","npt","nring");
+  const n0=P.note,n1="Tekis joy (balkon, ayvon, to‘siq) uchun bitta listdan kesiladigan bezakli panel: yoysimon poruchen, o‘rama hoshiya, panjara naqshi va o‘rtada gulli halqa. Eni o‘zgarsa naqsh o‘zi moslashadi. Halqa ramaga ko‘priklar bilan ulangan, hamma kontur yopiq.";
+  Object.defineProperty(P,"note",{get:()=>isN(vals.perila||{})?n1:n0});
+  const b0=P.build,l0=P.label;P.build=function(q){if(isN(q)){this._m3=null;return perilaNaqsh.call(this,q)}return b0.call(this,q)};
+  P.label=q=>isN(q)?`Perila naqsh ${q.nW}×${q.nH}`:l0(q)})();
 ["gatek","plaque","perila"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 
 
@@ -3494,6 +3575,7 @@ plaque:`<rect x="18" y="46" width="164" height="108" rx="14" fill="${D}"/><rect 
 stair:`<path d="M10 186V158H52V130H94V102H136V74H178V186Z" fill="${D}"/><path d="M22 150 172 66V16L22 100Z" fill="${L}" stroke="${D}" stroke-width="6" stroke-linejoin="round"/>
 ${[0,1,2,3,4].map(i=>`<circle cx="${42+i*30}" cy="${116-i*16.8}" r="9" fill="none" stroke="${O}" stroke-width="4"/>`).join("")}<path d="M22 100V156M172 16V72" stroke="${D}" stroke-width="7" stroke-linecap="round"/><path d="M14 98 180 6" stroke="${O}" stroke-width="7" stroke-linecap="round"/>`
 };
+ILL.pnaqsh=`<path d="M18 176V78H58Q66 54 100 50Q134 54 142 78H182V176Z" fill="${L}" stroke="${D}" stroke-width="7" stroke-linejoin="round"/><path d="M34 160V96H166V160Z" fill="none" stroke="${D}" stroke-width="4"/><circle cx="100" cy="124" r="30" fill="none" stroke="${O}" stroke-width="6"/><circle cx="100" cy="124" r="8" fill="${O}"/>${[0,1,2,3].map(i=>`<path d="M100 124L${100+26*Math.cos(i*Math.PI/4)} ${124+26*Math.sin(i*Math.PI/4)}M100 124L${100-26*Math.cos(i*Math.PI/4)} ${124-26*Math.sin(i*Math.PI/4)}" stroke="${O}" stroke-width="3"/>`).join("")}<path d="M100 50V94M100 154V176M34 124H70M130 124H166" stroke="${D}" stroke-width="4"/>`;
 ILL.prod=`<rect x="30" y="26" width="140" height="156" rx="12" fill="${L}" stroke="${D}" stroke-width="5"/><rect x="76" y="14" width="48" height="26" rx="8" fill="${D}"/>
 ${[0,1,2].map(i=>`<rect x="46" y="${64+i*36}" width="22" height="22" rx="5" fill="${i===1?O:D}"/><path d="M78 ${75+i*36}h44" stroke="${D}" stroke-width="5" stroke-linecap="round"/><path d="M132 ${75+i*36}h24" stroke="${O}" stroke-width="6" stroke-linecap="round"/>`).join("")}`;
 const ill=k=>`<svg viewBox="0 0 200 200" aria-hidden="true">${ILL[k]}</svg>`;
@@ -3509,12 +3591,13 @@ const SEC=[
   {k:"metal",s:"Metall",n:"Metall og‘irligi",d:"List, truba, profil — kg va narx",kw:"metall ogirlik kg truba profil list",tl:()=>`${Object.keys(SHAPES).length} tur`},
   {k:"gate2",part:"gatek",s:"Darvoza",n:"Darvoza / panjara",d:"Naqshli panel, truba ro‘yxati va narx",kw:"darvoza panjara kalitka tabaqa profil truba to‘siq",tl:()=>"konstruktor"},
   {k:"plaque",part:"plaque",s:"Uy raqami",n:"Uy raqami / tablichka",d:"Ko‘cha nomi va raqam, naqshli hoshiya",kw:"uy raqami tablichka manzil ko‘cha belgi yozuv",tl:()=>"tablichka"},
-  {k:"stair",part:"perila",s:"Perila",n:"Zinapoya perilasi",d:"Zina qiyaligidagi naqshli panellar",kw:"zinapoya perila panjara zina poruchen",tl:()=>"zinapoya"}];
+  {k:"stair",part:"perila",s:"Perila",n:"Zinapoya perilasi",d:"Zina qiyaligidagi naqshli panellar",kw:"zinapoya perila panjara zina poruchen",tl:()=>"zinapoya"},
+  {k:"pnaqsh",part:"perila",sub:"naqsh",s:"Perila naqsh",n:"Perila naqsh paneli",d:"Balkon va ayvon uchun bezakli panel: halqa, gul, o‘rama hoshiya",kw:"perila naqsh panel balkon ayvon to‘siq halqa gul ornament",tl:()=>"naqsh panel"}];
 const NM=Object.fromEntries(SEC.map(s=>[s.k,s.n]));
 document.body.classList.add("shop");
 const wrap=document.querySelector("body>.wrap"),nav=document.querySelector("nav.tabs");
-const tile=s=>`<button type="button" class="sh-tile" data-go="${s.part?"dxf:"+s.part:s.k}" data-nm="${s.n}"><span class="ill">${ill(s.k)}</span><span class="tl">${s.tl()}</span><span class="tn">${s.s}</span><span class="ta">${SV(I.arr,24,2.2)}</span></button>`;
-const row=s=>`<button type="button" class="sh-row" data-go="${s.part?"dxf:"+s.part:s.k}" data-nm="${s.n}"><span class="ri">${ill(s.k)}</span><span><b>${s.n}</b><small>${s.d}</small></span><span class="ta">${SV(I.chev,20)}</span></button>`;
+const tile=s=>`<button type="button" class="sh-tile" data-go="${s.part?"dxf:"+s.part+(s.sub?":"+s.sub:""):s.k}" data-nm="${s.n}"><span class="ill">${ill(s.k)}</span><span class="tl">${s.tl()}</span><span class="tn">${s.s}</span><span class="ta">${SV(I.arr,24,2.2)}</span></button>`;
+const row=s=>`<button type="button" class="sh-row" data-go="${s.part?"dxf:"+s.part+(s.sub?":"+s.sub:""):s.k}" data-nm="${s.n}"><span class="ri">${ill(s.k)}</span><span><b>${s.n}</b><small>${s.d}</small></span><span class="ta">${SV(I.chev,20)}</span></button>`;
 nav.insertAdjacentHTML("afterend",`
 <div class="sh-top" id="shTop" hidden><button type="button" id="shBack" aria-label="Orqaga">${SV(I.back,26,2.2)}</button><h2 id="shTitle"></h2><span></span></div>
 <div id="p-home" class="sh-home" hidden>
@@ -3555,7 +3638,7 @@ function view(v){if(cur!==v)prev=cur;cur=v;document.body.dataset.v=v;
   setNav(v);badge();document.dispatchEvent(new Event("lzview"))}
 const base=showTab;showTab=function(t){VIEWS.forEach(k=>$("p-"+k).hidden=true);base(t);view(t)};
 $("shBack").onclick=()=>{const p=prev&&prev!==cur?prev:"home";VIEWS.includes(p)?view(p):showTab(p)};
-document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){const [t,pp]=g.dataset.go.split(":");showTab(t);if(pp&&window.lzPick){lzPick(pp);$("shTitle").textContent=g.dataset.nm||""}return}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){const [t,pp,sub]=g.dataset.go.split(":");showTab(t);if(pp&&window.lzPick){if(pp==="perila"&&vals.perila)vals.perila.tur=sub||"zina";lzPick(pp);$("shTitle").textContent=g.dataset.nm||""}return}
   const n=e.target.closest("[data-nv]");if(n){const v=n.dataset.nv;v==="buy"?showTab("buy"):(view(v),window.scrollTo({top:0}))}});
 $("shQ").addEventListener("input",grid);
 $("shAll").onclick=()=>view("kat");
