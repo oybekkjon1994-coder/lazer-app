@@ -2000,33 +2000,119 @@ function pnPanel(W,H,opt={}){
         ts.sort((u,v)=>u-v);for(let a=0;a<ts.length-1;a++){const t0=ts[a],t1=ts[a+1];if((t1-t0)*Math.hypot(dx,dy)<1)continue;const tm=(t0+t1)/2;if(!ins(ax+dx*tm,ay+dy*tm))continue;
           const sx=ax+dx*t0,sy=ay+dy*t0,ex2=ax+dx*t1,ey2=ay+dy*t1;s+=E.line(sx,sy,ex2,ey2)+E.line(W-sx,sy,W-ex2,ey2);nl+=2}}}}
   return {s,w:W,h:H,n:n+nl,big}}
+/* ---------- 22c. perila naqsh: qo‘shimcha dizaynlar (shu uslubda, yopiq konturli) ---------- */
+const PN_DZ=[
+  {n:"Yulduz-xoch, 8 bargli gul",pat:"g:488_45",ps:50,top:"arch",cl:"bulut",med:"gul8",bd:"orama"},
+  {n:"12 qirrali rozetka, quyosh",pat:"g:4612_70",ps:44,top:"ogee",cl:"oval",med:"quyosh",bd:"zanjir"},
+  {n:"Olti qirrali yulduz, mehrob",pat:"g:666_60",ps:62,top:"gumbaz",cl:"mehrob",med:"gul12",bd:"romb"},
+  {n:"Xotam, yulduzli medalyon",pat:"g:488_67.5",ps:52,top:"arch",cl:"romb",med:"yulduz",bd:"tolqin"},
+  {n:"Kagome to‘r, naqshli medalyon",pat:"g:3636_70",ps:58,top:"tolqin",cl:"oval",med:"girih",bd:"orama"},
+  {n:"12 qirrali katta rozetka",pat:"g:31212_72",ps:46,top:"ogee",cl:"bulut",med:"gul12",bd:"girih"},
+  {n:"Shoh naqsh: to‘liq panjara, gul",pat:"g:4612_45",ps:46,top:"arch",cl:"yoq",med:"gul8",bd:"zanjir"},
+  {n:"6-4-3 aralash, quyosh",pat:"g:3464_65",ps:52,top:"gumbaz",cl:"oval",med:"quyosh",bd:"orama"},
+  {n:"Kvadrat to‘r, romb hoshiya",pat:"g:4444_60",ps:78,top:"tekis",cl:"romb",med:"yulduz",bd:"romb"},
+  {n:"Yulduz-xoch to‘liq, halqalar",pat:"g:488_45",ps:44,top:"tolqin",cl:"yoq",med:"halqa",bd:"tolqin"},
+  {n:"Olti qirrali nozik, mehrob",pat:"g:666_45",ps:56,top:"ogee",cl:"mehrob",med:"girih",bd:"zanjir"},
+  {n:"Uchburchak to‘r, 12 bargli gul",pat:"g:333333_45",ps:88,top:"arch",cl:"bulut",med:"gul12",bd:"romb"},
+  {n:"Xotam keng, quyosh",pat:"g:488_60",ps:56,top:"tekis",cl:"oval",med:"quyosh",bd:"girih"},
+  {n:"Rozetka 12-6, yulduz, to‘liq",pat:"g:4612_60",ps:42,top:"gumbaz",cl:"yoq",med:"yulduz",bd:"orama"}];
+function pnDesign(W,H,D,HbFix){
+  const t=20,bs=D.bd==="yoq"?0:100,ti=8,ex=40,fl=20,tr=24,pw=8;
+  const sx=Math.max(.45,Math.min(1,W/2360)),sv=.55+.45*sx,half=W/2,TOP=D.top;
+  const crown=(TOP==="tekis"?85:TOP==="tolqin"?170:TOP==="gumbaz"?250:224)*sv;if(HbFix)H=HbFix+crown;const Hb=H-crown,railY=Hb+85*sv,e0=577*sx,e1=TOP==="tekis"?e0:645*sx;
+  const shY=TOP==="arch"||TOP==="ogee"?Hb+156*sv:railY;
+  const inn=t+(bs?bs+ti:0),xi0=ex+inn,yi0=inn;
+  if(half-xi0<120||Hb-yi0<200)throw"Panel juda kichik — o‘lchamni kattalashtiring.";
+  const sm=u=>u<=0?0:u>=1?1:u*u*(3-2*u),mir=x=>Math.min(x,W-x);
+  const yT=x=>{x=mir(x);if(x<=e0||TOP==="tekis")return railY;if(x<e1)return railY+(shY-railY)*sm((x-e0)/(e1-e0));const u=(half-x)/(half-e1);
+    if(TOP==="arch")return shY+(H-shY)*(1-u*u);if(TOP==="ogee")return shY+(H-shY)*(1-Math.pow(u,.85))*(1-.25*Math.sin(Math.PI*u));
+    if(TOP==="gumbaz")return u<.6?railY+(H-railY)*Math.cos(Math.PI*u/1.2)**2:railY;
+    return railY+(H-railY)*(.5-.5*Math.cos(Math.PI*(1-u)*(W>=1700?3:1)))*(.55+.45*(1-u))};
+  const sc=W>=1700,xs=400*sx,rs=110*sx,dp=55,Rc=(rs*rs+dp*dp)/(2*dp),xst=530*sx,xr=600*sx,xr2=xr+fl;
+  const yB=x=>{x=mir(x);let y=Hb+fl;if(sc){if(Math.abs(x-xs)<rs)y-=Math.sqrt(Rc*Rc-(x-xs)**2)-(Rc-dp);if(x>xst)y+=27*sv}return y};
+  const F=x=>mir(x)>=xr2?Math.max(yB(x)-fl,yT(x)-tr):yB(x)-fl;
+  const Rd=(railY-Hb-fl)/2,cxd=ex+Rd+8,cyd=Hb+fl+Rd,rc=Math.max(0,Math.min(88*sv,inn-8));
+  const arc=(cx,cy,r,a0,a1,n=20)=>Array.from({length:n+1},(_,i)=>{const a=(a0+(a1-a0)*i/n)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+  const xsamp=(a,b,st)=>{const s=new Set([a,b]);for(const v of [e0,e1,xs-rs,xs+rs,xst,xr,xr2,W-e0,W-e1,W-xs+rs,W-xs-rs,W-xst,W-xr,W-xr2,half])if(v>a&&v<b){s.add(v);s.add(v-.01);s.add(v+.01)}for(let v=a;v<b;v+=st)s.add(v);return [...s].filter(v=>v>=a&&v<=b).sort((u,v)=>u-v)};
+  const O=[[ex+rc,0],[W-ex-rc,0]];if(rc>0)O.push(...arc(W-ex,0,rc,180,90).slice(1));
+  O.push([W-ex,Hb],[W,Hb],[W,Hb+fl],...arc(W-cxd,cyd,Rd,-90,90));xsamp(cxd,W-cxd,4).reverse().slice(1,-1).forEach(x=>O.push([x,yT(x)]));
+  O.push(...arc(cxd,cyd,Rd,90,270),[0,Hb+fl],[0,Hb],[ex,Hb]);if(rc>0)O.push(...arc(ex,0,rc,90,0));
+  const hw=half-xi0,Fc=F(half),fh=Fc-yi0,cx=half,full=D.cl==="yoq"&&W>=PN_BIG,cy=yi0+Math.min(fh,Hb+60-yi0)*(full?.5:.46),R=Math.min(.29*Math.min(fh,Hb+60-yi0),hw-30);
+  const ring=R>=70,cw=1.65*R,lat=W>=PN_BIG&&(!ring||full||hw>cw+180);
+  const r=rcut(W,H,T=>{const x=T.x,X=T.X,Y=T.Y,k=T.sc,both=f=>{f(v=>v);f(v=>W-v)};
+    const wline=(pts,w,cl)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.lineJoin="round";x.lineCap="round";x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(X(a),Y(b)):x.moveTo(X(a),Y(b)));if(cl)x.closePath();x.stroke()};
+    const wcirc=(a,b,rr,w)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.beginPath();x.arc(X(a),Y(b),rr*k,0,2*Math.PI);x.stroke()};
+    const bead=(a,b,ro,rh)=>{T.metal(T.circ(a,b,ro));if(rh>0)T.cut(T.circ(a,b,rh))};
+    const ch=Math.min(30,hw*.2),fp=[[xi0+ch,yi0],[W-xi0-ch,yi0],[W-xi0,yi0+ch]];xsamp(xi0,W-xi0,4).reverse().forEach(v=>fp.push([v,F(v)]));fp.push([xi0,yi0+ch]);
+    const zone=T.poly(fp),pol=(rr,a)=>[cx+rr*Math.cos(a),cy+rr*Math.sin(a)];
+    if(lat)T.pattern(zone,{pat:D.pat,s:D.ps,w:pw,mg:ti,box:[xi0,yi0,W-xi0,Fc],excl:full&&ring?[T.circ(cx,cy,R+14)]:[]});else T.cut(zone);
+    both(m=>{const xx=xsamp(cxd,xr,4),lo=xx.map(v=>[m(v),yB(v)]),up=xx.map(v=>[m(v),Math.max(yB(v),yT(v)-tr)]).reverse();T.cut(T.poly(lo.concat(up)));
+      T.metal(T.circ(m(cxd),cyd,Rd));if(Rd>=14)T.cut(T.circ(m(cxd),cyd,Rd-11))});
+    if(ring){let bx=hw+4;
+      if(lat&&!full){const ps=[];let top=Fc;
+        if(D.cl==="bulut"){const bp=[[cx-cw,yi0],[cx+cw,yi0]];xsamp(cx-cw,cx+cw,4).reverse().forEach(v=>bp.push([v,F(v)]));const lr=.62*R;ps.push(T.poly(bp),T.circ(cx-cw*1.04,yi0+lr,lr),T.circ(cx+cw*1.04,yi0+lr,lr));bx=cw+ti}
+        else if(D.cl==="oval"){const p=new Path2D(),ry=Math.min(cy-yi0,Fc-cy)+6;p.ellipse(X(cx),Y(cy),cw*1.12*k,ry*k,0,0,2*Math.PI);ps.push(p);bx=cw*1.12+ti}
+        else if(D.cl==="romb"){const ry=Math.min(cy-yi0,Fc-cy)+10;ps.push(T.poly([[cx-cw*1.3,cy],[cx,cy-ry],[cx+cw*1.3,cy],[cx,cy+ry]]));bx=cw*1.3+ti}
+        else{const y1=cy+R*.35,y2=Fc-12,pt=[[cx-cw,yi0],[cx+cw,yi0]];for(let i=0;i<=20;i++){const u=i/20;pt.push([cx+cw*(1-u),y1+(y2-y1)*Math.pow(u,.6)])}for(let i=19;i>=0;i--){const u=i/20;pt.push([cx-cw*(1-u),y1+(y2-y1)*Math.pow(u,.6)])}ps.push(T.poly(pt));bx=cw+ti}
+        x.save();x.clip(zone);x.strokeStyle="#fff";x.lineWidth=2*ti*k;x.lineJoin="round";ps.forEach(q=>x.stroke(q));ps.forEach(q=>T.cut(q));x.restore()}
+      if(full){T.metal(T.circ(cx,cy,R+14));T.cut(T.circ(cx,cy,R-8))}
+      else{const top=D.cl==="mehrob"?Math.min(Fc,yi0+(Fc-yi0)):Fc,br=[[[cx,cy+R-4],[cx,top+4]],[[cx,cy-R+4],[cx,yi0-4]],[[cx-R+4,cy],[cx-bx,cy]],[[cx+R-4,cy],[cx+bx,cy]]];
+        br.forEach(([a,b])=>{wline([a,b],10);if(Math.hypot(b[0]-a[0],b[1]-a[1])>110)bead((a[0]+b[0])/2,(a[1]+b[1])/2,15,7)})}
+      const g=R>=150?30:R*.16,r1=R-4,r2=R-8-g-4;wcirc(cx,cy,r1,8);wcirc(cx,cy,r2,8);
+      const rm=R-8-g/2,nb=Math.max(8,4*Math.round(2*Math.PI*rm/(g*2.2)/4));for(let i=0;i<nb;i++){const a=2*Math.PI*(i+.5)/nb;bead(...pol(rm,a),g/2+2,g/2-5)}
+      const ri=r2-4,q=(rr,a)=>[X(cx+rr*Math.cos(a)),Y(cy+rr*Math.sin(a))];x.strokeStyle="#fff";x.lineWidth=7*k;x.lineJoin="round";x.lineCap="round";
+      const petals=(n,d,r0)=>{for(let i=0;i<n;i++){const a=i*2*Math.PI/n;x.beginPath();x.moveTo(...q(r0,a));x.quadraticCurveTo(...q(.66*ri,a+d),...q(ri+2,a));x.quadraticCurveTo(...q(.66*ri,a-d),...q(r0,a));x.stroke();
+          const a2=a+Math.PI/n;x.beginPath();x.moveTo(...q(r0,a2));x.lineTo(...q(.5*ri,a2));x.stroke();bead(...pol(.5*ri,a2),n>8?7:9,0)}wcirc(cx,cy,r0,7)};
+      if(D.med==="gul8")petals(8,.42,.17*ri);
+      else if(D.med==="gul12")petals(12,.27,.2*ri);
+      else if(D.med==="quyosh"){const r0=.22*ri;for(let i=0;i<24;i++){const a=i*Math.PI/12,l=i%2?.62*ri:ri+2;wline([pol(r0,a),pol(l,a)],i%2?6:7);if(i%2)bead(...pol(.62*ri+9,a),10,4)}wcirc(cx,cy,r0,8);wcirc(cx,cy,r0*.45,5)}
+      else if(D.med==="yulduz"){for(const st of [0,Math.PI/8]){const P=[];for(let i=0;i<8;i++){P.push(pol(st?ri*.62:ri+2,st+i*Math.PI/4));P.push(pol(st?ri*.3:ri*.5,st+i*Math.PI/4+Math.PI/8))}x.lineJoin="miter";wline(P,7,true)}
+        for(let i=0;i<8;i++)wline([pol(ri*.3,Math.PI/8+i*Math.PI/4+Math.PI/8),pol(ri*.5,i*Math.PI/4+Math.PI/8)],6);wcirc(cx,cy,ri*.16,7)}
+      else if(D.med==="girih"){const dz=T.circ(cx,cy,ri+1);x.save();x.clip(dz);T.pattern(dz,{pat:D.pat,s:Math.max(20,ri/3.2),w:6,box:[cx-ri,cy-ri,cx+ri,cy+ri]});x.restore();wcirc(cx,cy,r2,8)}
+      else{for(const f of [.7,.4])wcirc(cx,cy,ri*f,7);for(let i=0;i<8;i++){const a=i*Math.PI/4;wline([pol(ri*.4,a),pol(ri*.7,a)],6);wline([pol(ri*.7,a+Math.PI/8),pol(ri+2,a+Math.PI/8)],6);bead(...pol(ri*.85,a),11,5)}wcirc(cx,cy,ri*.14,6)}}
+    if(bs){const a0=bs/2-1,sw=7,strip=(P0,P1)=>{const L=Math.hypot(P1[0]-P0[0],P1[1]-P0[1]),ux=(P1[0]-P0[0])/L,uy=(P1[1]-P0[1])/L,N=Math.ceil(L/3),pt=(s,o)=>[P0[0]+ux*s-uy*o,P0[1]+uy*s+ux*o];
+        const zn=T.poly([pt(0,-bs/2),pt(L,-bs/2),pt(L,bs/2),pt(0,bs/2)]);
+        if(D.bd==="girih"){x.save();x.clip(zn);T.pattern(zn,{pat:D.pat,s:26,w:5,box:[Math.min(P0[0],P1[0])-bs/2,Math.min(P0[1],P1[1])-bs/2,Math.max(P0[0],P1[0])+bs/2,Math.max(P0[1],P1[1])+bs/2]});x.restore();return}
+        T.cut(zn);
+        if(D.bd==="orama"){const n=Math.max(1,Math.round(L/(bs*1.7)));for(const sg of [1,-1]){const l=[];for(let i=0;i<=N;i++){const s=L*i/N;l.push(pt(s,sg*a0*Math.sin(2*Math.PI*n*s/L)))}wline(l,sw)}
+          for(let i=0;i<=2*n;i++){const c=pt(L*i/(2*n),0);bead(c[0],c[1],11,i&&i<2*n?5:0)}}
+        else if(D.bd==="zanjir"){const n=Math.max(1,Math.round(L/(bs*.86))),d=L/n;for(let i=0;i<n;i++){const c=pt(d*(i+.5),0);x.strokeStyle="#fff";x.lineWidth=sw*k;x.beginPath();x.ellipse(X(c[0]),Y(c[1]),(Math.abs(ux)>.5?d/2+3:a0-2)*k,(Math.abs(ux)>.5?a0-2:d/2+3)*k,0,0,2*Math.PI);x.stroke();bead(c[0],c[1],13,6)}
+          for(let i=0;i<n;i++){const c=pt(d*(i+.5),0);wline([pt(d*(i+.5),-a0),pt(d*(i+.5),-13)],5);wline([pt(d*(i+.5),a0),pt(d*(i+.5),13)],5)}}
+        else if(D.bd==="tolqin"){const n=Math.max(1,Math.round(L/(bs*1.3))),l=[];for(let i=0;i<=N;i++){const s=L*i/N;l.push(pt(s,a0*Math.sin(2*Math.PI*n*s/L)))}wline(l,sw+1);
+          for(let i=0;i<2*n;i++){const s=L*(i+.5)/(2*n),sg=i%2?1:-1,c=pt(s,sg*a0*.38);bead(c[0],c[1],15,7);wline([c,pt(s,sg*a0)],5);wline([c,pt(s,-sg*a0*.9)],5)}}
+        else{const n=Math.max(1,Math.round(L/bs)),d=L/n;for(const sg of [1,-1]){const l=[];for(let i=0;i<=2*n;i++)l.push(pt(d*i/2,i%2?sg*a0:0));x.lineJoin="miter";wline(l,sw)}
+          for(let i=0;i<n;i++){const c=pt(d*(i+.5),0);const rr=a0*.42;x.lineJoin="miter";wline([pt(d*(i+.5)-rr,0),pt(d*(i+.5),rr),pt(d*(i+.5)+rr,0),pt(d*(i+.5),-rr)],5,true);wline([pt(d*(i+.5),rr),pt(d*(i+.5),a0)],5);wline([pt(d*(i+.5),-rr),pt(d*(i+.5),-a0)],5)}}};
+      strip([ex+t+bs/2,yi0],[ex+t+bs/2,Hb-6]);strip([W-ex-t-bs/2,yi0],[W-ex-t-bs/2,Hb-6]);strip([xi0,t+bs/2],[W-xi0,t+bs/2]);
+      const av=Math.SQRT2*inn-rc,ry=av/2-24;if(ry>=6){const d=(rc+av/2)/Math.SQRT2;both(m=>{const pth=new Path2D(),sg=m(0)?-1:1;pth.ellipse(X(m(ex+d)),Y(d),ry*1.2*k,ry*k,sg*Math.PI/4,0,2*Math.PI);T.cut(pth)})}}
+  },{min:4});
+  return {s:E.poly(O)+r.out,w:W,h:H,n:r.n+1,big:lat,fy:Hb}}
 const PN_BIG=2200,pnH0=W=>W>=PN_BIG?PERT.big.h:PERT.small.h,pnT=W=>W>=PN_BIG?PERT.big:PERT.small;
 function pnStrips(s,w){const L=[];try{for(const pa of analyse(wrapDXF(s)).paths){const P=pa.pts.slice();if(pa.closed)P.push(P[0]);const n=P.length;if(n<2)continue;const a=[],b=[];
       for(let i=0;i<n;i++){const p=P[Math.max(0,i-1)],q=P[Math.min(n-1,i+1)],l=Math.hypot(q[0]-p[0],q[1]-p[1])||1,nx=-(q[1]-p[1])/l*w/2,ny=(q[0]-p[0])/l*w/2;a.push([P[i][0]+nx,P[i][1]+ny]);b.push([P[i][0]-nx,P[i][1]-ny])}
       L.push(a.concat(b.reverse()))}}catch(_){}return L}
-function perilaNaqsh(p){const W=p.nW,set=p.nset==="balkon",Y=set?p.nY:0;
+function perilaNaqsh(p){const W=p.nW,set=p.nset==="balkon",Y=set?p.nY:0,di=+p.nd||0,D=di?PN_DZ[di-1]:null;
   const chk=(w,nm)=>{if(!(w>=800&&w<=8000))throw`${nm} eni 800–8000 mm oralig‘ida bo‘lsin.`};chk(W,"Panel");if(set)chk(Y,"Yon panel");
-  const H0=pnH0(W),H=p.nH||H0;if(!(H>=H0-120&&H<=H0+1500))throw`Bu enda balandlik ${H0-120}–${H0+1500} mm oralig‘ida bo‘lsin (asl balandlik ${H0} mm).`;
-  const a=pnPanel(W,H),fy=pnT(W).fy+H-H0,items=[a],info=[];
-  info.push(`Old panel ${Math.round(W)}×${Math.round(H)} mm — ${a.big?"hoshiya naqshi va o‘rtada panjara naqshi":"faqat 10 sm hoshiya naqshi (2200 mm dan tor)"}.`);
-  let b=null,HY=0;if(set){HY=fy-pnT(Y).fy+pnH0(Y);b=pnPanel(Y,HY);items.push(b,b);info.push(`Yon panel ${Math.round(Y)}×${Math.round(HY)} mm × 2 dona${b.big?"":" (faqat hoshiya naqshi)"}; poruchen tagi old panel bilan bir balandlikda (${Math.round(fy)} mm).`)}
-  info.push("O‘rtadagi halqa asl fayldagidek hech narsaga ulanmagan — kesishdan oldin ko‘prik qoldiring.");
-  const M={bars3:[],boxes:[],panels:[],balls:[],yaw:-.6,pitch:.2},ps=50,lw=9;
-  M.panels.push({o:[0,0,0],u:[1,0,0],loops:pnStrips(a.s,lw),kind:"metal"});
-  if(set){const L=pnStrips(b.s,lw);M.panels.push({o:[-ps/2,0,-ps/2],u:[0,0,-1],loops:L,kind:"metal"},{o:[W+ps/2,0,-ps/2-Y],u:[0,0,1],loops:L,kind:"metal"});
+  const H0=D?950:pnH0(W),H=p.nH||H0;if(!(H>=(D?600:H0-120)&&H<=H0+1500))throw`Bu enda balandlik ${D?600:H0-120}–${H0+1500} mm oralig‘ida bo‘lsin (asl balandlik ${H0} mm).`;
+  const a=D?pnDesign(W,H,D):pnPanel(W,H),fy=D?a.fy:pnT(W).fy+H-H0,items=[a],info=[];
+  info.push(`${D?"Dizayn: "+D.n+". ":""}Old panel ${Math.round(W)}×${Math.round(H)} mm — ${a.big?"hoshiya naqshi va o‘rtada panjara naqshi":"faqat 10 sm hoshiya naqshi (2200 mm dan tor)"}.`);
+  let b=null;if(set){b=D?pnDesign(Y,0,D,fy):pnPanel(Y,fy-pnT(Y).fy+pnH0(Y));items.push(b,b);info.push(`Yon panel ${Math.round(Y)}×${Math.round(b.h)} mm × 2 dona${b.big?"":" (faqat hoshiya naqshi)"}; poruchen tagi old panel bilan bir balandlikda (${Math.round(fy)} mm).`)}
+  info.push(D?"Konturlar yopiq, halqa ramaga ko‘priklar bilan ulangan.":"O‘rtadagi halqa asl fayldagidek hech narsaga ulanmagan — kesishdan oldin ko‘prik qoldiring.");
+  const M={bars3:[],boxes:[],panels:[],balls:[],yaw:-.6,pitch:.2},ps=50,lw=9,pan=(q,o,u)=>M.panels.push(D?{o,u,s:q.s,kind:"metal"}:{o,u,loops:q.L||(q.L=pnStrips(q.s,lw)),kind:"metal"});
+  pan(a,[0,0,0],[1,0,0]);
+  if(set){pan(b,[-ps/2,0,-ps/2],[0,0,-1]);pan(b,[W+ps/2,0,-ps/2-Y],[0,0,1]);
     M.boxes.push([-ps,0,-ps,0,fy+20,0,"metal"],[W,0,-ps,W+ps,fy+20,0,"metal"],[-ps-40,-100,-Y-ps,W+ps+40,0,40,"floor"])}
   else M.boxes.push([-ps,0,-ps/2,0,fy+20,ps/2,"metal"],[W,0,-ps/2,W+ps,fy+20,ps/2,"metal"],[-ps-40,-100,-200,W+ps+40,0,100,"floor"]);
   this._m3=M;this.warn=info.join(" ");return rowDXF(items,40).s}
 (()=>{const P=PARTS.perila,isN=p=>p.tur==="naqsh";
   P.fields.forEach(f=>{const o=f[5];f[5]=q=>!isN(q)&&(!o||o(q))});
   P.fields.unshift(["tur","Perila turi","zina","select",[["zina","Zinapoya perilasi (stoyka, poruchen)"],["naqsh","Perila naqsh paneli"]]]);
-  P.fields.push(["nW","Old panel eni (mm)",2362,"num",null,isN],["nH","Balandligi (mm, 0 = asl)",0,"num",null,isN],
+  P.fields.push(["nd","Dizayn","0","select",[["0","1. Asl dizayn (sizning faylingiz)"]].concat(PN_DZ.map((d,i)=>[String(i+1),(i+2)+". "+d.n])),isN],["nW","Old panel eni (mm)",2362,"num",null,isN],["nH","Balandligi (mm, 0 = asl)",0,"num",null,isN],
     ["nset","To‘plam","bitta","select",[["bitta","Bitta panel"],["balkon","Balkon: old + ikki yon panel"]],isN],["nY","Yon panel eni (mm)",1000,"num",null,q=>isN(q)&&q.nset==="balkon"]);
-  P.rerender.push("tur","nset");
-  const n0=P.note,n1="PERILA NAQSH faylidagi dizayn, o‘z chiziqlari bilan. Enini va balandligini yozing — rama, hoshiya naqshi va panjara naqshi shu o‘lchamga moslanadi (naqsh kattaligi o‘zgarmaydi, soni o‘zgaradi). 2200 mm dan tor panelda faqat 10 sm hoshiya naqshi, kengrog‘ida o‘rtadagi panjara naqshi ham bo‘ladi. «Balkon» to‘plamida old va ikki yon panel birga chiqadi, pastdagi «3D ko‘rinish» tugmasi yig‘ilgan holatini ko‘rsatadi.";
+  P.rerender.push("tur","nset","nd");
+  const n0=P.note,n1="1-dizayn — PERILA NAQSH faylidagi dizayn, o‘z chiziqlari bilan; qolgan 14 tasi shu uslubdagi boshqa naqshlar. Enini va balandligini yozing — rama, hoshiya naqshi va panjara naqshi shu o‘lchamga moslanadi (naqsh kattaligi o‘zgarmaydi, soni o‘zgaradi). 2200 mm dan tor panelda faqat 10 sm hoshiya naqshi, kengrog‘ida o‘rtadagi panjara naqshi ham bo‘ladi. «Balkon» to‘plamida old va ikki yon panel birga chiqadi, pastdagi «3D ko‘rinish» tugmasi yig‘ilgan holatini ko‘rsatadi.";
   Object.defineProperty(P,"note",{get:()=>isN(vals.perila||{})?n1:n0});
   const b0=P.build,l0=P.label;P.build=function(q){if(isN(q))return perilaNaqsh.call(this,q);return b0.call(this,q)};
-  P.label=q=>isN(q)?`Perila naqsh ${q.nW}×${q.nH||pnH0(q.nW)}${q.nset==="balkon"?" + 2×"+q.nY:""}`:l0(q)})();
+  P.label=q=>isN(q)?`Perila naqsh ${+q.nd?"D"+(+q.nd+1)+" ":""}${q.nW}×${q.nH||(+q.nd?950:pnH0(q.nW))}${q.nset==="balkon"?" + 2×"+q.nY:""}`:l0(q)})();
 ["gatek","plaque","perila"].forEach(k=>{if(!vals[k]){vals[k]={};PARTS[k].fields.forEach(([id,,v])=>vals[k][id]=v)}else PARTS[k].fields.forEach(([id,,v])=>{if(vals[k][id]===undefined)vals[k][id]=v})});
 
 
