@@ -4276,8 +4276,6 @@ showTab("narx");lzView("home");
   }
   const go=()=>{if(LIC.ready)send();else setTimeout(go,3000)};setTimeout(go,8000);
   addEventListener("online",()=>send());
-  try{const u=$("shUpd");if(u)u.closest(".sh-pcard").insertAdjacentHTML("beforeend",`<label class="sh-link" style="border:0;display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="shAkt" ${off()?"":"checked"}> <span style="text-align:left;flex:1">Ishlatish statistikasini ustaxonaga yuborish<br><small style="opacity:.7">Qaysi bo‘lim va detallar ishlatilgani. Chizmalar va mijozlaringiz ma'lumoti yuborilmaydi.</small></span></label>`);
-    const c=$("shAkt");if(c)c.onchange=()=>{try{localStorage.setItem("lzAktOff",c.checked?"0":"1")}catch(_){}if(c.checked)send(true)}}catch(_){}
 })();
 </script>
 </body></html>
