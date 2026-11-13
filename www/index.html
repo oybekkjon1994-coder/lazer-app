@@ -4249,4 +4249,35 @@ upd();
 showTab("narx");lzView("home");
 </script>
 
+<script>
+/* ===== Mijoz faolligi: faollashtirilgan ilova qaysi bo'lim va detallar ishlatilganini ustaxona egasining botiga yuboradi ===== */
+(()=>{const TOPIC="lzakt-efccda95a003a4a326ba",K="lzAkt";
+  let A;try{A=JSON.parse(localStorage.getItem(K)||"null")}catch(_){}
+  if(!A||typeof A!=="object")A={since:Date.now(),open:0,days:{},tab:{},part:{},save:{},last:[],sent:0};
+  const st=()=>{try{localStorage.setItem(K,JSON.stringify(A))}catch(_){}};
+  const off=()=>{try{return localStorage.getItem("lzAktOff")==="1"}catch(_){return false}};
+  const inc=(o,k)=>{k=String(k||"?").slice(0,40);o[k]=(o[k]||0)+1};
+  const day=()=>new Date().toISOString().slice(0,10);
+  A.open++;A.days[day()]=1;const dk=Object.keys(A.days).sort();if(dk.length>60)dk.slice(0,dk.length-60).forEach(k=>delete A.days[k]);st();
+  try{const _st=showTab;showTab=function(t){inc(A.tab,t);st();return _st.apply(this,arguments)}}catch(_){}
+  const note=(kind,name)=>{inc(A.save,kind);A.last.unshift({t:Date.now(),k:kind,n:String(name||"").slice(0,60)});A.last=A.last.slice(0,12);st();send()};
+  let lastPart="";
+  try{$("save").addEventListener("click",()=>{if(!gen)return;const P=PARTS[part]||{};inc(A.part,P.name||part);lastPart=(P.name||part)+": "+(genName||"");st()},true)}catch(_){}
+  const kindOf=n=>/^hisob_/i.test(n)?"hisob-faktura":/^nesting_/i.test(n)?"nesting":/\.csv$/i.test(n)?"buyurtmalar":/\.(dxf|zip)$/i.test(n)?"dxf":/\.(png|jpe?g)$/i.test(n)?"rasm":"boshqa";
+  try{const _ns=nativeShare;nativeShare=function(name,data,toast){
+    if(LIC.ok){const k=kindOf(String(name));note(k,k==="dxf"&&lastPart?lastPart:name);lastPart=""}return _ns.apply(this,arguments)}}catch(_){}
+  function top(o,n){return Object.fromEntries(Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,n))}
+  async function send(force){
+    if(off()||!LIC.ok||!LIC.code||navigator.onLine===false)return;
+    if(!force&&Date.now()-(A.sent||0)<6*36e5)return;
+    const body={v:+("__LZBUILD__".replace(/\D/g,""))||0,since:A.since,open:A.open,days:Object.keys(A.days).length,tab:top(A.tab,8),part:top(A.part,15),save:A.save,last:A.last.slice(0,8)};
+    let txt="LA1|"+LIC.code+"|"+JSON.stringify(body);while(txt.length>3800&&body.last.length){body.last.pop();txt="LA1|"+LIC.code+"|"+JSON.stringify(body)}
+    try{const r=await fetch("https://ntfy.sh/"+TOPIC,{method:"POST",body:txt});if(r.ok){A.sent=Date.now();st()}}catch(_){}
+  }
+  const go=()=>{if(LIC.ready)send();else setTimeout(go,3000)};setTimeout(go,8000);
+  addEventListener("online",()=>send());
+  // ochiq xabar: mijoz ilovaning statistika yuborishini ko'rib turadi (yashirin emas)
+  try{const u=$("shUpd");if(u)u.closest(".sh-pcard").insertAdjacentHTML("beforeend",`<div class="sh-link" style="border:0;opacity:.72;font-size:12px;line-height:1.4;cursor:default">📊 Ishlatish ma'lumotlari ustaxonaga yuboriladi — qaysi bo‘lim va detallar ishlatilgani. Chizmalaringizning o‘zi yuborilmaydi.</div>`)}catch(_){}
+})();
+</script>
 </body></html>
