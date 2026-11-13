@@ -1,0 +1,7 @@
+{
+  "appId": "uz.metart.ovozim",
+  "appName": "Ovozim",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": { "CapacitorHttp": { "enabled": true } }
+}

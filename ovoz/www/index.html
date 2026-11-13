@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ovozim</title>
+<style>
+:root{--bg:#101418;--card:#1a2027;--line:#2a333d;--tx:#e9eef3;--mut:#93a1ae;--ac:#ff8a3d;--ok:#3ccf7a;--er:#ff5d5d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,Roboto,sans-serif;padding-bottom:84px}
+header{padding:14px 16px 6px;display:flex;align-items:center;gap:10px}
+header h1{font-size:20px;margin:0}
+header small{color:var(--mut)}
+main{padding:0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.card h2{font-size:16px;margin:0 0 8px}
+.mut{color:var(--mut);font-size:14px}
+button{font:inherit;border:0;border-radius:10px;padding:11px 14px;background:#2b3540;color:var(--tx)}
+button.p{background:var(--ac);color:#111;font-weight:600}
+button.big{width:100%;padding:15px;font-size:17px}
+button:disabled{opacity:.45}
+input,textarea,select{font:inherit;width:100%;background:#0d1115;color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:130px;resize:vertical}
+label{display:block;margin:10px 0 4px;color:var(--mut);font-size:14px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0b0e11;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border-radius:0;padding:10px 4px;font-size:13px;color:var(--mut)}
+nav button.on{color:var(--ac)}
+nav b{display:block;font-size:20px}
+.tab{display:none}.tab.on{display:block}
+.rec{width:110px;height:110px;border-radius:50%;margin:8px auto;display:block;background:var(--er);color:#fff;font-size:15px;font-weight:700}
+.rec.on{animation:pl 1.2s infinite}
+@keyframes pl{50%{box-shadow:0 0 0 14px rgba(255,93,93,.25)}}
+.timer{text-align:center;font-size:28px;font-variant-numeric:tabular-nums;margin:4px 0}
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item:first-child{border-top:0}
+.item .t{font-weight:600}
+.item audio{width:100%;margin:6px 0;height:38px}
+.item .btns{display:flex;gap:6px;flex-wrap:wrap}
+.item .btns button{padding:8px 10px;font-size:14px}
+.bar{height:8px;background:#0d1115;border-radius:5px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:var(--ok);width:0}
+.msg{position:fixed;left:12px;right:12px;bottom:92px;background:#222b34;border:1px solid var(--line);border-radius:12px;padding:12px;display:none;z-index:9}
+.msg.er{border-color:var(--er)}
+.voice{padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.voice.on{border-color:var(--ac)}
+.script{background:#0d1115;border-radius:10px;padding:10px;font-size:15px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header><h1>🎙 Ovozim</h1><small id="hdrVoice">ovoz tanlanmagan</small></header>
+<main>
+
+<!-- 1. NAMUNA -->
+<section class="tab on" id="t-namuna">
+  <div class="card">
+    <h2>1-qadam: ovozingizdan namuna yozing</h2>
+    <div class="mut">Tinch xonada, telefonni og'izdan 20–30 sm uzoqda ushlab, oddiy gapirganingizdek o'qing. Jami <b>1–3 daqiqa</b> bo'lsin. Bir nechta bo'lib yozsa ham bo'ladi.</div>
+    <button class="rec" id="recBtn">YOZISH</button>
+    <div class="timer" id="recTime">0:00</div>
+    <div class="mut" style="text-align:center">Jami namuna: <b id="totDur">0:00</b> (kamida 1:00 tavsiya)</div>
+  </div>
+  <div class="card">
+    <h2>O'qish uchun matn (ixtiyoriy)</h2>
+    <div class="script">Assalomu alaykum! Men Oybek, Metart ustaxonasidanman. Biz lazer bilan metall kesamiz: darvoza, perila, zina panjaralari, naqshli panellar va har xil buyurtmalar. Har bir ishni o'lchab, chizmasini tayyorlab, sifatli qilib beramiz. Narxlar hamyonbop, muddat aniq. Videoni oxirigacha ko'ring, mana bu ishni qanday qilganimizni ko'rsataman. Savollaringiz bo'lsa, Telegram orqali yozing, albatta javob beramiz. Bugun yangi buyurtmani boshlaymiz: avval listni stanokka qo'yamiz, keyin dastur orqali kesish yo'lini tekshiramiz va ishni boshlaymiz.</div>
+  </div>
+  <div class="card">
+    <h2>Namunalar</h2>
+    <div id="sampleList" class="mut">Hali namuna yo'q.</div>
+    <label>Yoki tayyor audio faylni qo'shing (eski videongiz ovozi va h.k.)</label>
+    <input type="file" id="sampleFile" accept="audio/*,video/*" multiple>
+  </div>
+  <div class="card">
+    <h2>2-qadam: ovoz nusxasini yaratish</h2>
+    <label>Ovoz nomi</label>
+    <input id="voiceName" value="Oybek ovozi">
+    <label><input type="checkbox" id="denoise" checked style="width:auto"> Fon shovqinini tozalash</label>
+    <div class="mut" style="margin:6px 0">Namunalar ElevenLabs'ga yuboriladi va ovozingiz nusxasi sizning akkauntingizda saqlanadi. Bu faqat o'zingizning ovozingiz uchun.</div>
+    <button class="p big" id="cloneBtn">Ovozimni yaratish</button>
+  </div>
+</section>
+
+<!-- 2. MATN -> OVOZ -->
+<section class="tab" id="t-tts">
+  <div class="card">
+    <h2>Matn yozing, sizning ovozingizda o'qiydi</h2>
+    <label>Sarlavha (kutubxonada shu nom bilan saqlanadi)</label>
+    <input id="ttsName" placeholder="masalan: Darvoza video kirish">
+    <label>Matn</label>
+    <textarea id="ttsText" placeholder="Assalomu alaykum, bugun sizga yangi darvozani ko'rsataman..."></textarea>
+    <div class="mut"><span id="chars">0</span> belgi</div>
+    <div class="row">
+      <div><label>Til / model</label>
+        <select id="model">
+          <option value="eleven_v3">O'zbekcha va boshqalar (v3)</option>
+          <option value="eleven_multilingual_v2">Ruscha/inglizcha (multilingual v2)</option>
+        </select></div>
+      <div><label>Ohang</label>
+        <select id="stab">
+          <option value="0.5">Tabiiy</option>
+          <option value="0">Jonli (har xil)</option>
+          <option value="1">Bir xil, barqaror</option>
+        </select></div>
+    </div>
+    <div class="mut" style="margin-top:6px">Maslahat: v3 da gapga hissiyot qo'shish mumkin, masalan <b>[xursand]</b> o'rniga inglizcha <b>[excited]</b>, <b>[laughs]</b>.</div>
+    <button class="p big" id="ttsBtn" style="margin-top:12px">🔊 Ovozga aylantirish</button>
+  </div>
+  <div class="card" id="ttsOut" style="display:none">
+    <h2>Natija</h2>
+    <div id="ttsRes"></div>
+  </div>
+</section>
+
+<!-- 3. KUTUBXONA -->
+<section class="tab" id="t-lib">
+  <div class="card">
+    <h2>Tayyor ovozlar</h2>
+    <input id="libSearch" placeholder="Qidirish...">
+    <div id="libList" class="mut" style="margin-top:8px">Hali yo'q.</div>
+  </div>
+</section>
+
+<!-- 4. SOZLAMA -->
+<section class="tab" id="t-set">
+  <div class="card">
+    <h2>ElevenLabs kaliti (API key)</h2>
+    <div class="mut">elevenlabs.io → Profil → <b>API Keys</b> → Create. Kalit faqat shu telefonda saqlanadi, hech kimga yuborilmaydi.</div>
+    <label>Kalit</label>
+    <input id="apiKey" type="password" placeholder="sk_..." autocomplete="off">
+    <div class="row" style="margin-top:8px"><button class="p" id="saveKey">Saqlash</button><button id="checkKey">Tekshirish</button></div>
+    <div id="acct" class="mut" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>Mening ovozlarim</h2>
+    <div class="mut">Akkauntingizdagi ovozlardan birini tanlang (yangi yaratilgani avtomatik tanlanadi).</div>
+    <button id="loadVoices" style="margin-top:8px">Ro'yxatni yangilash</button>
+    <div id="voiceList"></div>
+  </div>
+</section>
+</main>
+
+<nav>
+  <button data-t="namuna" class="on"><b>🎙</b>Namuna</button>
+  <button data-t="tts"><b>✍️</b>Matn→Ovoz</button>
+  <button data-t="lib"><b>📁</b>Kutubxona</button>
+  <button data-t="set"><b>⚙️</b>Sozlama</button>
+</nav>
+<div class="msg" id="msg"></div>
+
+<script>
+const API='https://api.elevenlabs.io/v1';
+const $=id=>document.getElementById(id);
+const S={get:(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const isNative=()=>!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const P=()=>(window.Capacitor&&window.Capacitor.Plugins)||{};
+
+let msgT;function toast(t,er){const m=$('msg');m.textContent=t;m.className='msg'+(er?' er':'');m.style.display='block';clearTimeout(msgT);msgT=setTimeout(()=>m.style.display='none',er?6000:3000)}
+const fmt=s=>{s=Math.round(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+b.dataset.t));
+  if(b.dataset.t==='lib')renderLib();
+  S.set('ovTab',b.dataset.t);
+});
+
+/* ---------- IndexedDB (audio fayllar) ---------- */
+const DB=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('ovozim',1);r.onupgradeneeded=()=>{r.result.createObjectStore('samples',{keyPath:'id'});r.result.createObjectStore('clips',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(st,mode,fn)=>{const db=await open();return new Promise((res,rej)=>{const t=db.transaction(st,mode);const s=t.objectStore(st);const r=fn(s);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})};
+  return{all:st=>tx(st,'readonly',s=>s.getAll()),put:(st,v)=>tx(st,'readwrite',s=>s.put(v)),del:(st,id)=>tx(st,'readwrite',s=>s.delete(id)),get:(st,id)=>tx(st,'readonly',s=>s.get(id))}})();
+
+/* ---------- WAV ga aylantirish (ElevenLabs uchun ishonchli format) ---------- */
+async function toWav(blob){
+  const buf=await blob.arrayBuffer();
+  const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();
+  let ab;try{ab=await ac.decodeAudioData(buf.slice(0))}finally{ac.close&&ac.close()}
+  const rate=24000,len=Math.ceil(ab.duration*rate);
+  const off=new OfflineAudioContext(1,len,rate);const src=off.createBufferSource();src.buffer=ab;src.connect(off.destination);src.start();
+  const r=await off.startRendering();const d=r.getChannelData(0);
+  const out=new DataView(new ArrayBuffer(44+d.length*2));const w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');out.setUint32(4,36+d.length*2,true);w(8,'WAVE');w(12,'fmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,1,true);
+  out.setUint32(24,rate,true);out.setUint32(28,rate*2,true);out.setUint16(32,2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,d.length*2,true);
+  for(let i=0;i<d.length;i++){const v=Math.max(-1,Math.min(1,d[i]));out.setInt16(44+i*2,v<0?v*0x8000:v*0x7fff,true)}
+  return{blob:new Blob([out],{type:'audio/wav'}),dur:ab.duration};
+}
+
+/* ---------- 1. Namuna yozish ---------- */
+let rec,recChunks=[],recStart=0,recTick,recStream;
+$('recBtn').onclick=async()=>{
+  if(rec&&rec.state==='recording'){rec.stop();return}
+  try{recStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}})}
+  catch(e){toast('Mikrofonga ruxsat berilmadi. Telefon sozlamalaridan Ovozim ilovasiga mikrofon ruxsatini bering.',1);return}
+  recChunks=[];rec=new MediaRecorder(recStream);
+  rec.ondataavailable=e=>e.data.size&&recChunks.push(e.data);
+  rec.onstop=async()=>{clearInterval(recTick);recStream.getTracks().forEach(t=>t.stop());$('recBtn').classList.remove('on');$('recBtn').textContent='YOZISH';
+    const raw=new Blob(recChunks,{type:rec.mimeType||'audio/webm'});await addSample(raw,'Yozuv '+new Date().toLocaleTimeString().slice(0,5))};
+  rec.start(1000);recStart=Date.now();$('recBtn').classList.add('on');$('recBtn').textContent='TO\'XTATISH';
+  recTick=setInterval(()=>{$('recTime').textContent=fmt((Date.now()-recStart)/1000)},250);
+};
+async function addSample(raw,name){
+  let blob=raw,dur=0;
+  try{const r=await toWav(raw);blob=r.blob;dur=r.dur}catch(e){dur=0}
+  await DB.put('samples',{id:'s'+Date.now()+Math.random().toString(36).slice(2,6),name,blob,dur,date:Date.now()});
+  renderSamples();toast('Namuna saqlandi'+(dur?' ('+fmt(dur)+')':''));
+}
+$('sampleFile').onchange=async e=>{for(const f of e.target.files)await addSample(f,f.name);e.target.value=''};
+async function renderSamples(){
+  const list=(await DB.all('samples')).sort((a,b)=>a.date-b.date);
+  const tot=list.reduce((s,x)=>s+(x.dur||0),0);$('totDur').textContent=fmt(tot);
+  if(!list.length){$('sampleList').innerHTML='Hali namuna yo\'q.';return}
+  $('sampleList').innerHTML='';
+  list.forEach(s=>{const d=document.createElement('div');d.className='item';
+    d.innerHTML=`<div class="t">${esc(s.name)} <span class="mut">${s.dur?fmt(s.dur):''}</span></div><audio controls src="${URL.createObjectURL(s.blob)}"></audio><div class="btns"><button>🗑 O'chirish</button></div>`;
+    d.querySelector('button').onclick=async()=>{if(confirm('Namunani o\'chirasizmi?')){await DB.del('samples',s.id);renderSamples()}};
+    $('sampleList').appendChild(d)});
+}
+
+/* ---------- API ---------- */
+const key=()=>S.get('ovKey','');
+async function api(path,opt={}){
+  if(!key()){toast('Avval Sozlama bo\'limida ElevenLabs kalitini kiriting.',1);throw new Error('nokey')}
+  opt.headers=Object.assign({'xi-api-key':key()},opt.headers||{});
+  let r;try{r=await fetch(API+path,opt)}catch(e){throw new Error('Internet yoki server bilan aloqa yo\'q')}
+  const txt=await r.text();let j;try{j=JSON.parse(txt)}catch(e){j=null}
+  if(!r.ok){const d=j&&j.detail;let m=(d&&(d.message||d.status))||(typeof d==='string'?d:'')||txt.slice(0,200);
+    if(r.status===401)m='Kalit noto\'g\'ri yoki ruxsati yetarli emas. '+m;
+    if(/can_not_use_instant_voice_cloning|voice_cloning|subscription/i.test(txt))m='Ovoz nusxalash uchun ElevenLabs Starter (yoki undan yuqori) tarif kerak. '+m;
+    if(/quota|credits/i.test(txt))m='Belgilar limiti tugagan. '+m;
+    throw new Error(m)}
+  return j;
+}
+
+/* ---------- 2. Ovoz yaratish ---------- */
+$('cloneBtn').onclick=async()=>{
+  const list=await DB.all('samples');
+  if(!list.length){toast('Avval namuna yozing.',1);return}
+  const tot=list.reduce((s,x)=>s+(x.dur||0),0);
+  if(tot&&tot<30&&!confirm('Namuna juda qisqa ('+fmt(tot)+'). Kamida 1 daqiqa bo\'lsa ovoz o\'xshashroq chiqadi. Baribir davom etasizmi?'))return;
+  const b=$('cloneBtn');b.disabled=true;b.textContent='Yaratilmoqda...';
+  try{
+    const fd=new FormData();fd.append('name',$('voiceName').value.trim()||'Mening ovozim');
+    fd.append('description','Ovozim ilovasi orqali yozilgan shaxsiy ovoz');
+    if($('denoise').checked)fd.append('remove_background_noise','true');
+    list.forEach((s,i)=>fd.append('files',s.blob,'namuna'+(i+1)+(s.blob.type==='audio/wav'?'.wav':'.webm')));
+    const j=await api('/voices/add',{method:'POST',body:fd});
+    S.set('ovVoice',{id:j.voice_id,name:$('voiceName').value.trim()});showVoice();
+    toast('Tayyor! Ovozingiz yaratildi. Endi "Matn→Ovoz" bo\'limiga o\'ting.');
+    if(j.requires_verification)toast('ElevenLabs ovozni tasdiqlashni so\'rayapti, saytga kirib tasdiqlang.',1);
+  }catch(e){if(e.message!=='nokey')toast('Xato: '+e.message,1)}
+  b.disabled=false;b.textContent='Ovozimni yaratish';
+};
+function showVoice(){const v=S.get('ovVoice',null);$('hdrVoice').textContent=v?('ovoz: '+v.name):'ovoz tanlanmagan'}
+
+/* ---------- 3. Matn -> ovoz ---------- */
+$('ttsText').oninput=()=>{$('chars').textContent=$('ttsText').value.length;S.set('ovDraft',$('ttsText').value)};
+$('model').onchange=()=>S.set('ovModel',$('model').value);
+$('stab').onchange=()=>S.set('ovStab',$('stab').value);
+function b64ToBlob(b64,type){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type})}
+$('ttsBtn').onclick=async()=>{
+  const v=S.get('ovVoice',null);const text=$('ttsText').value.trim();
+  if(!v){toast('Avval ovozingizni yarating yoki Sozlama\'dan tanlang.',1);return}
+  if(!text){toast('Matn yozing.',1);return}
+  const b=$('ttsBtn');b.disabled=true;b.textContent='Tayyorlanmoqda...';
+  try{
+    const model=$('model').value,st=parseFloat($('stab').value);
+    const j=await api('/text-to-speech/'+encodeURIComponent(v.id)+'/with-timestamps?output_format=mp3_44100_128',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:model,voice_settings:{stability:st,similarity_boost:0.85}})});
+    if(!j||!j.audio_base64)throw new Error('Audio qaytmadi');
+    const blob=b64ToBlob(j.audio_base64,'audio/mpeg');
+    const name=$('ttsName').value.trim()||text.slice(0,40);
+    const clip={id:'c'+Date.now(),name,text,blob,voice:v.name,model,date:Date.now()};
+    await DB.put('clips',clip);
+    $('ttsOut').style.display='block';$('ttsRes').innerHTML='';$('ttsRes').appendChild(clipEl(clip));
+    toast('Tayyor, kutubxonaga saqlandi');
+  }catch(e){if(e.message!=='nokey')toast('Xato: '+e.message,1)}
+  b.disabled=false;b.textContent='🔊 Ovozga aylantirish';
+};
+
+/* ---------- Ulashish / yuklab olish ---------- */
+const blobToB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)});
+const safeName=n=>(n||'ovoz').replace(/[^\wЀ-ӿ\- ]+/g,'').trim().replace(/\s+/g,'_').slice(0,50)||'ovoz';
+async function shareClip(c){
+  const fn=safeName(c.name)+'.mp3';
+  if(isNative()&&P().Filesystem&&P().Share){
+    try{const w=await P().Filesystem.writeFile({path:fn,data:await blobToB64(c.blob),directory:'CACHE'});
+      await P().Share.share({title:c.name,files:[w.uri],dialogTitle:'Qayerga yuborish? (CapCut, Telegram...)'});}
+    catch(e){if(!/cancel/i.test(e.message||''))toast('Ulashib bo\'lmadi: '+(e.message||e),1)}
+    return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(c.blob);a.download=fn;document.body.appendChild(a);a.click();a.remove();
+}
+function clipEl(c){
+  const d=document.createElement('div');d.className='item';
+  d.innerHTML=`<div class="t">${esc(c.name)}</div><div class="mut">${new Date(c.date).toLocaleString()} · ${esc(c.voice||'')}</div><audio controls src="${URL.createObjectURL(c.blob)}"></audio>
+  <div class="btns"><button class="p" data-a="sh">📤 Ulashish / CapCut</button><button data-a="ed">✏️ Matnni qayta ishlatish</button><button data-a="del">🗑</button></div>`;
+  d.querySelector('[data-a=sh]').onclick=()=>shareClip(c);
+  d.querySelector('[data-a=ed]').onclick=()=>{$('ttsText').value=c.text;$('ttsName').value=c.name;$('ttsText').oninput();document.querySelector('nav button[data-t=tts]').click()};
+  d.querySelector('[data-a=del]').onclick=async()=>{if(confirm('O\'chirasizmi?')){await DB.del('clips',c.id);d.remove()}};
+  return d;
+}
+async function renderLib(){
+  const q=$('libSearch').value.toLowerCase();
+  const list=(await DB.all('clips')).filter(c=>!q||(c.name+' '+c.text).toLowerCase().includes(q)).sort((a,b)=>b.date-a.date);
+  $('libList').innerHTML=list.length?'':'Hali yo\'q.';list.forEach(c=>$('libList').appendChild(clipEl(c)));
+}
+$('libSearch').oninput=renderLib;
+
+/* ---------- 4. Sozlama ---------- */
+$('saveKey').onclick=()=>{S.set('ovKey',$('apiKey').value.trim());toast('Kalit saqlandi');checkKey()};
+$('checkKey').onclick=()=>checkKey();
+async function checkKey(){
+  $('acct').textContent='Tekshirilmoqda...';
+  try{const j=await api('/user/subscription');
+    $('acct').innerHTML=`✅ Kalit ishlayapti. Tarif: <b>${esc(j.tier)}</b><br>Belgilar: ${j.character_count} / ${j.character_limit}`+
+      (j.can_use_instant_voice_cloning===false?'<br>⚠️ Bu tarifda ovoz nusxalash yo\'q. Starter tarifga o\'ting.':'');
+  }catch(e){$('acct').textContent=e.message==='nokey'?'Kalit kiritilmagan.':'❌ '+e.message}
+}
+$('loadVoices').onclick=async()=>{
+  try{const j=await api('/voices');const cur=S.get('ovVoice',null);
+    const mine=(j.voices||[]).filter(v=>v.category==='cloned'||v.category==='professional'||v.category==='generated');
+    const list=mine.length?mine:(j.voices||[]);
+    $('voiceList').innerHTML='';
+    list.forEach(v=>{const d=document.createElement('div');d.className='voice'+(cur&&cur.id===v.voice_id?' on':'');
+      d.innerHTML=`<div><b>${esc(v.name)}</b><div class="mut">${esc(v.category||'')}</div></div><button>Tanlash</button>`;
+      d.querySelector('button').onclick=()=>{S.set('ovVoice',{id:v.voice_id,name:v.name});showVoice();$('loadVoices').click();toast('Tanlandi: '+v.name)};
+      $('voiceList').appendChild(d)});
+    if(!list.length)$('voiceList').innerHTML='<div class="mut">Ovoz topilmadi.</div>';
+  }catch(e){if(e.message!=='nokey')toast('Xato: '+e.message,1)}
+};
+
+/* ---------- start ---------- */
+$('apiKey').value=key();
+$('ttsText').value=S.get('ovDraft','');$('chars').textContent=$('ttsText').value.length;
+$('model').value=S.get('ovModel','eleven_v3');$('stab').value=S.get('ovStab','0.5');
+showVoice();renderSamples();
+(()=>{const t=S.get('ovTab','');const b=t&&document.querySelector('nav button[data-t='+t+']');if(b)b.click();else if(!key())document.querySelector('nav button[data-t=set]').click()})();
+</script>
+</body>
+</html>
