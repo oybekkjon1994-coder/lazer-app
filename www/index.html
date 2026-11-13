@@ -4276,6 +4276,8 @@ showTab("narx");lzView("home");
   }
   const go=()=>{if(LIC.ready)send();else setTimeout(go,3000)};setTimeout(go,8000);
   addEventListener("online",()=>send());
+  // ochiq xabar: mijoz ilovaning statistika yuborishini ko'rib turadi (yashirin emas)
+  try{const u=$("shUpd");if(u)u.closest(".sh-pcard").insertAdjacentHTML("beforeend",`<div class="sh-link" style="border:0;opacity:.72;font-size:12px;line-height:1.4;cursor:default">📊 Ishlatish ma'lumotlari ustaxonaga yuboriladi — qaysi bo‘lim va detallar ishlatilgani. Chizmalaringizning o‘zi yuborilmaydi.</div>`)}catch(_){}
 })();
 </script>
 </body></html>
