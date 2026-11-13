@@ -1844,8 +1844,8 @@ const INF=[["vert","1. Vertikal balyasina"],["vert_halqa","2. Balyasina + o‘rt
   ["vert_kov","5. Balyasina + kovaniy jingalak"],["vert_arka","6. Balyasina + tepada arkachalar"],["burama","7. Burama (buralgan) balyasina"],["vert_romb","8. Balyasina + romb (har ikkinchi oraliqda)"],
   ["gor","9. Gorizontal profil"],["gor_vert","10. Gorizontal + vertikal (ramka)"],["katak","11. Katakli to‘r"],["x","12. X-xoch"],["x2","13. Qo‘sh X-xoch"],["romb","14. Romb to‘r (diagonal)"],
   ["zanjir","15. Romb zanjir"],["oval","16. Oval halqalar (polosa)"],["halqa","17. Ikki qator halqa"],["s_gul","18. S-gul (bukilgan polosa)"],["yurak","19. Yurak gul (polosa)"],
-  ["tolqin","20. To‘lqin (ikki polosa)"],["lazer","21. Lazer naqsh panel (girih)"],["perf","22. Lazer teshikli panel"],["kov","23. Kovaniy gul — lazer panel (islimiy)"],["shisha","24. Shisha panel (qisqichli)"]];
-const isLz=p=>["lazer","perf","kov"].includes(p.inf),usesBal=p=>!isLz(p)&&p.inf!=="shisha";
+  ["tolqin","20. To‘lqin (ikki polosa)"],["lazer","21. Lazer naqsh panel (girih)"],["perf","22. Lazer teshikli panel"],["kov","23. Kovaniy gul — lazer panel (islimiy)"],["shisha","24. Shisha panel (qisqichli)"],["pnaqsh","25. Perila naqsh uslubida (hoshiya, panjara, gul)"]];
+const isLz=p=>["lazer","perf","kov","pnaqsh"].includes(p.inf),usesBal=p=>!isLz(p)&&p.inf!=="shisha";
 function scrollPanel(v,w,h,o,fb){const sw=o.sw,cw=o.cw,m=o.m,hh=o.hi;
   return rcut(w,h,T=>{const z=T.poly(v);T.cut(z);const x=T.x;x.save();x.clip(z);
     const nc=Math.max(1,Math.round(w/cw)),cwx=w/nc,rows=Math.max(1,Math.round(hh/(cwx*1.5))),ch=hh/rows;
@@ -1944,6 +1944,7 @@ PARTS.perila={group:"tpl",name:"Zinapoya perilasi",gal:"pt",rerender:["pt","inf"
         else if(inf==="shisha"){const yS=G.ref(a),v=[[0,10],[sec,G.ref(b)-yS+10],[sec,G.ref(b)-yS+hi-10],[0,hi-10]];M.panels.push({o:Wp(a,0),u:[G.d[0],0,G.d[1]],loops:[v],kind:"glass"});
           [[a+40,40],[b-40,40],[a+40,hi-40],[b-40,hi-40]].forEach(([s,o])=>{const c=Wp(s,o);M.boxes.push([c[0]-15,c[1]-15,c[2]-15,c[0]+15,c[1]+15,c[2]+15,"decor"])});addCut("Shisha (toblangan, 8–10 mm)",sec,1)}
         else{const yS=G.ref(a),fb=x=>G.ref(a+x)-yS,bot=[[0,0]];if(G.sb>a+1&&G.sb<b-1)bot.push([G.sb-a,fb(G.sb-a)]);bot.push([sec,fb(sec)]);const v=bot.concat(bot.slice().reverse().map(([x,y])=>[x,y+hi])),Hh=Math.max(...v.map(q=>q[1]));
+          if(inf==="pnaqsh"){const di=+p.nd||0,kn=G.sb>a+1&&G.sb<b-1?[G.sb-a]:[],r=pnStair(sec,hi,fb,kn,di?PN_DZ[di-1]:null),s2=E.poly(v)+r.s;laser.push({s:s2,w:sec,h:Hh});laserN++;M.panels.push({o:Wp(a,0),u:[G.d[0],0,G.d[1]],loops:pnStrips(s2,9),kind:"metal"});continue}
           const r=inf==="kov"?scrollPanel(v,sec,Hh,{sw:Math.max(5,p.kt),cw:Math.max(80,p.kw),m:12,hi},fb):rcut(sec,Hh,T=>T.pattern(T.poly(v),inf==="perf"?{pat:"perf_doira",s:Math.max(10,p.ps*.6),w:Math.max(5,p.pw),mg:12}:hasPt(p)?{pat:p.pt,s:p.ps,w:p.pw,mg:12}:{pat:"yoq"}),{min:4});
           const s2=E.poly(v)+r.out;laser.push({s:s2,w:sec,h:Hh});laserN++;M.panels.push({o:Wp(a,0),u:[G.d[0],0,G.d[1]],s:s2,kind:"metal"})}}}
     /* hisob */
@@ -1964,16 +1965,27 @@ function pnFlat(v){const pg=[];v.forEach((q,i)=>{const r=v[(i+1)%v.length],b=q[2
 function pnPanel(W,H,opt={}){
   const big=W>=PN_BIG,T=big?PERT.big:PERT.small,W0=T.w,H0=T.h,dW=W-W0,dH=H-H0,cx0=W0/2,ys=T.c[0][1],A=T.arch,B=PERT.br;
   const h1=W/2-A.sx,sg=A.ay-A.sy,R1=(h1*h1+sg*sg)/(2*sg),cy1=A.ay-R1;
+  const N=Math.max(1,Math.min(6,Math.round(+opt.nr||1)));let xr=[W/2];
+  if(N>1){if(big){const db=cx0-676.14,sp=(W+2*db-396)/(N+1),sm=Math.max(2*db+150,cx0-298+db);if(sp<sm)throw`${Math.round(W)} mm enga ${N} ta halqa sig‘maydi — ${N} ta halqa uchun eni kamida ${Math.ceil(((N+1)*sm-2*db+396)/10)*10} mm bo‘lsin.`;xr=[...Array(N)].map((_,k)=>sp-db+198+k*sp)}
+    else{const sp=W/(N+1);if(sp<520)throw`${Math.round(W)} mm enga ${N} ta halqa sig‘maydi — ${N} ta halqa uchun eni kamida ${(N+1)*520} mm bo‘lsin.`;xr=[...Array(N)].map((_,k)=>sp*(k+1))}}
   const zone=(x,y)=>{if(big){const xm=Math.min(x,W0-x);return xm>=(y>=740?720:600)?1:x<cx0?0:2}return Math.abs(x-cx0)<1?1:x<cx0?0:2};
-  const mp=(x,y)=>{const z=zone(x,y),X=x+(z===1?dW/2:z===2?dW:0);let Y=y+(y>ys?dH:0);
+  const mp=(x,y,fl)=>{const z=zone(x,y),X=x+(z===1?(fl?(x<cx0?xr[0]:xr[N-1])-cx0:dW/2):z===2?dW:0);let Y=y+(y>ys?dH:0);
     if(big&&z===1&&y>=740)Y+=cy1+Math.sqrt(Math.max(0,R1*R1-(X-W/2)**2))-(A.cy+Math.sqrt(Math.max(0,A.r*A.r-(x-cx0)**2)));return [X,Y]};
-  const mapPoly=v=>{const n=v.length,P=v.map(q=>mp(q[0],q[1]));return v.map((q,i)=>{const j=(i+1)%n,b0=q[2]||0;let b=b0;
+  const mapPoly=(v,fl)=>{const n=v.length,P=v.map(q=>mp(q[0],q[1],fl));return v.map((q,i)=>{const j=(i+1)%n,b0=q[2]||0;let b=b0;
       if(b0){const c0=Math.hypot(v[j][0]-q[0],v[j][1]-q[1]),c=Math.hypot(P[j][0]-P[i][0],P[j][1]-P[i][1]);
         if(q[3]){const Rn=R1+q[3]-A.r,s=Rn-Math.sqrt(Math.max(0,Rn*Rn-c*c/4));b=Math.sign(b0)*2*s/c}else if(Math.abs(c-c0)>.01)b=Math.max(-1.3,Math.min(1.3,b0*c0/c))}
       return b?[P[i][0],P[i][1],b]:[P[i][0],P[i][1]]})};
-  let s="",n=0;const polys=T.p.map(([c,v])=>[c,mapPoly(v)]);
+  let s="",n=0;const FL=big?[T.clip,T.clip+1,T.clip+4,T.clip+5]:[],polys=T.p.map(([c,v],i)=>[c,mapPoly(v,FL.includes(i))]);
+  /* bir nechta halqa: halqalar orasidagi maydon — asl maydonning o‘yiq cheti ikki tomondan, tepasi yoy bo‘ylab */
+  const mids=[];if(big&&N>1)for(const li of [T.clip,T.clip+4]){const v=T.p[li][1],nv=v.length,z1=v.map(q=>zone(q[0],q[1])===1),st=z1.findIndex((f,i)=>f&&!z1[(i-1+nv)%nv]),run=[];
+    for(let i=st;z1[i%nv]&&run.length<nv;i++)run.push(v[i%nv]);const r=run.length,pre=v[(st-1+nv)%nv],last=run[r-1];
+    const Yof=(x,y,X)=>y+(y>ys?dH:0)+(y>=740?cy1+Math.sqrt(Math.max(0,R1*R1-(X-W/2)**2))-(A.cy+Math.sqrt(Math.max(0,A.r*A.r-(x-cx0)**2))):0);
+    const ab=(p,q,f,sg)=>{if(!f)return 0;const c=Math.hypot(q[0]-p[0],q[1]-p[1]),Rn=R1+f-A.r;return Math.sign(sg)*2*(Rn-Math.sqrt(Math.max(0,Rn*Rn-c*c/4)))/c};
+    for(let k=0;k<N-1;k++){const a=xr[k],b=xr[k+1],P=run.map((q,i)=>{const X=q[0]+b-cx0;return [X,Yof(q[0],q[1],X),i<r-1?q[2]||0:0]}),M=run.slice().reverse().map((q,j)=>{const X=a-(q[0]-cx0);return [X,Yof(q[0],q[1],X),j<r-1?run[r-2-j][2]||0:0]});
+      P[r-1][2]=ab(P[r-1],M[0],last[3],last[2]);M[r-1][2]=ab(M[r-1],P[0],pre[3],pre[2]);mids.push({li,v:P.concat(M),c:(a+b)/2})}}
   const sk=opt.dz&&big?[T.clip+4,T.clip+5]:[];polys.forEach(([c,v],i)=>{if(sk.includes(i))return;s+=E.poly(v,!!c);n++});
-  T.c.forEach(([x,y,r],i)=>{if(opt.med&&!i)return;s+=E.circle(x+dW/2,y+dH/2,r);n++});
+  mids.forEach(m=>{if(opt.dz&&m.li===T.clip+4)return;s+=E.poly(m.v,true);n++});
+  T.c.forEach(([x,y,r],i)=>{if(opt.med&&!i)return;xr.forEach(X=>{s+=E.circle(X+x-cx0,y+dH/2,r);n++})});
   /* hoshiya (o‘rama) naqshi: uchi + takrorlanadigan bo‘lak, flanets va o‘rtada kesiladi */
   const bx=big?0:-15,fy=T.fy+dH,emit=e=>{if(e.length===4)s+=E.line(e[0],e[1],e[2],e[3]);else if(e[4]-e[3]>=359.99)s+=E.circle(e[0],e[1],e[2]);else s+=E.arc(e[0],e[1],e[2],e[3],e[4]);n++};
   const mir=e=>e.length===4?[W-e[0],e[1],W-e[2],e[3]]:e[4]-e[3]>=359.99?[W-e[0],e[1],e[2],0,360]:[W-e[0],e[1],e[2],180-e[4],180-e[3]];
@@ -1989,18 +2001,20 @@ function pnPanel(W,H,opt={}){
   for(let k=0;B.bu0+bx+k*B.P<W/2;k++)for(const e of B.bu)half.push(...clip(sh(e,bx+k*B.P,0),0,W/2));
   half.forEach(e=>{emit(e);emit(mir(e))});
   /* o‘rtadagi panjara naqshi (faqat katta panelda): katak takrorlanadi va maydon chegarasida kesiladi */
-  let nl=0;if(big&&opt.lat!==false){const pg=pnFlat(polys[T.clip][1]);
+  let nl=0;const latF=(pg,ax,mid)=>{const ox=mid?ax-30.98:0;
     let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;pg.forEach(([a,b])=>{x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,a);y1=Math.max(y1,b)});
     const ins=(px,py)=>{let c=false;for(let i=0,j=pg.length-1;i<pg.length;j=i++){const [xi,yi]=pg[i],[xj,yj]=pg[j];if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)c=!c}return c};
     const LT=PERT.lat,p=LT.px,q=LT.py;
     for(const d of LT.l){const lx0=Math.min(d[0],d[2]),lx1=Math.max(d[0],d[2]),ly0=Math.min(d[1],d[3]),ly1=Math.max(d[1],d[3]);
-      for(let i=Math.ceil((x0-lx1)/p);lx0+i*p<=x1;i++)for(let j=Math.ceil((y0-ly1)/q);ly0+j*q<=y1;j++){
-        const ax=d[0]+i*p,ay=d[1]+j*q,bx2=d[2]+i*p,by=d[3]+j*q,dx=bx2-ax,dy=by-ay,ts=[0,1];
+      for(let i=Math.ceil((x0-ox-lx1)/p);lx0+i*p+ox<=x1;i++)for(let j=Math.ceil((y0-ly1)/q);ly0+j*q<=y1;j++){
+        const ax2=d[0]+i*p+ox,ay=d[1]+j*q,bx2=d[2]+i*p+ox,by=d[3]+j*q,dx=bx2-ax2,dy=by-ay,ts=[0,1];if(Math.abs(dx)>1e-9){const tx=(ax-ax2)/dx;if(tx>1e-9&&tx<1-1e-9)ts.push(tx)}
         for(let a=0,b=pg.length-1;a<pg.length;b=a++){const ex=pg[a][0]-pg[b][0],ey=pg[a][1]-pg[b][1],den=dx*ey-dy*ex;if(Math.abs(den)<1e-12)continue;
-          const t=((pg[b][0]-ax)*ey-(pg[b][1]-ay)*ex)/den,u=((pg[b][0]-ax)*dy-(pg[b][1]-ay)*dx)/den;if(t>1e-9&&t<1-1e-9&&u>=0&&u<=1)ts.push(t)}
-        ts.sort((u,v)=>u-v);for(let a=0;a<ts.length-1;a++){const t0=ts[a],t1=ts[a+1];if((t1-t0)*Math.hypot(dx,dy)<1)continue;const tm=(t0+t1)/2;if(!ins(ax+dx*tm,ay+dy*tm))continue;
-          const sx=ax+dx*t0,sy=ay+dy*t0,ex2=ax+dx*t1,ey2=ay+dy*t1;s+=E.line(sx,sy,ex2,ey2)+E.line(W-sx,sy,W-ex2,ey2);nl+=2}}}}
-  return {s,w:W,h:H,n:n+nl,big,fld:big?pnFlat(polys[T.clip+4][1]):null,ring:[T.c[0][0]+dW/2,T.c[0][1]+dH/2,T.c[0][2]]}}
+          const t=((pg[b][0]-ax2)*ey-(pg[b][1]-ay)*ex)/den,u=((pg[b][0]-ax2)*dy-(pg[b][1]-ay)*dx)/den;if(t>1e-9&&t<1-1e-9&&u>=0&&u<=1)ts.push(t)}
+        ts.sort((u,v)=>u-v);for(let a=0;a<ts.length-1;a++){const t0=ts[a],t1=ts[a+1];if((t1-t0)*Math.hypot(dx,dy)<1)continue;const tm=(t0+t1)/2;if(ax2+dx*tm>ax+1e-6||!ins(ax2+dx*tm,ay+dy*tm))continue;
+          const sx=ax2+dx*t0,sy=ay+dy*t0,ex2=ax2+dx*t1,ey2=ay+dy*t1;s+=E.line(sx,sy,ex2,ey2)+E.line(2*ax-sx,sy,2*ax-ex2,ey2);nl+=2}}}};
+  if(big&&opt.lat!==false){latF(pnFlat(polys[T.clip][1]),W/2);mids.forEach(m=>{if(m.li===T.clip)latF(pnFlat(m.v),m.c,1)})}
+
+  return {s,w:W,h:H,n:n+nl,big,flds:big?[[pnFlat(polys[T.clip+4][1]),1]].concat(mids.filter(m=>m.li===T.clip+4).map(m=>[pnFlat(m.v),0])):[],rings:xr.map(X=>[X,T.c[0][1]+dH/2,T.c[0][2]])}}
 /* ---------- 22c. perila naqsh: qo‘shimcha dizaynlar — forma (rama, tepa profil, poruchen, maydon, halqa, hoshiya) asl fayldan, faqat ichki naqsh almashadi ---------- */
 const PN_DZ=[
   {n:"Yulduz-xoch mayda, 8 bargli gul",pat:"g:488_45",ps:50,med:"gul8"},
@@ -2017,14 +2031,10 @@ const PN_DZ=[
   {n:"Uchburchak to‘r, 12 bargli gul",pat:"g:333333_45",ps:88,med:"gul12"},
   {n:"Xotam keng, quyosh",pat:"g:488_60",ps:60,med:"quyosh"},
   {n:"Rozetka 12-6, yulduz",pat:"g:4612_60",ps:42,med:"yulduz"}];
-function pnDesign(W,H,D){
-  const a=pnPanel(W,H,{lat:false,dz:true,med:true});let s=a.s,n=a.n;
-  const cap=f=>{const o=E.poly,L=[];E.poly=v=>{L.push(v);return""};try{f()}finally{E.poly=o}return L};
-  if(a.big){const pg=a.fld;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;pg.forEach(([u,v])=>{x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v)});x0-=3;y0-=3;
-    const L=cap(()=>rcut(x1-x0+3,y1-y0+3,T=>{T.pattern(T.poly(pg.map(([u,v])=>[u-x0,v-y0])),{pat:D.pat,s:D.ps,w:9,box:[3,3,x1-x0,y1-y0]})},{min:8}));
-    L.forEach(v=>{s+=E.poly(v.map(([u,w])=>[u+x0,w+y0]))+E.poly(v.map(([u,w])=>[W-u-x0,w+y0]));n+=2})}
-  const [rx,ry,ri]=a.ring,m=ri+4,cx=m,cy=m;
-  cap(()=>rcut(2*m,2*m,T=>{const x=T.x,X=T.X,Y=T.Y,k=T.sc,pol=(rr,q)=>[cx+rr*Math.cos(q),cy+rr*Math.sin(q)];
+const pnCap=f=>{const o=E.poly,L=[];E.poly=v=>{L.push(v);return""};try{f()}finally{E.poly=o}return L};
+/* halqa ichidagi gul (medalyon): markazi (0,0) bo‘lgan yopiq konturlar */
+function pnMed(ri,D){const m=ri+4,cx=m,cy=m;
+  return pnCap(()=>rcut(2*m,2*m,T=>{const x=T.x,X=T.X,Y=T.Y,k=T.sc,pol=(rr,q)=>[cx+rr*Math.cos(q),cy+rr*Math.sin(q)];
     const wline=(pts,w,cl)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.lineJoin="round";x.lineCap="round";x.beginPath();pts.forEach(([p,q],i)=>i?x.lineTo(X(p),Y(q)):x.moveTo(X(p),Y(q)));if(cl)x.closePath();x.stroke()};
     const wcirc=(p,q,rr,w)=>{x.strokeStyle="#fff";x.lineWidth=w*k;x.beginPath();x.arc(X(p),Y(q),rr*k,0,2*Math.PI);x.stroke()};
     const bead=(p,q,ro,rh)=>{T.metal(T.circ(p,q,ro));if(rh>0)T.cut(T.circ(p,q,rh))};
@@ -2039,8 +2049,57 @@ function pnDesign(W,H,D){
       for(let i=0;i<8;i++)wline([pol(ri*.3,Math.PI/8+i*Math.PI/4+Math.PI/8),pol(ri*.5,i*Math.PI/4+Math.PI/8)],6);wcirc(cx,cy,ri*.16,7)}
     else if(D.med==="girih")T.pattern(dz,{pat:D.pat,s:Math.max(20,ri/3.2),w:6,box:[cx-ri,cy-ri,cx+ri,cy+ri]});
     else{for(const f of [.7,.4])wcirc(cx,cy,ri*f,7);for(let i=0;i<8;i++){const g=i*Math.PI/4;wline([pol(ri*.4,g),pol(ri*.7,g)],6);wline([pol(ri*.7,g+Math.PI/8),pol(ri+2,g+Math.PI/8)],6);bead(...pol(ri*.85,g),11,5)}wcirc(cx,cy,ri*.14,6)}
-    x.restore()},{min:6})).forEach(v=>{s+=E.poly(v.map(([u,w])=>[u+rx-m,w+ry-m]));n++});
+    x.restore()},{min:6})).map(v=>v.map(([u,w])=>[u-m,w-m]))}
+function pnDesign(W,H,D,nr){
+  const a=pnPanel(W,H,{lat:false,dz:true,med:true,nr});let s=a.s,n=a.n;
+  const cap=f=>{const o=E.poly,L=[];E.poly=v=>{L.push(v);return""};try{f()}finally{E.poly=o}return L};
+  for(const [pg,mr] of a.flds){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;pg.forEach(([u,v])=>{x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v)});x0-=3;y0-=3;
+    const L=cap(()=>rcut(x1-x0+3,y1-y0+3,T=>{T.pattern(T.poly(pg.map(([u,v])=>[u-x0,v-y0])),{pat:D.pat,s:D.ps,w:9,box:[3,3,x1-x0,y1-y0]})},{min:8}));
+    L.forEach(v=>{s+=E.poly(v.map(([u,w])=>[u+x0,w+y0]));n++;if(mr){s+=E.poly(v.map(([u,w])=>[W-u-x0,w+y0]));n++}})}
+  const [,ry,ri]=a.rings[0];pnMed(ri,D).forEach(v=>a.rings.forEach(([rx])=>{s+=E.poly(v.map(([u,w])=>[u+rx,w+ry]));n++}));
   return {s,w:W,h:H,n,big:a.big}}
+/* ---------- 22d. zinapoya perilasi uchun naqsh panel: asl rama + 10 sm hoshiya (qiyalik bo‘ylab), o‘rtada panjara va halqa (gul) ---------- */
+function pnStair(W,H,f,knots,D){const B=PERT.br,LT=PERT.lat;let s="",n=0;const kn=knots.filter(k=>k>1&&k<W-1).sort((u,v)=>u-v);
+  if(W<500||H<420)throw"Naqsh panel uchun stoykalar orasi kamida 500 mm, panel balandligi kamida 420 mm bo‘lsin.";
+  const Mp=(x,y)=>[x,y+f(x)];
+  const segPts=(x1,y1,x2,y2)=>{const P=[[x1,y1]];const lo=Math.min(x1,x2),hi=Math.max(x1,x2);const ks=kn.filter(k=>k>lo+1e-6&&k<hi-1e-6);if(x2<x1)ks.reverse();ks.forEach(k=>{const t=(k-x1)/(x2-x1);P.push([k,y1+(y2-y1)*t])});P.push([x2,y2]);return P};
+  const rect=(m)=>{const P=[];[[m,m,W-m,m],[W-m,m,W-m,H-m],[W-m,H-m,m,H-m],[m,H-m,m,m]].forEach(e=>P.push(...segPts(...e).slice(0,-1)));return P.map(([x,y])=>Mp(x,y))};
+  const line=(x1,y1,x2,y2)=>{s+=E.poly(segPts(x1,y1,x2,y2).map(([x,y])=>Mp(x,y)),false);n++};
+  const arcP=(cx,cy,r,a0,a1)=>{let sw=a1-a0;if(sw<=0)sw+=360;const m=Math.max(4,Math.ceil(sw/4)),P=[];for(let i=0;i<=m;i++){const t=(a0+sw*i/m)*Math.PI/180;P.push([cx+r*Math.cos(t),cy+r*Math.sin(t)])}return P};
+  /* rama chiziqlari: tashqi bar 20, hoshiya 100, ichki bar 8 */
+  for(const m of [20,120,128]){s+=E.poly(rect(m),true);n++}
+  /* hoshiya naqshi: chap-past chorak, keyin x va y bo‘yicha ko‘zgu */
+  const clip=(e,ax,lim)=>{if(e.length===4){const a=e[ax],b=e[ax+2];if(a<=lim&&b<=lim)return [e];if(a>lim&&b>lim)return [];const t=(lim-a)/(b-a),px=e[0]+(e[2]-e[0])*t,py=e[1]+(e[3]-e[1])*t;return [a<=lim?[e[0],e[1],px,py]:[px,py,e[2],e[3]]]}
+    const [x,y,r,a0]=e;let sw=((e[4]-a0)%360+360)%360;if(sw<1e-9)sw=360;const d=(lim-(ax?y:x))/r;if(d>=1)return [e];if(d<=-1)return [];
+    const t=Math.acos(d)*180/Math.PI,cuts=[0,sw];for(const q of ax?[90-t,90+t]:[t,-t]){const rel=((q-a0)%360+360)%360;if(rel>1e-6&&rel<sw-1e-6)cuts.push(rel)}cuts.sort((u,v)=>u-v);
+    const o=[];for(let i=0;i<cuts.length-1;i++){if(cuts[i+1]-cuts[i]<.05)continue;const mm=(a0+(cuts[i]+cuts[i+1])/2)*Math.PI/180;if((ax?y+r*Math.sin(mm):x+r*Math.cos(mm))<=lim+1e-6)o.push([x,y,r,a0+cuts[i],a0+cuts[i+1]])}return o};
+  const sh=(e,dx,dy)=>e.length===4?[e[0]+dx,e[1]+dy,e[2]+dx,e[3]+dy]:[e[0]+dx,e[1]+dy,e[2],e[3],e[4]];
+  const bx=-40,q=[];for(const e of B.se)q.push(...clip(sh(e,bx,0),1,H/2));
+  for(let k=0;B.su0+k*B.P<H/2;k++)for(const e of B.su)q.push(...clip(sh(e,bx,k*B.P),1,H/2));
+  for(const e of B.be)q.push(...clip(sh(e,bx,0),0,W/2));
+  for(let k=0;B.bu0+bx+k*B.P<W/2;k++)for(const e of B.bu)q.push(...clip(sh(e,bx+k*B.P,0),0,W/2));
+  const emit=e=>{if(e.length===4)line(...e);else{const P=arcP(...e),full=e[4]-e[3]>=359.99;s+=E.poly(P.slice(0,full?-1:P.length).map(([x,y])=>Mp(x,y)),full);n++}};
+  const mx=e=>e.length===4?[W-e[0],e[1],W-e[2],e[3]]:[W-e[0],e[1],e[2],180-e[4],180-e[3]],my=e=>e.length===4?[e[0],H-e[1],e[2],H-e[3]]:[e[0],H-e[1],e[2],360-e[4],360-e[3]];
+  q.forEach(e=>{emit(e);emit(mx(e));emit(my(e));emit(my(mx(e)))});
+  /* o‘rta maydon va halqa */
+  const fm=158,fh=H-2*fm,kR=Math.min(1,(fh/2-46)/221),ring=kR>=.45&&W-2*fm>=2*(221*kR+30)+120,cxR=W/2,cy0=H/2,[cx,cy]=Mp(cxR,cy0),rh=ring?221*kR+30:0;
+  const fpg=rect(fm);s+=E.poly(fpg,true);n++;if(!D){s+=E.poly(rect(fm+8),true);n++}
+  if(ring){s+=E.circle(cx,cy,rh)+(D?"":E.circle(cx,cy,rh+8));n+=D?1:2;
+    [175,183,213,221].forEach((r,i)=>{if(D&&!i)return;s+=E.circle(cx,cy,r*kR);n++});
+    if(D)pnMed(175*kR,D).forEach(v=>{s+=E.poly(v.map(([u,w])=>[u+cx,w+cy]));n++})}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;fpg.forEach(([u,v])=>{x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v)});
+  if(!D){const pg=fpg,ins=(px,py)=>{let c=false;for(let i=0,j=pg.length-1;i<pg.length;j=i++){const [xi,yi]=pg[i],[xj,yj]=pg[j];if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)c=!c}return c};
+    const p=LT.px,qq=LT.py,ox=cxR-30.98,oy=cy-30.98;
+    for(const d of LT.l){const lx0=Math.min(d[0],d[2])+ox,lx1=Math.max(d[0],d[2])+ox,ly0=Math.min(d[1],d[3])+oy,ly1=Math.max(d[1],d[3])+oy;
+      for(let i=Math.ceil((x0-lx1)/p);lx0+i*p<=x1;i++)for(let j=Math.ceil((y0-ly1)/qq);ly0+j*qq<=y1;j++){
+        const ax=d[0]+ox+i*p,ay=d[1]+oy+j*qq,dx=d[2]-d[0],dy=d[3]-d[1],ts=[0,1];
+        for(let a=0,b=pg.length-1;a<pg.length;b=a++){const ex=pg[a][0]-pg[b][0],ey=pg[a][1]-pg[b][1],den=dx*ey-dy*ex;if(Math.abs(den)<1e-12)continue;
+          const t=((pg[b][0]-ax)*ey-(pg[b][1]-ay)*ex)/den,u=((pg[b][0]-ax)*dy-(pg[b][1]-ay)*dx)/den;if(t>1e-9&&t<1-1e-9&&u>=0&&u<=1)ts.push(t)}
+        if(ring){const fx=ax-cx,fy=ay-cy,A=dx*dx+dy*dy,Bq=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-rh*rh,disc=Bq*Bq-4*A*C;if(disc>0){const sq=Math.sqrt(disc);for(const t of [(-Bq-sq)/(2*A),(-Bq+sq)/(2*A)])if(t>1e-9&&t<1-1e-9)ts.push(t)}}
+        ts.sort((u,v)=>u-v);for(let a=0;a<ts.length-1;a++){const t0=ts[a],t1=ts[a+1];if((t1-t0)*Math.hypot(dx,dy)<1)continue;const tm=(t0+t1)/2,mx2=ax+dx*tm,my2=ay+dy*tm;
+          if(!ins(mx2,my2)||(ring&&Math.hypot(mx2-cx,my2-cy)<rh))continue;s+=E.line(ax+dx*t0,ay+dy*t0,ax+dx*t1,ay+dy*t1);n++}}}}
+  else{const zp=rect(fm+8),Hh=y1+20;const L=pnCap(()=>rcut(W,Hh,T=>{T.pattern(T.poly(zp),{pat:D.pat,s:D.ps,w:9,box:[x0,y0,x1,y1],excl:ring?[T.circ(cx,cy,rh+8)]:[]})},{min:8}));L.forEach(v=>{s+=E.poly(v);n++})}
+  return {s,n,ring}}
 const PN_BIG=2200,pnH0=W=>W>=PN_BIG?PERT.big.h:PERT.small.h,pnT=W=>W>=PN_BIG?PERT.big:PERT.small;
 function pnStrips(s,w){const L=[];try{for(const pa of analyse(wrapDXF(s)).paths){const P=pa.pts.slice();if(pa.closed)P.push(P[0]);const n=P.length;if(n<2)continue;const a=[],b=[];
       for(let i=0;i<n;i++){const p=P[Math.max(0,i-1)],q=P[Math.min(n-1,i+1)],l=Math.hypot(q[0]-p[0],q[1]-p[1])||1,nx=-(q[1]-p[1])/l*w/2,ny=(q[0]-p[0])/l*w/2;a.push([P[i][0]+nx,P[i][1]+ny]);b.push([P[i][0]-nx,P[i][1]-ny])}
@@ -2048,8 +2107,8 @@ function pnStrips(s,w){const L=[];try{for(const pa of analyse(wrapDXF(s)).paths)
 function perilaNaqsh(p){const W=p.nW,set=p.nset==="balkon",Y=set?p.nY:0,di=+p.nd||0,D=di?PN_DZ[di-1]:null;
   const chk=(w,nm)=>{if(!(w>=800&&w<=8000))throw`${nm} eni 800–8000 mm oralig‘ida bo‘lsin.`};chk(W,"Panel");if(set)chk(Y,"Yon panel");
   const H0=pnH0(W),H=p.nH||H0;if(!(H>=H0-120&&H<=H0+1500))throw`Bu enda balandlik ${H0-120}–${H0+1500} mm oralig‘ida bo‘lsin (asl balandlik ${H0} mm).`;
-  const a=D?pnDesign(W,H,D):pnPanel(W,H),fy=pnT(W).fy+H-H0,items=[a],info=[];
-  info.push(`${D?"Dizayn: "+D.n+". ":""}Old panel ${Math.round(W)}×${Math.round(H)} mm — ${a.big?"hoshiya naqshi va o‘rtada panjara naqshi":"faqat 10 sm hoshiya naqshi (2200 mm dan tor)"}${D?", halqa ichida medalyon":""}.`);
+  const nr=+p.nr||1,a=D?pnDesign(W,H,D,nr):pnPanel(W,H,{nr}),fy=pnT(W).fy+H-H0,items=[a],info=[];
+  info.push(`${D?"Dizayn: "+D.n+". ":""}Old panel ${Math.round(W)}×${Math.round(H)} mm — ${a.big?"hoshiya naqshi va o‘rtada panjara naqshi":"faqat 10 sm hoshiya naqshi (2200 mm dan tor)"}${nr>1?`, o‘rtada ${nr} ta halqa`:""}${D?", halqa ichida medalyon":""}.`);
   let b=null;if(set){{const hb=fy-pnT(Y).fy+pnH0(Y);b=D?pnDesign(Y,hb,D):pnPanel(Y,hb)}items.push(b,b);info.push(`Yon panel ${Math.round(Y)}×${Math.round(b.h)} mm × 2 dona${b.big?"":" (faqat hoshiya naqshi)"}; poruchen tagi old panel bilan bir balandlikda (${Math.round(fy)} mm).`)}
   info.push((D?"Forma (rama, tepa profil, poruchen, hoshiya) asl fayldan, faqat ichki naqsh almashgan. ":"")+"O‘rtadagi halqa asl fayldagidek hech narsaga ulanmagan — kesishdan oldin ko‘prik qoldiring.");
   const M={bars3:[],boxes:[],panels:[],balls:[],yaw:-.6,pitch:.2},ps=50,lw=9,pan=(q,o,u)=>M.panels.push({o,u,loops:q.L||(q.L=pnStrips(q.s,lw)),kind:"metal"});
@@ -2061,7 +2120,7 @@ function perilaNaqsh(p){const W=p.nW,set=p.nset==="balkon",Y=set?p.nY:0,di=+p.nd
 (()=>{const P=PARTS.perila,isN=p=>p.tur==="naqsh";
   P.fields.forEach(f=>{const o=f[5];f[5]=q=>!isN(q)&&(!o||o(q))});
   P.fields.unshift(["tur","Perila turi","zina","select",[["zina","Zinapoya perilasi (stoyka, poruchen)"],["naqsh","Perila naqsh paneli"]]]);
-  P.fields.push(["nd","Dizayn","0","select",[["0","1. Asl dizayn (sizning faylingiz)"]].concat(PN_DZ.map((d,i)=>[String(i+1),(i+2)+". "+d.n])),isN],["nW","Old panel eni (mm)",2362,"num",null,isN],["nH","Balandligi (mm, 0 = asl)",0,"num",null,isN],
+  P.fields.push(["nd","Dizayn","0","select",[["0","1. Asl dizayn (sizning faylingiz)"]].concat(PN_DZ.map((d,i)=>[String(i+1),(i+2)+". "+d.n])),q=>isN(q)||q.inf==="pnaqsh"],["nW","Old panel eni (mm)",2362,"num",null,isN],["nH","Balandligi (mm, 0 = asl)",0,"num",null,isN],["nr","O‘rtadagi halqalar soni (old panel)","1","select",[["1","1 ta"],["2","2 ta"],["3","3 ta"],["4","4 ta"]],isN],
     ["nset","To‘plam","bitta","select",[["bitta","Bitta panel"],["balkon","Balkon: old + ikki yon panel"]],isN],["nY","Yon panel eni (mm)",1000,"num",null,q=>isN(q)&&q.nset==="balkon"]);
   P.rerender.push("tur","nset","nd");
   const n0=P.note,n1="1-dizayn — PERILA NAQSH faylidagi dizayn, o‘z chiziqlari bilan; qolgan 14 tasi shu uslubdagi boshqa naqshlar. Enini va balandligini yozing — rama, hoshiya naqshi va panjara naqshi shu o‘lchamga moslanadi (naqsh kattaligi o‘zgarmaydi, soni o‘zgaradi). 2200 mm dan tor panelda faqat 10 sm hoshiya naqshi, kengrog‘ida o‘rtadagi panjara naqshi ham bo‘ladi. «Balkon» to‘plamida old va ikki yon panel birga chiqadi, pastdagi «3D ko‘rinish» tugmasi yig‘ilgan holatini ko‘rsatadi.";
